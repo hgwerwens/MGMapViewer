@@ -9,19 +9,32 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private final CubicSpline[] SurfaceCatSpline = new CubicSpline[7];
     protected CostCalcSplineProfileTreckingBike() {
-        super((short) 1);
+        super(new Object());
         SurfaceCatSpline[1] = super.getProfileSpline();
     }
 
-    protected CubicSpline getRefSpline(Object context) {
+    protected CubicSpline getProfileSpline(Object context) {
         try {
-            return calcSpline((short) context);
+            return calcSpline(1);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private CubicSpline calcSpline(short surfaceLevel) throws Exception {
+    protected CubicSpline getRefHeuristicSpline(Object context) {
+        try {
+            return calcSpline(1);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    protected float getMinDistFactSC0(){
+        return (float) TagEval.minDistfSc0;
+    }
+
+    private CubicSpline calcSpline(int surfaceLevel) throws Exception {
         float watt0 = 90.0f ;
         float watt = 130.0f;
         float ACw = 0.45f;

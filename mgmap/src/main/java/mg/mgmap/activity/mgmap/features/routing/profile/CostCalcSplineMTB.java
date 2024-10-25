@@ -15,42 +15,96 @@ public class CostCalcSplineMTB implements CostCalculator {
     private final CostCalcSplineProfileMTB mProfileCalculator;
 
     public CostCalcSplineMTB(WayAttributs wayTagEval, CostCalcSplineProfileMTB profile) {
+//        int slevel = 2;
         mProfileCalculator = profile;
         oneway = wayTagEval.onewayBic;
-
+        int mtbUp = -1;
+        int mtbDn = -1;
         float  distFactor ;
-        short surfaceCat = TagEval.getSurfaceCat(wayTagEval);
+        short surfaceLevel = TagEval.getSurfaceCat(wayTagEval);
         if (TagEval.getNoAccess(wayTagEval)){
             distFactor = 10;
-            surfaceCat = (surfaceCat>0) ? surfaceCat :2;
+            surfaceLevel = (surfaceLevel>0) ? surfaceLevel :2;
         } else {
             if ("path".equals(wayTagEval.highway)) {
-                surfaceCat = (surfaceCat<=0) ? 4: surfaceCat;
-                if (surfaceCat == 1){
+                surfaceLevel = (surfaceLevel<=0) ? 4: surfaceLevel;
+                if (surfaceLevel == 1){
                     distFactor = 1.2f;
-                    surfaceCat = 2;
-                } else
+                    surfaceLevel = 2;
+                } else {
                     distFactor = 1f;
+                    if (wayTagEval.mtbScaleUp != null) {
+                        switch (wayTagEval.mtbScaleUp) {
+                            case "mtbu_0":
+                                mtbUp = 0;
+                                break;
+                            case "mtbu_1":
+                                mtbUp = 1;
+                                break;
+                            case "mtbu_2":
+                                mtbUp = 2;
+                                break;
+                            case "mtbu_3":
+                                mtbUp = 3;
+                                break;
+                            case "mtbu_4":
+                                mtbUp = 4;
+                                break;
+                            default:
+                                mtbUp = 5;
+                        }
+                    }
+                    if (wayTagEval.mtbScale != null) {
+                        switch (wayTagEval.mtbScale) {
+                            case "mtbs_0":
+                                mtbDn = 0;
+                                break;
+                            case "mtbs_1":
+                                mtbDn = 1;
+                                break;
+                            case "mtbs_2":
+                                mtbDn = 2;
+                                break;
+                            case "mtbs_3":
+                                mtbDn = 3;
+                                break;
+                            case "mtbs_4":
+                                mtbDn = 4;
+                                break;
+                            case "mtbs_5":
+                                mtbDn = 5;
+                                break;
+                            default:
+                                mtbDn = 6;
+                        }
+                    }
+                }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
-                surfaceCat = (surfaceCat>0) ? surfaceCat :4;
-                distFactor = 1.25f;
+                surfaceLevel = (surfaceLevel>0) ? surfaceLevel :4;
+                distFactor = 1.35f;
             } else if ("steps".equals(wayTagEval.highway)) {
-                surfaceCat = 6;
-                if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network))
-                    distFactor = 1f;
-                else
-                    distFactor = 2f;
+                surfaceLevel = 4; // treat steps as mtb scale 3.
+                mtbDn = 3;
+                mtbUp = 6;
+                distFactor = 2f;
             } else {
-                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat);
-                surfaceCat = factors.surfaceCat;
-                distFactor = (float) ((surfaceCat <= 2) ? factors.distFactor*1.3d : factors.distFactor );
+                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceLevel);
+                if (factors.surfaceCat <= 4) {
+                    surfaceLevel = factors.surfaceCat;
+                } else {
+                    surfaceLevel = 4;
+                    mtbDn = 3;
+                    mtbUp = 6;
+                }
+                distFactor = (float) ((surfaceLevel <= 2) ? factors.distFactor * 1.35d : factors.distFactor);
             }
         }
-        if (surfaceCat>6) {
-            mgLog.e("Wrong surface Cat:"+ surfaceCat + " ,Tag.highway:" + wayTagEval.highway + " ,Tag.trackType:" + wayTagEval.trackType);
+        if (surfaceLevel>6) {
+            throw new RuntimeException("Wrong surface Cat:"+ surfaceLevel + " ,Tag.highway:" + wayTagEval.highway + " ,Tag.trackType:" + wayTagEval.trackType);
         }
-        this.surfaceCat = surfaceCat;
-        this.surfaceCatSpline = mProfileCalculator.getSpline(surfaceCat);
+
+        this.surfaceCat = (short) mProfileCalculator.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
+        this.surfaceCatSpline = mProfileCalculator.getSpline(surfaceLevel,mtbDn,mtbUp);
         mfd =  distFactor;
     }
 
@@ -73,7 +127,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             float slope = vertDist / (float) dist;
             double spm = surfaceCatSpline.calc(slope);
             double v = 3.6/spm;
-            mgLog.d(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f surfaceCat=%s",100f*slope,v,spm*dist,dist,surfaceCat));
+            mgLog.d(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f surfaceCat=%s mfd=%.2f",100f*slope,v,spm*dist,dist,surfaceCat,mfd));
         }
         return ( dist >= 0.00001) ? (long) ( 1000 * dist * surfaceCatSpline.calc(vertDist/(float) dist)) : 0;
     }
