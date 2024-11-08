@@ -40,7 +40,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         float ACw = 0.45f;
         float fdown = 8.5f;
         float m = 90f;
-        float [] cr = new float[] {0.0035f,0.005f,0.0076f,0.015f,0.04f,0.075f,0.13f};
+        float [] cr = new float[] {0.0035f,0.005f,0.0076f,0.02f,0.04f,0.075f,0.13f};
         float [] highdowndoffset = new float[] {0.15f,0.143f,0.13f,0.11f,0.1f,0.08f,-0.03f};
         float[] relSlope;
         float[] slopes;

@@ -68,7 +68,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             }
         };
 //      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
-        durations[varyat] = newtonNumeric(durations[varyat],0.00001f,smMin,0.001f);
+        durations[varyat] = newtonNumeric(durations[varyat],0.00001f,smMin,0.0001f);
         return checkSpline(new CubicSpline(slopes, durations),surfaceCat);
     }
 
