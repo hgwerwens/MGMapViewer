@@ -22,6 +22,7 @@ import android.view.WindowManager;
 import org.mapsforge.core.graphics.Paint;
 import org.mapsforge.map.model.DisplayModel;
 
+import java.io.FileOutputStream;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -42,7 +43,6 @@ import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S2;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3;
 import mg.mgmap.activity.mgmap.features.routing.profile.ShortestDistance;
 import mg.mgmap.activity.mgmap.features.routing.profile.TrekkingBike;
-import mg.mgmap.activity.mgmap.features.routing.profile.TrekkingBikeTwoPieceFunc;
 import mg.mgmap.activity.mgmap.view.MultiMultiPointView;
 import mg.mgmap.application.MGMapApplication;
 import mg.mgmap.activity.mgmap.FeatureService;
@@ -260,7 +260,6 @@ public class FSRouting extends FeatureService {
         addDefinedRoutingProfile(prefCache, new MTB_K3S2(), false);
         addDefinedRoutingProfile(prefCache, new MTB_K3S3(), true);
         addDefinedRoutingProfile(prefCache, new TrekkingBike(), true);
-        addDefinedRoutingProfile(prefCache, new TrekkingBikeTwoPieceFunc(), false);
 
         prefRoutingProfileId.addObserver(evt -> {
             String id = prefRoutingProfileId.getValue();
@@ -397,6 +396,7 @@ public class FSRouting extends FeatureService {
                 mgLog.i("save "+trackLog.getName());
                 GpxExporter.export(application.getPersistenceManager(), trackLog);
                 application.getMetaDataUtil().createMetaData(trackLog);
+                getApplication().getMetaDataUtil().writeMetaData(getApplication().getPersistenceManager().openMetaOutput(trackLog.getName()), trackLog);
             });
             etv.setDisabledData(prefRouteSavable, R.drawable.save2);
             etv.setHelp("save marker track with route");
