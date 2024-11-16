@@ -1,6 +1,7 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
@@ -11,28 +12,28 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     private static final float lowstart = -0.15f;
     private static final float highstart = 0.1f;
 
-    private final CubicSpline cubicSpline;
-    private final CubicSpline cubicSplineHeuristic;
+    private final CubicSpline cubicProfileSpline;
+    private final CubicSpline cubicHeuristicSpline;
 
     protected CostCalcSplineProfile(Object context) {
-        cubicSplineHeuristic = getCubicSplineHeuristic(getRefHeuristicSpline(context));
-        cubicSpline = getProfileSpline(context);
+        cubicHeuristicSpline = calcHeuristicSpline(getHeuristicRefSpline(context));
+        cubicProfileSpline = getProfileSpline(context);
     }
 
     protected abstract  CubicSpline getProfileSpline(Object context);
-    protected abstract  CubicSpline getRefHeuristicSpline(Object context);
+    protected abstract  CubicSpline getHeuristicRefSpline(Object context);
 
     protected abstract  float getMinDistFactSC0();
 
     protected CubicSpline getProfileSpline(){
-        return cubicSpline;
+        return cubicProfileSpline;
     }
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection) {
         if (dist <= 0.0000001) {
             return 0.0001;
         }
-        return dist * cubicSpline.calc(vertDist / (float) dist) + 0.0001;
+        return dist * cubicProfileSpline.calc(vertDist / (float) dist) + 0.0001;
     }
 
 
@@ -40,18 +41,18 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         if (dist <= 0.0000001) {
             return 0.0;
         }
-        return dist * cubicSplineHeuristic.calc(vertDist / (float) dist) * 0.9999;
+        return dist * cubicHeuristicSpline.calc(vertDist / (float) dist) * 0.9999;
     }
 
     @Override
     public long getDuration(double dist, float vertDist) {
         if (dist >= 0.00001) {
             float slope = vertDist / (float) dist;
-            double spm = cubicSpline.calc(slope);
+            double spm = cubicProfileSpline.calc(slope);
             double v = 3.6/spm;
             mgLog.d(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f",100f*slope,v,spm*dist,dist));
         }
-        return (dist >= 0.00001) ? (long) (1000 * dist * cubicSpline.calc(vertDist / (float) dist)) : 0;
+        return (dist >= 0.00001) ? (long) (1000 * dist * cubicProfileSpline.calc(vertDist / (float) dist)) : 0;
     }
 
     protected CubicSpline getCheckOptSpline(float[] slopes, float[] durations, int surfaceCat,float smMinTarget,int varyat) throws Exception{
@@ -69,23 +70,34 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         };
 //      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
         durations[varyat] = newtonNumeric(durations[varyat],0.00001f,smMin,0.0001f);
-        return checkSpline(new CubicSpline(slopes, durations),surfaceCat);
+        return checkSplineCurvature(new CubicSpline(slopes, durations),surfaceCat);
     }
 
     protected CubicSpline getCheckSpline(float[] slopes, float[] durations, int surfaceCat) throws Exception {
-        return checkSpline(new CubicSpline(slopes, durations),surfaceCat);
+        return checkSplineCurvature(new CubicSpline(slopes, durations),surfaceCat);
     }
 
-    private CubicSpline checkSpline(CubicSpline cubicSpline, int surfaceCat) throws Exception {
+    protected ArrayList<float[]> checkSplineHeuristic(CubicSpline cubicSpline, int surfaceCat)  {
         float xs = lowstart - 0.1f;
         float minmfd = (surfaceCat == 0) ? getMinDistFactSC0() : 1f;
+        ArrayList<float[]> violations = new ArrayList<>();
+        do {
+            xs = xs + 0.01f;
+            // make sure that costs are always lager than Heuristic
+            if (cubicHeuristicSpline !=null ) {
+                float delta = minmfd * cubicSpline.calc(xs) + 0.0001f - cubicHeuristicSpline.calc(xs)*0.9999f;
+                if (delta <0) violations.add(new float[]{xs,delta});
+            }
+            // make sure that spline has always positive curvature
+
+        } while (xs < highstart + 0.2f);
+        return violations;
+    }
+
+    private CubicSpline checkSplineCurvature(CubicSpline cubicSpline,int surfaceCat) throws Exception{
+        float xs = lowstart - 0.1f;
         do {
             xs = xs + 0.001f;
-            // make sure that costs are always lager than Heuristic
-            if (cubicSplineHeuristic!=null && cubicSplineHeuristic.calc(xs)*0.9999f > minmfd * cubicSpline.calc(xs) + 0.0001f) {
-                mgLog.d("SurfaceCat: " + surfaceCat + " slope= " + xs + " heuristic=" + cubicSplineHeuristic.calc(xs) + " Spline=" + cubicSpline.calc(xs) );
-                throw new Exception("CubicSpline of surfaceCat " + surfaceCat + " smaller than heuristic at slope: " + xs);
-            }
             // make sure that spline has always positive curvature
             if (cubicSpline.calcCurve(xs)<0f){
                 throw new Exception("CubicSpline of surfaceCat " + surfaceCat + " has negative curvature at slope: " + xs);
@@ -121,7 +133,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
        Equations solved via Newton Iteration.
      */
 
-    private CubicSpline getCubicSplineHeuristic(CubicSpline refCubicSpline ){
+    private CubicSpline calcHeuristicSpline(CubicSpline refCubicSpline ){
         // cut out a new cubic spline out of the existing one using the to touch points of the tangents
         function tangent = x -> refCubicSpline.calc(x) - refCubicSpline.calcSlope(x) * x;
         function tangDeriv = x -> -refCubicSpline.calcCurve(x) * x;

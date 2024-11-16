@@ -21,7 +21,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         }
     }
 
-    protected CubicSpline getRefHeuristicSpline(Object context) {
+    protected CubicSpline getHeuristicRefSpline(Object context) {
         try {
             return calcSpline(1);
         } catch (Exception e) {
