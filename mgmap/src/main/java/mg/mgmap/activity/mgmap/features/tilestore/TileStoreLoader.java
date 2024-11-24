@@ -17,12 +17,10 @@ package mg.mgmap.activity.mgmap.features.tilestore;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Handler;
-import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.LinearLayout;
 
 import org.mapsforge.core.model.Tile;
 import org.mapsforge.core.util.MercatorProjection;
@@ -46,7 +44,6 @@ import javax.json.JsonObject;
 import javax.json.JsonReader;
 import javax.json.JsonValue;
 
-import mg.mgmap.activity.mgmap.ControlView;
 import mg.mgmap.activity.mgmap.MGMapActivity;
 import mg.mgmap.application.MGMapApplication;
 import mg.mgmap.R;
@@ -61,17 +58,17 @@ public class TileStoreLoader {
 
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 
-    public File storeDir;
-    MGMapApplication application;
-    MGMapActivity activity;
-    MGTileStore mgTileStore;
+    public final File storeDir;
+    final MGMapApplication application;
+    final MGMapActivity activity;
+    final MGTileStore mgTileStore;
 
     public XmlTileSource xmlTileSource;
     BgJobGroup jobGroup;
 
     private class TimerTaskEnableDone implements Runnable{
-        DialogView dialogView;
-        Handler timer;
+        final DialogView dialogView;
+        final Handler timer;
         private TimerTaskEnableDone(DialogView dialogView, Handler timer){
             this.dialogView = dialogView;
             this.timer = timer;
@@ -116,7 +113,6 @@ public class TileStoreLoader {
                     CookieManager.getInstance().removeAllCookies(null);
                     DialogView dialogView = activity.findViewById(R.id.dialog_parent);
                     WebView myWebView = new WebView(activity);
-                    myWebView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dialogView.getHeight()-activity.getControlView().getStatusBarHeight()-activity.getControlView().getNavigationBarHeight()-ControlView.dp(120)));
                     myWebView.getSettings().setJavaScriptEnabled(true);
                     myWebView.getSettings().setJavaScriptCanOpenWindowsAutomatically(true);
 
@@ -152,6 +148,7 @@ public class TileStoreLoader {
                                 jobGroup.doit(); // this is the real retry
                             })
                             .setNegative( "Abort", null)
+                            .setMaximize(true)
                             .show());
 
                     dialogView.setEnablePositive(false);
@@ -188,6 +185,7 @@ public class TileStoreLoader {
     }
 
     private boolean checkRequiredCookies(String cookies){
+        if (xmlTileSource.config.cookiesRequired == null) return true;
         List<String> requiredList = new ArrayList<>( List.of(xmlTileSource.config.cookiesRequired));
         if (cookies != null){
             String[] cookiesA = cookies.split("; ");

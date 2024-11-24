@@ -68,6 +68,7 @@ public class TrackStatisticActivity extends AppCompatActivity {
     private RecyclerView recyclerView = null;
     private TrackStatisticAdapter statisticAdapter = null;
     PrefCache prefCache = null;
+    private final Set<String> allNameKeys = new TreeSet<>();
     private final ArrayList<TrackLog> allEntries = new ArrayList<>();
     private final ArrayList<TrackLog> visibleEntries = new ArrayList<>();
 
@@ -86,12 +87,21 @@ public class TrackStatisticActivity extends AppCompatActivity {
         return application;
     }
 
-    Handler timer = new Handler();
-    Runnable ttReworkState = () -> TrackStatisticActivity.this.runOnUiThread(this::reworkState);
+    final Handler timer = new Handler();
+    final Runnable ttReworkState = () -> TrackStatisticActivity.this.runOnUiThread(this::reworkState);
 
-    Observer reworkObserver = (e) -> {
+    final Observer reworkObserver = (e) -> {
         timer.removeCallbacks(ttReworkState);
         timer.postDelayed(ttReworkState,30);
+    };
+
+    Pref<Boolean> metaLoading;
+    final Observer metaDataObserver = (e) -> {
+        if (!metaLoading.getValue()){ // loading is finished
+            mgLog.d("rework allEntries allEntriesSize="+allEntries.size()+" metaTrackLogsSize="+application.metaTrackLogs.size());
+            application.metaTrackLogs.values().forEach(this::addTrackLog);
+            refreshVisibleEntries();
+        }
     };
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -108,6 +118,7 @@ public class TrackStatisticActivity extends AppCompatActivity {
 
         prefCache = new PrefCache(context);
         prefFilterOn = prefCache.get(R.string.Statistic_pref_FilterOn, false);
+        metaLoading = prefCache.get(R.string.MGMapApplication_pref_MetaData_loading, true);
 
         prefFilterOn.addObserver((e) -> {
             if (prefFilterOn.getValue()){
@@ -196,18 +207,12 @@ public class TrackStatisticActivity extends AppCompatActivity {
         super.onResume();
         mgLog.d();
 
-        Set<String> nameKeys = new TreeSet<>();
-        addTrackLog(nameKeys, application.recordingTrackLogObservable.getTrackLog());
-        addTrackLog(nameKeys, application.routeTrackLogObservable.getTrackLog());
-        addTrackLog(nameKeys, application.availableTrackLogsObservable.selectedTrackLogRef.getTrackLog());
-        for (TrackLog trackLog : application.availableTrackLogsObservable.availableTrackLogs){
-            addTrackLog(nameKeys, trackLog);
-        }
-        synchronized (application.metaTrackLogs){
-            for (TrackLog trackLog : application.metaTrackLogs.values()) {
-                addTrackLog(nameKeys, trackLog);
-            }
-        }
+        addTrackLog(application.recordingTrackLogObservable.getTrackLog());
+        addTrackLog(application.routeTrackLogObservable.getTrackLog());
+        addTrackLog(application.availableTrackLogsObservable.selectedTrackLogRef.getTrackLog());
+        application.availableTrackLogsObservable.availableTrackLogs.forEach(this::addTrackLog);
+        metaLoading.addObserver(metaDataObserver);
+        application.metaTrackLogs.values().forEach(this::addTrackLog);
         refreshVisibleEntries();
 
         prefFullscreen.onChange();
@@ -217,7 +222,9 @@ public class TrackStatisticActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         mgLog.d();
+        metaLoading.deleteObserver(metaDataObserver);
         visibleEntries.clear();
+        allNameKeys.clear();
         allEntries.clear();
         super.onPause();
     }
@@ -226,9 +233,7 @@ public class TrackStatisticActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        for (TrackLog trackLog : application.metaTrackLogs.values()) {
-            trackLog.getPrefSelected().deleteObserver(reworkObserver);
-        }
+        application.metaTrackLogs.values().forEach(trackLog -> trackLog.getPrefSelected().deleteObserver(reworkObserver) );
         ViewGroup qcs = findViewById(R.id.ts_qc);
         qcs.removeAllViews();
         prefCache.cleanup();
@@ -276,12 +281,12 @@ public class TrackStatisticActivity extends AppCompatActivity {
 
 
     // nameKeys contains the nameKey values of all tracks, which are already added
-    public void addTrackLog(Set<String> nameKeys, TrackLog trackLog){
+    public void addTrackLog(TrackLog trackLog){
         if (trackLog == null) return;
-        if (nameKeys.contains(trackLog.getNameKey())) return; // this TrackLog is already added
+        if (allNameKeys.contains(trackLog.getNameKey())) return; // this TrackLog is already added
         TrackLogStatistic statistic = trackLog.getTrackStatistic();
         if (statistic.getNumPoints() == 0) return; // don't show empty tracks, especially possible for marker Tracks
-        nameKeys.add(trackLog.getNameKey());
+        allNameKeys.add(trackLog.getNameKey());
 
         allEntries.add(trackLog);
         trackLog.getPrefSelected().addObserver(reworkObserver);
@@ -298,7 +303,7 @@ public class TrackStatisticActivity extends AppCompatActivity {
     private void reworkState(){
         ArrayList<TrackLog> trackLogs = getSelectedEntries();
         mgLog.i(getNames(trackLogs, false));
-        prefNoneSelected.setValue(trackLogs.size() == 0);
+        prefNoneSelected.setValue(trackLogs.isEmpty());
         prefAllSelected.setValue(visibleEntries.size() == trackLogs.size());
         prefEditAllowed.setValue( trackLogs.size() == 1 );
         boolean bMarker = (trackLogs.size() == 1);
@@ -307,7 +312,7 @@ public class TrackStatisticActivity extends AppCompatActivity {
             if (trackLogs.get(0) == application.markerTrackLogObservable.getTrackLog()) bMarker = false;
         }
         prefMarkerAllowed.setValue(bMarker);
-        boolean bDelete = (trackLogs.size() > 0);
+        boolean bDelete = (!trackLogs.isEmpty());
         if (bDelete){
             if (trackLogs.get(0) == application.recordingTrackLogObservable.getTrackLog()) bDelete = false;
             for (TrackLog trackLog : trackLogs){
@@ -316,14 +321,14 @@ public class TrackStatisticActivity extends AppCompatActivity {
             }
         }
         prefDeleteAllowed.setValue(bDelete);
-        boolean bShare = (trackLogs.size() > 0);
+        boolean bShare = (!trackLogs.isEmpty());
         if (bShare){
             for (TrackLog trackLog : trackLogs){
                 if (!persistenceManager.existsGpx(trackLog.getName())) bShare = false;
             }
         }
         prefShareAllowed.setValue((bShare));
-        prefNoneModified.setValue(getModifiedEntries().size() == 0);
+        prefNoneModified.setValue(getModifiedEntries().isEmpty());
     }
 
     private View.OnClickListener createEditOCL(){
@@ -385,12 +390,12 @@ public class TrackStatisticActivity extends AppCompatActivity {
         return v -> {
             if (!prefNoneSelected.getValue()){
                 ArrayList<TrackLog> trackLogs = getSelectedEntries();
-                if (trackLogs.size() > 0){
+                if (!trackLogs.isEmpty()){
                     TrackLog sel = trackLogs.remove(0);
                     Intent intent = new Intent(TrackStatisticActivity.this, MGMapActivity.class);
                     intent.putExtra("stl",sel.getNameKey());
                     List<String> list = getNames(trackLogs,true);
-                    if (list.size() > 0){
+                    if (!list.isEmpty()){
                         intent.putExtra("atl",list.toString());
                     }
                     intent.setType("mgmap/showTrack");
@@ -420,7 +425,7 @@ public class TrackStatisticActivity extends AppCompatActivity {
         return v -> {
             if (prefShareAllowed.getValue()){
                 ArrayList<TrackLog> trackLogs = getSelectedEntries();
-                if (trackLogs.size() > 0){
+                if (!trackLogs.isEmpty()){
                     Intent sendIntent;
                     String title = "Share ...";
                     if (trackLogs.size() == 1){

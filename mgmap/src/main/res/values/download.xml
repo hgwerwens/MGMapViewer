@@ -7,6 +7,7 @@
     <string name="url_oam_th_el">https://www.openandromaps.org/kartenlegende/elevation-hike-theme</string>
     <string name="url_github_apk_dir">https://github.com/mg4gh/MGMapViewer/tree/master/apk</string>
     <string name="url_github_apk_latest">https://github.com/mg4gh/MGMapViewer/raw/master/apk/</string>
+    <string name="url_gwdg_openandromaps">https://ftp.gwdg.de/pub/misc/openstreetmap/openandromaps/mapsV5/</string>
 
     <string name="preferences_screen_download">Download</string>
     <string name="preferences_screen_desc_download">Download Maps and Software</string>
@@ -16,9 +17,10 @@
         select the entry \"Android mf-V4-map\" and click on the button \"Install others\"
     </string>
 
+    <string name="preferences_dl_maps_direct">DownloadMapsDirect</string>
     <string name="preferences_dl_maps_wd_key">DldMapsKey</string>
     <string name="preferences_dl_maps_wd_title">World</string>
-    <string name="preferences_dl_maps_wd_desc">Download Maps from world</string>
+    <string name="preferences_dl_maps_wd_desc">Download Maps from world (via Browser)</string>
 
     <string name="preferences_dl_maps_eu_key">DldMapsEUKey</string>
     <string name="preferences_dl_maps_eu_title">Europa</string>
@@ -52,4 +54,6 @@
     <string name="preferences_dl_sw_other_title">Download other apk</string>
     <string name="preferences_dl_sw_other_desc">Download the other apk from https://github.com/mg4gh/MGMapViewer</string>
 
+    <string name="button_dl">Download</string>
+    <string name="button_dl_open">Open</string>
 </resources>

@@ -138,7 +138,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
      *  @see <a href="../../../images/MGMapViewer_ViewModel.PNG">MGMapActivity_ViewModel</a> */
     ControlView coView = null;
 
-    ArrayList<FeatureService> featureServices = new ArrayList<>();
+    final ArrayList<FeatureService> featureServices = new ArrayList<>();
 
     /** Reference to the renderThemeStyleMenu - will be set due to the callback getCategories
      * form XmlRenderThemeMenuCallback after reading the themes xml file */
@@ -245,7 +245,6 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         application.prefGps.addObserver(prefGpsObserver);
         application.prefGps.onChange();
         prefCache.get(R.string.preferences_sftp_uploadGpxTrigger, false).addObserver((e) -> new GpxSyncUtil().trySynchronisation(application));
-//        prefCache.dumpPrefs();
         prefTracksVisible = prefCache.get(R.string.preferences_tracks_visible, true);
         prefTracksVisible.addObserver(pcl -> getFS(FSAvailableTrackLogs.class).redraw());
     }
@@ -285,8 +284,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
             }
         }
         for (Layer layer : mapView.getLayerManager().getLayers()){
-            if (layer instanceof TileDownloadLayer) {
-                TileDownloadLayer tileDownloadLayer = (TileDownloadLayer) layer;
+            if (layer instanceof TileDownloadLayer tileDownloadLayer) {
                 tileDownloadLayer.onResume();
             }
         }
@@ -294,9 +292,8 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         application.recordingTrackLogObservable.changed();
         application.availableTrackLogsObservable.changed();
         application.lastPositionsObservable.changed();
-//        application.markerTrackLogObservable.changed();
 
-        FeatureService.getTimer().postDelayed(ttUploadGpxTrigger, 60*1000);
+        FeatureService.getTimer().postDelayed(ttUploadGpxTrigger, 25*1000);
         application.finishAlarm(); // just in case there is one
     }
 
@@ -321,8 +318,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
             }
         }
         for (Layer layer : mapView.getLayerManager().getLayers()){
-            if (layer instanceof TileDownloadLayer) {
-                TileDownloadLayer tileDownloadLayer = (TileDownloadLayer) layer;
+            if (layer instanceof TileDownloadLayer tileDownloadLayer) {
                 tileDownloadLayer.onPause();
             }
         }
@@ -558,6 +554,11 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
                             etPassword.setTransformationMethod(PasswordTransformationMethod.getInstance());
                             return etPassword;
                         }
+                        @Override
+                        public void afterGroupFinished(BgJobGroup jobGroup, int total, int success, int fail) {
+                            BgJobGroupCallback.super.afterGroupFinished(jobGroup, total, success, fail);
+                            prefCache.get(R.string.MGMapActivity_trigger_recreate,"").setValue("trigger recreate at "+System.currentTimeMillis());
+                        }
                     };
                     BgJobGroup bgJobGroup = new BgJobGroup(application, this, "Install zip archive", bgJobGroupCallback );
                     String sUrl = uri.toString().replaceFirst("mgmap-install", "https");
@@ -568,7 +569,6 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
                             Editable edPassword = etPassword.getText();
                             Zipper zipper = new Zipper(edPassword==null?null:edPassword.toString());
                             zipper.unpack(new URL(sUrl), pm.getAppDir(), null, this);
-                            prefCache.get(R.string.MGMapActivity_trigger_recreate,"").setValue("trigger recreate at "+System.currentTimeMillis());
                         }
                     } );
                     bgJobGroup.setConstructed("Download and install "+sUrl);
@@ -863,7 +863,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
 
     public TrackLogRefApproach selectCloseTrack(PointModel pmTap) {
         TrackLogRefApproach bestMatch = new TrackLogRefApproach(null, -1,getMapViewUtility().getCloseThresholdForZoomLevel());
-        for (TrackLog trackLog : application.availableTrackLogsObservable.availableTrackLogs){
+        for (TrackLog trackLog : new ArrayList<>( application.availableTrackLogsObservable.availableTrackLogs) ){
             TrackLogRefApproach currentMatch = trackLog.getBestDistance(pmTap,bestMatch.getDistance());
             if (currentMatch != null){
                 bestMatch = currentMatch;

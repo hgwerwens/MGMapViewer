@@ -23,8 +23,6 @@ import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import mg.mgmap.application.MGMapApplication;
 import mg.mgmap.generic.model.BBox;
@@ -43,8 +41,8 @@ public class MetaDataUtil {
     public static final long MAGIC = 0xAFFEAFFED00FD00FL;
     public static final int VERSION = 0x0200;
 
-    MGMapApplication application;
-    PersistenceManager persistenceManager;
+    final MGMapApplication application;
+    final PersistenceManager persistenceManager;
 
     public MetaDataUtil(MGMapApplication application, PersistenceManager persistenceManager){
         this.application = application;
@@ -71,8 +69,7 @@ public class MetaDataUtil {
                 MetaData metaData = metaDatas.get(mIdx);
 
                 PointModel pm = segment.get(pIdx);
-                if (pm instanceof PointModelImpl) {
-                    PointModelImpl pmi = (PointModelImpl) pm;
+                if (pm instanceof PointModelImpl pmi) {
                     metaData.bBox.extend(pmi);
                     pmi.toBuf(metaData.buf);
                     metaData.numPoints++;
@@ -195,30 +192,6 @@ public class MetaDataUtil {
         }
     }
 
-    public void loadMetaData(ArrayList<String> metaNames){
-        mgLog.i("loading meta files started");
-
-        if (metaNames == null){
-            metaNames = persistenceManager.getMetaNames();
-        }
-        int numMetaNames = metaNames.size();
-        ExecutorService executor = Executors.newFixedThreadPool(8);
-        for (String name : metaNames){
-            executor.execute(() -> {
-                final TrackLog trackLog = new TrackLog();
-                trackLog.setName(name);
-                readMetaData(persistenceManager.openMetaInput(name), trackLog);
-                application.addMetaDataTrackLog(trackLog);
-                if (numMetaNames == application.metaTrackLogs.size()){
-                    mgLog.i("loading meta files finished");
-                }
-            });
-        }
-        executor.shutdown();
-        mgLog.i("loading meta files triggered ("+metaNames.size()+").");
-    }
-
-
     public void loadLaLoBufs(TrackLog trackLog){
         try {
             InputStream in = persistenceManager.openMetaInput(trackLog.getName());
@@ -260,7 +233,7 @@ public class MetaDataUtil {
                 if (buf.getLong() == MAGIC) return buf;
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            mgLog.e(e);
         }
         return null;
     }

@@ -72,6 +72,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -105,7 +107,7 @@ public class MGMapApplication extends Application {
     public final TrackLogObservable<RecordingTrackLog> recordingTrackLogObservable = new TrackLogObservable<>("recordingTrackLog",true);
     public final TrackLogObservable<WriteableTrackLog> markerTrackLogObservable = new TrackLogObservable<>("markerTrackLog",false);
     public final TrackLogObservable<WriteableTrackLog> routeTrackLogObservable = new TrackLogObservable<>("routeTrackLog",true);
-    public final TreeMap<String, TrackLog> metaTrackLogs = new TreeMap<>(Collections.reverseOrder());
+    public final Map<String, TrackLog> metaTrackLogs = Collections.synchronizedMap( new TreeMap<>(Collections.reverseOrder()) );
 
     /** queue for new (unhandled) TrackLogPoint objects */
     public final ArrayBlockingQueue<PointModel> logPoints2process = new ArrayBlockingQueue<>(5000);
@@ -119,7 +121,7 @@ public class MGMapApplication extends Application {
 
     private Setup setup;
     public BaseConfig baseConfig = null;
-    volatile UUID currentRun = null;
+    public volatile UUID currentRun = null;
 
     public void startLogging(File logDir){
         try {
@@ -157,7 +159,7 @@ public class MGMapApplication extends Application {
 
         this.baseConfig = baseConfig;
 
-        persistenceManager = new PersistenceManager(this, baseConfig.getAppDirName());
+        persistenceManager = new PersistenceManager(this, baseConfig.appDirName());
         startLogging(persistenceManager.getLogDir());
         CC.init(this);
         AndroidGraphicFactory.createInstance(this);
@@ -271,60 +273,67 @@ public class MGMapApplication extends Application {
 
         // supervise logging and check timing behaviour, escalate if necessary
         new Thread(() -> {
-            long TIMEOUT = 10000;
-            mgLog.i("logcat supervision: start ");
-            UUID uuid = currentRun;
-            int cnt = 0;
-            final int[] escalationCnt = {0,(int)(SensorManager.PRESSURE_STANDARD_ATMOSPHERE*1000),0,0}; // escalationCnt, last pressure*1000, barometerSensorChangedCnt, pressure*1000
-            BarometerListener.setEscalationCnt(escalationCnt);
-            registerActivityLifecycleCallbacks(new ActivityLifecycleAdapter() {
-                @Override
-                public void onActivityResumed(@NonNull Activity activity) {
-                    super.onActivityResumed(activity);
-                    escalationCnt[0] =  0; // escalation is reset whenever any activity is resumed
-                    finishAlarm();
-                }
-            });
-            long lastCheck = System.currentTimeMillis();
-            while (uuid == currentRun){
-                try {
-                    pLogcat.waitFor(TIMEOUT, TimeUnit.MILLISECONDS );
-                    if (uuid != currentRun){
-                        break; // leave Thread
+            ActivityLifecycleAdapter activityLifecycleAdapter = null;
+            try{
+                long TIMEOUT = 10000;
+                mgLog.i("logcat supervision: start ");
+                UUID uuid = currentRun;
+                int cnt = 0;
+                final int[] escalationCnt = {0,(int)(SensorManager.PRESSURE_STANDARD_ATMOSPHERE*1000),0,0}; // escalationCnt, last pressure*1000, barometerSensorChangedCnt, pressure*1000
+                BarometerListener.setEscalationCnt(escalationCnt);
+                activityLifecycleAdapter = new ActivityLifecycleAdapter() {
+                    @Override
+                    public void onActivityResumed(@NonNull Activity activity) {
+                        super.onActivityResumed(activity);
+                        escalationCnt[0] =  0; // escalation is reset whenever any activity is resumed
+                        finishAlarm();
                     }
-                    int ec = pLogcat.exitValue(); // normal execution will result in an IllegalStateException
-                    synchronized (MGMapApplication.class){
-                        MGMapApplication.class.wait(1000);
-                    }
-                    mgLog.e("logcat supervision: logcat process terminated with exitCode "+ec+". Try to start again.");
-                    startLogging(persistenceManager.getLogDir());
-                    lastCheck = System.currentTimeMillis();
-                } catch (Exception e) {
-                    long now = System.currentTimeMillis();
-                    if (prefGps.getValue() && (recordingTrackLogObservable.getTrackLog() != null) && ((now - lastCheck) > (TIMEOUT*1.5))){ // we might have detected an energy saving problem
-                        mgLog.i("Log supervision Timeout exceeded by factor 1.5; lastCheck="+lastCheck+" now="+now);
-                        if (escalationCnt[2] != 0){ // there is a new pressure changed event
-                            float lastHeight = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE,  escalationCnt[1]/1000f);
-                            float currentHeight = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE,  escalationCnt[3]/1000f);
-                            if (Math.abs(lastHeight-currentHeight) > 5){ // there is some height movement as indicator that position is changing
-                                escalationCnt[0]++;
-                                escalationCnt[1] = escalationCnt[3]; // set new last height value
-                                mgLog.i("escalationCnt="+ Arrays.toString(escalationCnt));
-                            }
+                };
+                registerActivityLifecycleCallbacks(activityLifecycleAdapter);
+                long lastCheck = System.currentTimeMillis();
+                while (uuid == currentRun){
+                    try {
+                        pLogcat.waitFor(TIMEOUT, TimeUnit.MILLISECONDS );
+                        if (uuid != currentRun){
+                            break; // leave Thread
                         }
-                    } else {
-                        escalationCnt[0] = 0;
+                        int ec = pLogcat.exitValue(); // normal execution will result in an IllegalStateException
+                        synchronized (MGMapApplication.class){
+                            MGMapApplication.class.wait(1000);
+                        }
+                        mgLog.e("logcat supervision: logcat process terminated with exitCode "+ec+". Try to start again.");
+                        startLogging(persistenceManager.getLogDir());
+                        lastCheck = System.currentTimeMillis();
+                    } catch (Exception e) {
+                        long now = System.currentTimeMillis();
+                        if (prefGps.getValue() && (recordingTrackLogObservable.getTrackLog() != null) && ((now - lastCheck) > (TIMEOUT*1.5))){ // we might have detected an energy saving problem
+                            mgLog.i("Log supervision Timeout exceeded by factor 1.5; lastCheck="+lastCheck+" now="+now);
+                            if (escalationCnt[2] != 0){ // there is a new pressure changed event
+                                float lastHeight = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE,  escalationCnt[1]/1000f);
+                                float currentHeight = SensorManager.getAltitude(SensorManager.PRESSURE_STANDARD_ATMOSPHERE,  escalationCnt[3]/1000f);
+                                if (Math.abs(lastHeight-currentHeight) > 5){ // there is some height movement as indicator that position is changing
+                                    escalationCnt[0]++;
+                                    escalationCnt[1] = escalationCnt[3]; // set new last height value
+                                    mgLog.i("escalationCnt="+ Arrays.toString(escalationCnt));
+                                }
+                            }
+                        } else {
+                            escalationCnt[0] = 0;
+                        }
+                        if (escalationCnt[0] > 3){
+                            mgLog.w("try to notify user ...");
+                            notifyAlarm();
+                        }
+                        if (++cnt % 6 == 0){
+                            mgLog.i("logcat supervision: OK. (running "+(cnt/6)+" min)");
+                        }
+                        lastCheck = now;
+                        escalationCnt[2] = 0; // reset cnt of pressure change events
                     }
-                    if (escalationCnt[0] > 3){
-                        mgLog.w("try to notify user ...");
-                        notifyAlarm();
-                    }
-                    if (++cnt % 6 == 0){
-                        mgLog.i("logcat supervision: OK. (running "+(cnt/6)+" min)");
-                    }
-                    lastCheck = now;
-                    escalationCnt[2] = 0; // reset cnt of pressure change events
                 }
+
+            } finally {
+                unregisterActivityLifecycleCallbacks(activityLifecycleAdapter);
             }
         }).start();
 
@@ -332,21 +341,18 @@ public class MGMapApplication extends Application {
     }
 
     public void checkCreateLoadMetaData(boolean onlyNew){
-        ArrayList<String> newNames = ExtrasUtil.checkCreateMeta(persistenceManager, metaDataUtil, elevationProvider);
-        metaDataUtil.loadMetaData(onlyNew?newNames:null);
+        ArrayList<String> newNames = ExtrasUtil.checkCreateMeta(this, this.currentRun);
     }
 
     public void addMetaDataTrackLog(TrackLog trackLog){
         trackStatisticFilter.checkFilter(trackLog);
-        synchronized (metaTrackLogs){
-            metaTrackLogs.put(trackLog.getNameKey(),trackLog);
-        }
+        metaTrackLogs.put(trackLog.getNameKey(),trackLog);
     }
 
     void cleanup(){
         UUID lastRun = currentRun;
         currentRun = UUID.randomUUID();
-        mgLog.i("do cleanup now. lastRun="+lastRun);
+        mgLog.i("do cleanup now. lastRun="+lastRun+" currentRun="+currentRun);
         recordingTrackLogObservable.setTrackLog(null);
         markerTrackLogObservable.setTrackLog(null);
         routeTrackLogObservable.setTrackLog(null);
@@ -362,10 +368,10 @@ public class MGMapApplication extends Application {
         if (pLogcat != null) pLogcat.destroy(); // abort logcat and als Logcat supervision thread
 
         if (baseConfig != null){
-            if (!baseConfig.getAppDirName().equals(Setup.APP_DIR_DEFAULT)){
-                File appDir = new File(getExternalFilesDir(null),baseConfig.getAppDirName());
+            if (!baseConfig.appDirName().equals(Setup.APP_DIR_DEFAULT)){
+                File appDir = new File(getExternalFilesDir(null),baseConfig.appDirName());
                 PersistenceManager.deleteRecursivly(appDir);
-                baseConfig.getSharedPreferences().edit().clear().apply();
+                baseConfig.sharedPreferences().edit().clear().apply();
             }
         }
         if (prefCache != null) prefCache.cleanup();
@@ -410,10 +416,10 @@ public class MGMapApplication extends Application {
             super("availableTrackLogs");
         }
         TrackLogRef noRef = new TrackLogRef(null,-1);
-        public TreeSet<TrackLog> availableTrackLogs = new TreeSet<>(Collections.reverseOrder());
+        public Set<TrackLog> availableTrackLogs = Collections.synchronizedSet(new TreeSet<>(Collections.reverseOrder()));
         public TrackLogRef selectedTrackLogRef = noRef;
 
-        public TreeSet<TrackLog> getAvailableTrackLogs(){
+        public Set<TrackLog> getAvailableTrackLogs(){
             return availableTrackLogs;
         }
         public TrackLogRef getSelectedTrackLogRef(){
@@ -554,11 +560,11 @@ public class MGMapApplication extends Application {
     }
 
     public SharedPreferences getSharedPreferences(){
-        return baseConfig.getSharedPreferences();
+        return baseConfig.sharedPreferences();
     }
 
     public String getPreferencesName() {
-        return baseConfig.getPreferencesName();
+        return baseConfig.preferencesName();
     }
 
     public Setup getSetup() {
