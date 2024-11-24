@@ -1,17 +1,20 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
+
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import mg.mgmap.activity.mgmap.features.routing.profile.CubicSpline.Value;
 import mg.mgmap.generic.util.basic.MGLog;
 
 public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
-    protected static final int maxSL = 6; // SurfaceLevels without MTB scale
+    protected static final int maxSL = 7; // SurfaceLevels without MTB scale
     private static final int deltaUptoDn = 2; // mtbUp = mtbDn + 2 in case only mtbDn is specified
-    private static final int maxUptoDn = 2; // maximum difference mtbUp - mtbDn considered
+    private static final int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
 
+/*  parameters of last commit
 //  Element 0 for heuristic, than subsequent 5 are for surfaceLevel 0-4; Nr 5 is for surfaceLevel 4 on path; subsequent are for mtbscale dependant
     private static final float[] distFactforCostFunct  = {0.0f  , 2.2f  ,1.8f  ,1.5f  ,1.25f ,1.2f  ,0.0f    ,1.1f ,0.0f  ,0.0f  ,0.0f };
     private static final float[] cr                    = {0.009f, 0.005f,0.006f,0.008f,0.012f,0.016f,0.02f   ,0.01f,0.015f,0.020f,0.025f,0.04f,0.1f,0.15f,0.2f,0.25f};
@@ -21,6 +24,23 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private static final float   ref0SMDn = 0.2f;
     private static final float[] deltaSMDn             = {0.17f , 0.1f   ,0.12f ,0.18f ,0.21f ,0.25f ,0.25f   ,0.17f,0.18f ,0.19f  ,0.3f ,0.4f ,0.6f ,0.8f};
     private static final float[] factorDown            = {3.0f , 3.0f   ,3.0f  ,3.0f  ,3.5f  ,4f    ,4.5f     ,3.0f ,3.0f  ,3.0f   ,4.0f ,5f   ,6f   ,6f  };
+
+    private static final int maxSurfaceCat = maxSL + (maxUptoDn+1)*(factorDown.length-maxSL-1);
+    private static final float   refDnSlopeOptStart = -0.035f;
+    private static final float   refDnSlope = -0.2f;
+    private static final float[] slopesAll = { -2f,-0.4f,refDnSlope, refDnSlopeOptStart, 0.0f, 0.1f, 0.4f,2f};
+    private static final float[] slopesNoOpt;
+    private static int indRefDnSlope;   */
+
+//  Element 0 for heuristic, than subsequent 5 are for surfaceLevel 0-5; Nr 6 is for path; subsequent are for mtbscale dependant
+    private static final float[] distFactforCostFunct  = {0.0f   , 2.7f  ,2.3f  ,1.9f  ,1.50f ,1.3f  ,1.2f ,0.0f   ,0.0f  ,0.0f  ,0.0f  ,0.0f };
+    private static final float[] cr                    = {0.0170f, 0.005f,0.006f,0.008f,0.015f,0.020f,0.03f,0.025f ,0.020f,0.025f,0.030f,0.035f,0.06f,0.1f,0.15f,0.2f,0.25f,0.3f};
+    private static final float[] f1u                   = {1.2f   , 1.1f  ,1.15f  ,1.15f,1.15f ,1.3f  ,1.6f ,2.2f   ,1.2f  ,1.25f ,1.3f  ,1.8f  ,2.4f ,3.0f,3.0f ,3.0f,3.5f ,4f };
+    private static final float[] f2u                   = {3.3f   , 3f    ,3f    ,3f    ,3.1f  ,3.3f  ,3.3f ,3.3f   ,3.3f  ,3.3f  ,3.3f  ,3.3f  ,3.5f ,5f  ,6f   ,6f  ,7.0f ,8f};
+    private static final float[] vmax                  = {24.0f  , 42f   ,36f   ,28f   , 24f  ,22f   ,15f  ,21f    ,22f   ,20f   ,18f   ,15f   ,10f  };
+    private static final float refSM20Dn = 0.15f;
+    private static final float[] deltaSM20Dn =           {0.16f  , 0.1f   ,0.12f ,0.18f ,0.21f ,0.25f,0.26f,0.25f  ,0.17f ,0.18f ,0.19f  ,0.3f ,0.4f ,1.0f ,1.5f};
+    private static final float[] factorDown            = {3.0f   , 3.0f   ,3.0f  ,3.1f  ,3.5f  ,4f   ,4.5f ,4.5f   ,3.0f  ,3.0f  ,3.0f   ,4.0f ,6f   ,8f   ,10f  };
 
     private static final int maxSurfaceCat = maxSL + (maxUptoDn+1)*(factorDown.length-maxSL-1);
     private static final float   refDnSlopeOptStart = -0.035f;
@@ -51,26 +71,36 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     }
 
     private void checkAll() {
+        boolean negativeCurvature = false;
         //noinspection unchecked
-        ArrayList<float[]>[] violations = new ArrayList[maxSurfaceCat+1];
-        for ( int surfaceCat = 1 ; surfaceCat <= maxSurfaceCat; surfaceCat++){
-            violations[surfaceCat] = checkSplineHeuristic(getCostSpline(surfaceCat),surfaceCat);
+        ArrayList<Value>[] violations = (ArrayList<Value>[]) new ArrayList[maxSurfaceCat+1];
+        for ( int surfaceCat = 0 ; surfaceCat <= maxSurfaceCat; surfaceCat++){
+            try {
+                CubicSpline cubicSpline = getCostSpline(surfaceCat);
+                if (surfaceCat > 0) {
+                    violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
+                    if (hasCostSpline(surfaceCat)) getDurationSpline(surfaceCat);
+                }
+            } catch (Exception e) {
+                mgLog.e(e.getMessage());
+                negativeCurvature = true;
+            }
         }
         boolean heuristicViolation = false;
         for ( int surfaceCat=0; surfaceCat<violations.length;surfaceCat++) {
             if (violations[surfaceCat]!=null && !violations[surfaceCat].isEmpty()) {
                 heuristicViolation = true;
-                int finalSurfaceCat = surfaceCat;
+                int fSurfaceCat = surfaceCat;
                 mgLog.e(() -> {
-                    StringBuilder msgTxt = new StringBuilder("Violation of Heuristic for SurfaceCat " + finalSurfaceCat + " at: ");
-                    for (float[] violationAt : violations[finalSurfaceCat]){
-                        msgTxt.append(String.format(Locale.ENGLISH, "(%2f,%2f)", violationAt[0] * 100, violationAt[1]));
+                    StringBuilder msgTxt = new StringBuilder(String.format(Locale.ENGLISH,"Violation of Heuristic for SurfaceLevel=%s mtbDn=%s mtbUp=%s at",getSurfaceLevel(fSurfaceCat), getMtbDn(fSurfaceCat), getMtbUp(fSurfaceCat)));
+                    for (Value violationAt : violations[fSurfaceCat]){
+                        msgTxt.append(String.format(Locale.ENGLISH, "(%.1f,%.5f)", violationAt.x() * 100, violationAt.y()));
                     }
                     return msgTxt.toString();
                 });
             }
         }
-        if (heuristicViolation) throw new RuntimeException("Heuristic Violation!");
+        if (heuristicViolation||negativeCurvature) throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
     }
 
     protected CubicSpline getProfileSpline(Object context ) {
@@ -94,108 +124,112 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     }
 
 
-    private CubicSpline calcSpline(boolean costSpline, int surfaceCat) {
+
+    private CubicSpline calcSpline(boolean costSpline, int surfaceCat) throws Exception {
+        int scDn = getCatDn(surfaceCat);
+        int scUp = getCatUp(surfaceCat);
+
+        float crUp = cr[scUp];
+        float f1Up = f1u[scUp];
+        float f2Up = f2u[scUp];
+        float cr0 = cr[scDn];
+        float sm20Dn = refSM20Dn + deltaSM20Dn[scDn];
+        float factorDn = factorDown[scDn];
+        float smMin = scDn < vmax.length ? 3.6f/vmax[scDn]:0f;
+        float distFactCostFunct = scDn < distFactforCostFunct.length ? distFactforCostFunct[scDn] : 0f;
+        float watt =  170f;
+        float watt0 = cr0 <= 0.05 ? 100f:(watt+100)/ 2f;
+
+        return calcSplineSC(costSpline,surfaceCat,crUp,f1Up,f2Up,cr0,sm20Dn,factorDn,smMin,distFactCostFunct,watt,watt0);
+    }
+
+    private CubicSpline calcSplineSC(boolean costSpline, int surfaceCat,float crUp,float f1Up, float f2Up, float cr0,float sm20Dn,float factorDn,float smMin, float distFactCostFunct, float watt, float watt0) throws Exception {
         long t1 = System.nanoTime();
         float ACw = 0.45f;
         float m = 90f;
-        int scDn = getCatDn(surfaceCat);
-        int scUp = getCatUp(surfaceCat);
-        float cr0 = cr[scDn];
 
         float[] slopes;
         float[] durations;
-        float watt =  160f;
-        float watt0 = cr0 < 0.075 ? 120f:watt;
-        boolean allSlopes = cr0 <= 0.04;
+        boolean allSlopes = cr0 <= 0.05;
 
         if (allSlopes) {
             slopes = slopesAll;
             durations = new float[slopes.length];
-            durations[indRefDnSlope] = 3.6f/vmax[scDn];
+            if (smMin==0f) throw new Exception(String.format( Locale.ENGLISH,"vmax not defined for scDn=%s at surfaceLevel=%s",getCatDn(surfaceCat),getSurfaceLevel(surfaceCat)));
+            durations[indRefDnSlope] = smMin;
         } else {
             slopes = slopesNoOpt;
             durations = new float[slopes.length];
         }
-        float refSMDn = ref0SMDn + deltaSMDn[scDn];
-        durations[0] = refSMDn -(slopes[0]-refDnSlope)*12f;
-        durations[1] = refSMDn -(slopes[1]-refDnSlope)*factorDown[scDn];
-        durations[2] = refSMDn -(slopes[2]-refDnSlope)*factorDown[scDn];
+        durations[0] = sm20Dn -(slopes[0]-refDnSlope)*12f;
+        durations[1] = sm20Dn -(slopes[1]-refDnSlope)*factorDn;
+        durations[2] = sm20Dn -(slopes[2]-refDnSlope)*factorDn;
         durations[slopes.length-4] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-4], watt0, cr0, ACw, m) ;
-        durations[slopes.length-3] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, cr[scUp], ACw, m) ;
-        durations[slopes.length-2] = f1u[scUp] /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, cr[scUp], ACw, m)  ;
-        durations[slopes.length-1] = f2u[scUp] /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, cr[scUp], ACw, m)  ;
+        durations[slopes.length-3] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, crUp, ACw, m) ;
+        durations[slopes.length-2] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp, ACw, m)  ;
+        durations[slopes.length-1] = f2Up /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, crUp, ACw, m)  ;
 
-        if (costSpline) {
+        if (costSpline && distFactCostFunct>0) {
             for ( int i = 0; i<durations.length;i++){
-                if     (slopes[i]<=0     && scDn < distFactforCostFunct.length && distFactforCostFunct[scDn]>=1) durations[i] = durations[i] *  distFactforCostFunct[scDn];
-                else if(slopes[i]<=0.12f && scUp < distFactforCostFunct.length && distFactforCostFunct[scUp]>=1) durations[i] = durations[i] * ( 1f + ( distFactforCostFunct[scUp] - 1f)*0.4f );
-                else if(                    scUp < distFactforCostFunct.length && distFactforCostFunct[scUp]>=1) durations[i] = durations[i] * ( 1f + ( distFactforCostFunct[scUp] - 1f)*0.6f );
+                if     (slopes[i]<0     ) durations[i] = durations[i] *  distFactCostFunct;
+                else if(slopes[i]==0.0f ) durations[i] = durations[i] * ( 1f + ( distFactCostFunct - 1f)*0.7f );
+                else                      durations[i] = durations[i] * ( 1f + ( distFactCostFunct - 1f)*0.3f );
             }
         }
 
         CubicSpline cubicSpline;
         if (allSlopes) {
-            try {
-                cubicSpline = getCheckOptSpline(slopes, durations, surfaceCat, durations[indRefDnSlope], indRefDnSlope);
-            } catch (Exception e){
-                throw new RuntimeException(String.format(Locale.ENGLISH, "%s at optimizing surfaceLevel=%s mtbDn=%s mtbUp=%s",e.getMessage(),getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat)));
-            }
+            cubicSpline = getOptSpline(slopes, durations, durations[indRefDnSlope], indRefDnSlope);
             durations[indRefDnSlope] = cubicSpline.calc(slopes[indRefDnSlope]);
-            long t = System.nanoTime() - t1;
-            mgLog.i( ()-> {
-                try {
-                    float slopeMin = cubicSpline.calcMin(-0.13f);
-                    float smMin = cubicSpline.calc(slopeMin);
-                    float smVary = durations[indRefDnSlope];
-                    String type = costSpline ? "Cost":"Duration";
-                    return String.format(Locale.ENGLISH, "Opt %s Spline for SurfaceLevel=%s mtbDn=%s mtbUp=%s t[µsec]=%s. Min at Slope=%.2f, sm=%.3f, vmax=%.2f, smVary=%.3f", type,getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat),t/1000,100f*slopeMin,smMin,3.6f/smMin,smVary);
-                } catch (Exception e) {
-                   return String.format(Locale.ENGLISH, "%s for SurfaceLevel=%s mtbDn=%s mtbUp=%s",e.getMessage(),getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat));
-                }
-            });
         } else {
-            try {
-                cubicSpline = getCheckSpline(slopes, durations, surfaceCat);
-            } catch (Exception e) {
-                throw new RuntimeException(String.format(Locale.ENGLISH, "%s surfaceLevel=%s mtbDn=%s mtbUp=%s",e.getMessage(),getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat)));
-            }
-            mgLog.i( ()-> {
-                try {
-                    float slopeMin = cubicSpline.calcMin(-0.13f);
-                    float smMin = cubicSpline.calc(slopeMin);
-                    return String.format(Locale.ENGLISH, "Spline for SurfaceLevel=%s mtbDn=%s mtbUp=%s.Min at Slope=%.2f, sm=%.3f, vmax=%.2f",getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat),100f*slopeMin,smMin,3.6f/smMin);
-                } catch (Exception e) {
-                    return String.format(Locale.ENGLISH, "%s for SurfaceLevel=%s mtbDn=%s mtbUp=%s",e.getMessage(),getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat));
-                }
-            });
+            cubicSpline = getSpline(slopes, durations);
         }
+
+        String OptSpline = allSlopes ? "Optimized" :"";
+        String SplineType = costSpline ? " Cost":" Duration";
+
+        ArrayList<CubicSpline.Value> negativeCurvatures = cubicSpline.getNegativeCurvaturePoints();
+        if (negativeCurvatures != null) {
+            StringBuilder msg = new StringBuilder(String.format(Locale.ENGLISH,"%s%s Spline for SurfaceLevel=%s mtbDn=%s mtbUp=%s has negative curvature at",OptSpline,SplineType,getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat)));
+            for (CubicSpline.Value negCurvature : negativeCurvatures) {
+                msg.append(": ");
+                msg.append(String.format(Locale.ENGLISH," slope=%.2f",100*negCurvature.x()));
+                msg.append(String.format(Locale.ENGLISH," curve=%.2f",negCurvature.y()));
+            }
+            throw new Exception( msg.toString());
+        }
+
+        long t = System.nanoTime() - t1;
+        mgLog.i( ()-> {
+            try {
+                float slopeMin = cubicSpline.calcMin(-0.13f);
+                float smMinOpt = cubicSpline.calc(slopeMin);
+                float smVary = durations[indRefDnSlope];
+                float sm0 = cubicSpline.calc(0f);
+                return String.format(Locale.ENGLISH, "%s%s Spline for SurfaceLevel=%s mtbDn=%s mtbUp=%s t[µsec]=%s. Min at Slope=%.2f, smMin=%.3f, vmax=%.2f, smVary=%.3f, sm0=%3f, v0=%2f", OptSpline,SplineType,getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat),t/1000,100f*slopeMin,smMinOpt,3.6f/smMin,smVary,sm0,3.6f/sm0);
+            } catch (Exception e) {
+                return String.format(Locale.ENGLISH, "%s for SurfaceLevel=%s mtbDn=%s mtbUp=%s",e.getMessage(),getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat));
+            }
+        });
         return cubicSpline;
     }
 
-    protected CubicSpline getCostSpline(int surfaceCat) {
+    protected CubicSpline getCostSpline(int surfaceCat) throws Exception{
         CubicSpline cubicSpline = SurfaceCatCostSpline[surfaceCat];
         if (cubicSpline == null) {
-            try {
-                cubicSpline = calcSpline(true,surfaceCat);
-                SurfaceCatCostSpline[surfaceCat] = cubicSpline;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+             cubicSpline = calcSpline(true,surfaceCat);
+             SurfaceCatCostSpline[surfaceCat] = cubicSpline;
         }
         return cubicSpline;
     }
 
-    protected CubicSpline getDurationSpline(int surfaceCat){
+    protected CubicSpline getDurationSpline(int surfaceCat) throws Exception{
         CubicSpline cubicSpline;
         cubicSpline = SurfaceCatDurationSpline[surfaceCat];
         if (cubicSpline == null) {
-            try {
-                if (hasCostSpline(surfaceCat)) cubicSpline = calcSpline(false,surfaceCat); // calculate dedicated duration function
-                else                           cubicSpline = getCostSpline(surfaceCat);             // reuse existing cost function = duration function
-                SurfaceCatDurationSpline[surfaceCat] = cubicSpline;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+              if (hasCostSpline(surfaceCat)) cubicSpline = calcSpline(false,surfaceCat); // calculate dedicated duration function
+              else                           cubicSpline = getCostSpline(surfaceCat);             // reuse existing cost function = duration function
+              SurfaceCatDurationSpline[surfaceCat] = cubicSpline;
         }
         return cubicSpline;
     }
@@ -245,9 +279,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     }
 
     private int getCatUp(int surfaceCat){
-        if (surfaceCat==maxSL ) return getCatUp(getSurfaceCat(maxSL-1,-1,4));// for path without mtbscale map upScale to mtbscale 4 except for zero slope
-        if (surfaceCat < maxSL) return surfaceCat;
-        else                     return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        if (surfaceCat==maxSL )      return getCatUp(getSurfaceCat(maxSL-1,-1,4));// for path without mtbscale map upScale to mtbscale 4 except for zero slope
+        else if (surfaceCat < maxSL) return surfaceCat;
+        else                         return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
     }
 
     protected int getMtbDn(int surfaceCat){

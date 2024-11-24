@@ -62,7 +62,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         durations[slopes.length-3] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, cr[surfaceLevel], ACw, m)  ;
         durations[slopes.length-2] = 1.5f /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, cr[surfaceLevel], ACw, m)  ;
         durations[slopes.length-1] = 3.0f /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, cr[surfaceLevel], ACw, m)  ;
-        return getCheckSpline(slopes, durations,surfaceLevel);
+        return getSpline(slopes, durations);
     }
 
     protected CubicSpline getSpline(short surfaceLevel){

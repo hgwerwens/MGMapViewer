@@ -1,10 +1,16 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
+
+import java.util.ArrayList;
+
 /**
  * computes natural cubic spline. Algorithm: <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">...</a>
  */
 public class CubicSpline {
     private final float[][] polynominals;
     private final float[] x;
+
+    public record Value(float x, float y) {
+    }
 
     public CubicSpline(float[] x, float[] y) throws Exception {
         if  ( x.length < 3 ) {
@@ -86,6 +92,15 @@ public class CubicSpline {
             float x1 = x - this.x[in - 1];
             return 2f * polynominals[in][2] + 6f * polynominals[in][3] * x1;
         }
+    }
+
+    public ArrayList<Value> getNegativeCurvaturePoints(){
+        ArrayList<Value> result = new ArrayList<>(0);
+        for (int i=1; i<x.length-1;i++){
+           if (polynominals[i][2]<0)
+               result.add(new Value(x[i - 1], 2 * polynominals[i][2]));
+        }
+        return result.isEmpty()? null : result;
     }
 
     public float calcMin(float start) throws Exception{

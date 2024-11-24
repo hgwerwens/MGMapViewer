@@ -48,10 +48,13 @@ public class CostCalcSplineMTB implements CostCalculator {
                 };
             }
             if ("path".equals(wayTagEval.highway)) {
-                surfaceLevel = (surfaceLevel<=0 || surfaceLevel == 4) ? 5: surfaceLevel; //surfacelevel 5 for surfacelevel 4 on path
-                //noinspection NonStrictComparisonCanBeEquality
-                surfaceLevel = surfaceLevel <= 1 ? 2: surfaceLevel;
-                distFactor = 1f;
+                if (surfaceLevel<=0 || surfaceLevel == 4) {
+                    surfaceLevel = 6;
+                    distFactor = 1f;
+                } else { // a path, which is not raw might be anything ...
+                    surfaceLevel = surfaceLevel <= 1 ? 2 : surfaceLevel;
+                    distFactor = 1.15f;
+                }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
                 surfaceLevel = (surfaceLevel>0) ? surfaceLevel :4;
                 distFactor = 1.0f;
@@ -69,8 +72,12 @@ public class CostCalcSplineMTB implements CostCalculator {
                     distFactor = (float) factors.distFactor;
             }
         }
-        this.surfaceCat = (short) mProfileCalculator.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
-        this.surfaceCatSpline = mProfileCalculator.getCostSpline(surfaceCat);
+        try {
+            this.surfaceCat = (short) mProfileCalculator.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
+            this.surfaceCatSpline = mProfileCalculator.getCostSpline(surfaceCat);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         mfd =  distFactor;
     }
 
@@ -91,11 +98,17 @@ public class CostCalcSplineMTB implements CostCalculator {
     public long getDuration(double dist, float vertDist) {
         if (dist >= 0.00001) {
             float slope = vertDist / (float) dist;
-            float spm =  mProfileCalculator.getDurationSpline(surfaceCat).calc(slope); //mfd*surfaceCatSpline.calc(slope); //
+            float spm ; //mfd*surfaceCatSpline.calc(slope); //
+            try {
+                spm = mProfileCalculator.getDurationSpline(surfaceCat).calc(slope);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
             float cost = mfd*surfaceCatSpline.calc(slope);
             float v = 3.6f/spm;
+            float finalSpm = spm;
             mgLog.d(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f cost=%.2f",
-                    100f*slope,v,spm*dist,dist,surfaceCat,mProfileCalculator.getSurfaceLevel(surfaceCat),mProfileCalculator.getMtbUp(surfaceCat),mProfileCalculator.getMtbDn(surfaceCat),mfd,dist*cost));
+                    100f*slope,v, finalSpm *dist,dist,surfaceCat,mProfileCalculator.getSurfaceLevel(surfaceCat),mProfileCalculator.getMtbUp(surfaceCat),mProfileCalculator.getMtbDn(surfaceCat),mfd,dist*cost));
             return (long) (1000*dist*spm);
         } else return 0;
     }

@@ -93,7 +93,7 @@ public class TagEval {
             if ("bic_no".equals(wayTagEval.bicycle))
                 distFactor = 10;
             else if ( "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) || ( wayTagEval.cycleway != null && "lcn".equals(wayTagEval.network)))
-                distFactor = 1.5;
+                distFactor = 1.45;
             else if (wayTagEval.cycleway != null || "lcn".equals(wayTagEval.network)  )
                 distFactor = 1.8;
             else
