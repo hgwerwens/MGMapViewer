@@ -11,29 +11,40 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private static final float lowstart = -0.15f;
     private static final float highstart = 0.1f;
+    protected abstract int getMaxSurfaceCat();
 
     private final CubicSpline cubicProfileSpline;
     private final CubicSpline cubicHeuristicSpline;
+    protected final CubicSpline[] SurfaceCatCostSpline = new CubicSpline[getMaxSurfaceCat()+1];
+    private Object context;
+
+    //   private final CubicSpline cubicHeuristicRefSpline;
 
     protected CostCalcSplineProfile(Object context) {
+ //       cubicHeuristicRefSpline = getHeuristicRefSpline(context);
+        this.context = context;
         cubicHeuristicSpline = calcHeuristicSpline(getHeuristicRefSpline(context));
         cubicProfileSpline = getProfileSpline(context);
+        checkAll();
     }
 
     protected abstract  CubicSpline getProfileSpline(Object context);
     protected abstract  CubicSpline getHeuristicRefSpline(Object context);
 
     protected abstract  float getMinDistFactSC0();
+    protected abstract  CubicSpline calcSpline(int surfaceCat, Object context) throws Exception;
 
-    protected CubicSpline getProfileSpline(){
+    protected abstract String getSurfaceCatTxt(int surfaceCat);
+/*    protected CubicSpline getProfileSpline(){
         return cubicProfileSpline;
-    }
+    } */
+    protected Object getContext(){return context;}
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection) {
         if (dist <= 0.0000001) {
             return 0.0001;
         }
-        return dist * cubicProfileSpline.calc(vertDist / (float) dist) + 0.0001;
+        return dist * cubicProfileSpline.calc(vertDist / (float) dist) ;
     }
 
 
@@ -41,7 +52,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         if (dist <= 0.0000001) {
             return 0.0;
         }
-        return dist * cubicHeuristicSpline.calc(vertDist / (float) dist) * 0.9999;
+        return dist * cubicHeuristicSpline.calc(vertDist / (float) dist) ;
     }
 
     @Override
@@ -55,7 +66,48 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         return (dist >= 0.00001) ? (long) (1000 * dist * cubicProfileSpline.calc(vertDist / (float) dist)) : 0;
     }
 
-    protected CubicSpline getOptSpline(float[] slopes, float[] durations, float smMinTarget, int varyat) {
+    private void checkAll() {
+        boolean negativeCurvature = false;
+        //noinspection unchecked
+        ArrayList<CubicSpline.Value>[] violations = (ArrayList<CubicSpline.Value>[]) new ArrayList[getMaxSurfaceCat()+1];
+        for ( int surfaceCat = 0 ; surfaceCat < getMaxSurfaceCat(); surfaceCat++){
+            try {
+                CubicSpline cubicSpline = getCostSpline(surfaceCat);
+                if (surfaceCat > 0) {
+                    violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
+                }
+            } catch (Exception e) {
+                mgLog.e(e.getMessage());
+                negativeCurvature = true;
+            }
+        }
+        boolean heuristicViolation = false;
+        for ( int surfaceCat=0; surfaceCat<violations.length;surfaceCat++) {
+            if (violations[surfaceCat]!=null && !violations[surfaceCat].isEmpty()) {
+                heuristicViolation = true;
+                int fSurfaceCat = surfaceCat;
+                mgLog.e(() -> {
+                    StringBuilder msgTxt = new StringBuilder(String.format(Locale.ENGLISH,"Violation of Heuristic for %s at",getSurfaceCatTxt(fSurfaceCat)));
+                    for (CubicSpline.Value violationAt : violations[fSurfaceCat]){
+                        msgTxt.append(String.format(Locale.ENGLISH, "(%.1f,%.5f)", violationAt.x() * 100, violationAt.y()));
+                    }
+                    return msgTxt.toString();
+                });
+            }
+        }
+        if (heuristicViolation||negativeCurvature) throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
+    }
+
+    protected CubicSpline getCostSpline(int surfaceCat) throws Exception{
+        CubicSpline cubicSpline = SurfaceCatCostSpline[surfaceCat];
+        if (cubicSpline == null) {
+            cubicSpline = calcSpline(surfaceCat,getContext() );
+            SurfaceCatCostSpline[surfaceCat] = cubicSpline;
+        }
+        return cubicSpline;
+    }
+
+    protected CubicSpline getsmMinSpline(float[] slopes, float[] durations, float smMinTarget, int varyat) {
  //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
         function smMin = smvary -> {
             try {
@@ -70,6 +122,27 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         };
 //      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
         durations[varyat] = newtonNumeric(durations[varyat],0.00001f,smMin,0.0001f);
+        try {
+            return new CubicSpline(slopes, durations);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, int varyat) {
+        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
+        float curveTarget = 0.001f;
+        function curve = durationvary -> {
+            try {
+                durations[varyat] = durationvary;
+                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
+                return cubicSpline.getCurve(targetat) - curveTarget;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
+//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
+        durations[varyat] = newtonNumeric(durations[varyat],curveTarget/3f, curve,0.0001f);
         try {
             return new CubicSpline(slopes, durations);
         } catch (Exception e) {
@@ -93,8 +166,11 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             xs = xs + 0.01f;
             // make sure that costs are always lager than Heuristic
             if (cubicHeuristicSpline !=null ) {
-                float delta = minmfd * cubicSpline.calc(xs) + 0.0001f - cubicHeuristicSpline.calc(xs)*0.9999f;
-                if (delta <0) violations.add(new CubicSpline.Value(xs,delta));
+                float heuristic = cubicHeuristicSpline.calc(xs);
+                float spline    = cubicSpline.calc(xs);
+                float delta = minmfd * spline - 0.00001f - heuristic/0.9999f;
+                if (delta <0)
+                    violations.add(new CubicSpline.Value(xs,delta));
             }
         } while (xs < highstart + 0.2f);
         return violations;

@@ -94,6 +94,10 @@ public class CubicSpline {
         }
     }
 
+    public float getCurve(int pos){
+        return polynominals[pos+1][2] ;
+    }
+
     public ArrayList<Value> getNegativeCurvaturePoints(){
         ArrayList<Value> result = new ArrayList<>(0);
         for (int i=1; i<x.length-1;i++){

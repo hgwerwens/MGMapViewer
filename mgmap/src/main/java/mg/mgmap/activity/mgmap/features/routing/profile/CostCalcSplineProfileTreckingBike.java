@@ -1,21 +1,28 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
 import java.lang.invoke.MethodHandles;
+import java.util.Locale;
 
 import mg.mgmap.generic.util.basic.MGLog;
 
 public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
 
+    private static final int maxSurfaceCat = 7;
+    private static final float[] slopesAll = new float[]{ -0.6f,-0.4f,-0.2f, -0.02f, 0.0f, 0.08f, 0.2f, 0.4f};
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
-    private final CubicSpline[] SurfaceCatSpline = new CubicSpline[7];
+//    private final CubicSpline[] SurfaceCatSpline = new CubicSpline[maxSurfaceCat];
     protected CostCalcSplineProfileTreckingBike() {
         super(new Object());
-        SurfaceCatSpline[1] = super.getProfileSpline();
+//        SurfaceCatSpline[1] = super.getProfileSpline();
+    }
+
+    protected int getMaxSurfaceCat(){
+        return maxSurfaceCat;
     }
 
     protected CubicSpline getProfileSpline(Object context) {
         try {
-            return calcSpline(1);
+            return calcSpline(1,context);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -23,7 +30,23 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
 
     protected CubicSpline getHeuristicRefSpline(Object context) {
         try {
-            return calcSpline(1);
+            int[] refSurfaceCats = {1};
+            CubicSpline[] refCubicSplines = new CubicSpline[refSurfaceCats.length];
+            for ( int i=0;i<refSurfaceCats.length;i++){
+                int surfaceCat = refSurfaceCats[i];
+                refCubicSplines[i] = getCostSpline(surfaceCat);
+            }
+            float[] minDurations = new  float[slopesAll.length];
+            for ( int s=0;s<slopesAll.length;s++){
+                minDurations[s] = 1e6f;
+                for ( int i=0;i<refSurfaceCats.length;i++){
+                    float mfd = refSurfaceCats[i]==0 ? getMinDistFactSC0():1f;
+                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.000011f ) * 0.9999f;
+                    if (duration < minDurations[s])
+                        minDurations[s] = duration;
+                }
+            }
+            return getSpline(slopesAll,minDurations);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -34,7 +57,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         return (float) TagEval.minDistfSc0;
     }
 
-    private CubicSpline calcSpline(int surfaceLevel) throws Exception {
+    protected CubicSpline calcSpline(int surfaceLevel, Object context) throws Exception {
         float watt0 = 90.0f ;
         float watt = 130.0f;
         float ACw = 0.45f;
@@ -46,7 +69,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         float[] slopes;
         float[] durations;
         if (surfaceLevel <= 3) {
-            slopes = new float[]{ -0.6f,-0.4f,-0.2f, -0.02f, 0.0f, 0.08f, 0.2f, 0.4f};
+            slopes = slopesAll;
             relSlope = new float[]{2.2f,2.3f,1.15f,1.0f};
             durations = new float[slopes.length];
             durations[4] = 1f / getFrictionBasedVelocity(0.0f, watt0, cr[surfaceLevel], ACw, m);
@@ -65,17 +88,26 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         return getSpline(slopes, durations);
     }
 
+    protected String getSurfaceCatTxt(int surfaceCat){
+        return String.format(Locale.ENGLISH,"SurfaceLevel=%s",surfaceCat);
+    }
+
     protected CubicSpline getSpline(short surfaceLevel){
-        CubicSpline cubicSpline = SurfaceCatSpline[surfaceLevel];
+        try {
+            return getCostSpline(surfaceLevel);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+ /*        CubicSpline cubicSpline = SurfaceCatSpline[surfaceLevel];
         if (cubicSpline == null) {
             try {
-                cubicSpline = calcSpline(surfaceLevel);
+                cubicSpline = calcSpline(surfaceLevel,getContext());
                 SurfaceCatSpline[surfaceLevel] = cubicSpline;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-        return cubicSpline;
+        return cubicSpline; */
     }
 
 }

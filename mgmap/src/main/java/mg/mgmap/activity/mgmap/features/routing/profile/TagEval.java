@@ -123,7 +123,7 @@ public class TagEval {
             } else  distFactor = 1.15;
         } else if ("footway".equals(wayTagEval.highway) || "pedestrian".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat < 1) ? 2 : surfaceCat;
-            if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) )
+            if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) || wayTagEval.mtbScale != null || wayTagEval.mtbScaleUp != null )
                 distFactor = 1.0;
             else if ("bic_yes".equals(wayTagEval.bicycle))
                 distFactor = 1.5;
