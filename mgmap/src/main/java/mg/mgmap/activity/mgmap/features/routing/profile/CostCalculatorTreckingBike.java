@@ -22,7 +22,7 @@ public class CostCalculatorTreckingBike implements CostCalculator {
     private final CostCalculatorTwoPieceFunc mProfileCalculator;
     public CostCalculatorTreckingBike(WayAttributs wayTagEval, CostCalculatorTwoPieceFunc profile) {
         mProfileCalculator = profile;
-        oneway = wayTagEval.onewayBic;
+        oneway = wayTagEval.oneway;
         double deltaSlope = 0.0;
         double  distFactor ;
         short surfaceCat = TagEval.getSurfaceCat(wayTagEval);

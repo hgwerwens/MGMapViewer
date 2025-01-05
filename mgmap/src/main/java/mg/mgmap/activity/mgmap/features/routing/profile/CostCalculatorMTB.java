@@ -23,7 +23,7 @@ public class CostCalculatorMTB implements CostCalculator {
 
     public CostCalculatorMTB(WayAttributs wayTagEval, CostCalculatorTwoPieceFunc profile) {
         mProfileCalculator = profile;
-        oneway = wayTagEval.onewayBic;
+        oneway = wayTagEval.oneway;
         double mtbUp = -2;
         double mtbDn = -2;
         double mfud = 1;

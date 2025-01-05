@@ -18,7 +18,9 @@ public class WayAttributs {
 
     public String trackType = null;
     public String network = null;
-    public final boolean onewayBic;
+    public String incline_dir = null;
+    public final boolean oneway;
+
 //    additional tags that might be used in future
 //    public String service = null;
 //    public String trail_visibility = null;
@@ -31,12 +33,12 @@ public class WayAttributs {
 
         String oneway = null;
         String oneway_bic = null;
+
 //        String name = null;
 
         for (Tag tag : way.tags) {
             switch (tag.key) {
                 case "highway":
-//                    accessible = true;
                     highway = tag.value;
                     break;
                 case "surface":
@@ -71,11 +73,14 @@ public class WayAttributs {
                 case "oneway:bicycle":
                     oneway_bic = tag.value;
                     break;
-                case "smoothness":
-                    boolean smoothness = true;
+                case "incline_dir":
+                    incline_dir = tag.value;
                     break;
      /*           case "name":
                     name = tag.value;
+                    break;
+                case "smoothness":
+                    boolean smoothness = true;
                     break;
                 case "service":
                     service = tag.value; */
@@ -86,7 +91,8 @@ public class WayAttributs {
                 "motorway".equals(highway) || "trunk".equals(highway))) {
             accessible = false;
         } */
-        this.onewayBic = ( "yes".equals(oneway) && !"ow_bic_no".equals(oneway_bic));
+        this.oneway = ( "yes".equals(oneway) && !"ow_bic_no".equals(oneway_bic));
+
     }
 
     public Object getDerivedData() {

@@ -17,7 +17,7 @@ public class CostCalcSplineTreckingBike implements CostCalculator {
 
     public CostCalcSplineTreckingBike(WayAttributs wayTagEval, CostCalcSplineProfileTreckingBike profile) {
         mProfileCalculator = profile;
-        oneway = wayTagEval.onewayBic;
+        oneway = wayTagEval.oneway;
 
         float  distFactor ;
         short surfaceCat = TagEval.getSurfaceCat(wayTagEval);

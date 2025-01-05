@@ -7,17 +7,18 @@ import mg.mgmap.generic.graph.WayAttributs;
 import mg.mgmap.generic.util.basic.MGLog;
 
 public class CostCalcSplineMTB implements CostCalculator {
+    enum dir {up,down,none,oneway}
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 
     private final float mfd;
-    private final boolean oneway;
+    private final dir direction;
     private final CubicSpline surfaceCatSpline;
     private final short surfaceCat;
     private final CostCalcSplineProfileMTB mProfileCalculator;
 
     public CostCalcSplineMTB(WayAttributs wayTagEval, CostCalcSplineProfileMTB profile) {
         mProfileCalculator = profile;
-        oneway = wayTagEval.onewayBic;
+        dir direction = null;
         int mtbUp = -1;
         int mtbDn = -1;
         float  distFactor;
@@ -48,7 +49,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 };
             }
             if ("path".equals(wayTagEval.highway)) {
-                if (surfaceLevel<=0 || surfaceLevel == 4) {
+                if (surfaceLevel<=0 || surfaceLevel == 4 || mtbUp >= 0 || mtbDn >= 0) {
                     surfaceLevel = 6;
                     distFactor = 1f;
                 } else { // a path, which is not raw might be anything ...
@@ -62,7 +63,13 @@ public class CostCalcSplineMTB implements CostCalculator {
                 surfaceLevel = 5; // treat steps as mtb scale 3.
                 mtbDn = 3;
                 mtbUp = 6;
-                distFactor = 1f;
+                distFactor = 2f;
+                if ("up".equals(wayTagEval.incline_dir))
+                    direction = dir.up;
+                else if ("down".equals(wayTagEval.incline_dir))
+                    direction = dir.down;
+                else
+                    direction = dir.none;
             } else {
                 TagEval.Factors factors = TagEval.getFactors(wayTagEval, (short) surfaceLevel);
                 surfaceLevel = factors.surfaceCat;
@@ -78,15 +85,26 @@ public class CostCalcSplineMTB implements CostCalculator {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        if (wayTagEval.oneway)
+            this.direction = dir.oneway;
+        else
+            this.direction = direction;
         mfd =  distFactor;
     }
 
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection){
-        if ( oneway && !primaryDirection)
-            return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + dist * 5;
+        if (direction!=null)
+            if ( direction == dir.oneway && !primaryDirection)
+                return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + dist * 5 + 0.0001;
+            else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
+                return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
+            else if (direction!=dir.oneway)
+                return dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
+            else
+                return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
         else
-            return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist);
+            return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
     }
 
     public double heuristic(double dist, float vertDist) {

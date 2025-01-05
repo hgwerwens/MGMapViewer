@@ -13,8 +13,9 @@ public class TagEval {
         return wayTagEval.highway == null ||
                 "motorway".equals(wayTagEval.highway) || "trunk".equals(wayTagEval.highway) ||
                 "private".equals(wayTagEval.bicycle)  ||
+                ( "bic_no".equals(wayTagEval.bicycle) && !( "path".equals(wayTagEval.highway) || "track".equals(wayTagEval.highway))) ||
                 ( ( "private".equals(wayTagEval.access) || "acc_no".equals(wayTagEval.access) )  &&
-                       !(  "bic_yes".equals(wayTagEval.bicycle)        || "bic_designated".equals(wayTagEval.bicycle) ||
+                       !(  "bic_yes".equals(wayTagEval.bicycle)         || "bic_designated".equals(wayTagEval.bicycle) ||
                             "bic_permissive".equals(wayTagEval.bicycle) || "lcn".equals(wayTagEval.network)            ||
                              "rcn".equals(wayTagEval.network)           || "icn".equals(wayTagEval.network)            ||
                              wayTagEval.mtbScaleUp != null              || wayTagEval.mtbScale != null

@@ -41,7 +41,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
                 minDurations[s] = 1e6f;
                 for ( int i=0;i<refSurfaceCats.length;i++){
                     float mfd = refSurfaceCats[i]==0 ? getMinDistFactSC0():1f;
-                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.000011f ) * 0.9999f;
+                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.00011f ) * 0.9999f;
                     if (duration < minDurations[s])
                         minDurations[s] = duration;
                 }
@@ -92,23 +92,12 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         return String.format(Locale.ENGLISH,"SurfaceLevel=%s",surfaceCat);
     }
 
-    protected CubicSpline getSpline(short surfaceLevel){
+    protected CubicSpline getSpline(short surfaceLevel) {
         try {
             return getCostSpline(surfaceLevel);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
- /*        CubicSpline cubicSpline = SurfaceCatSpline[surfaceLevel];
-        if (cubicSpline == null) {
-            try {
-                cubicSpline = calcSpline(surfaceLevel,getContext());
-                SurfaceCatSpline[surfaceLevel] = cubicSpline;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return cubicSpline; */
     }
-
 }
 

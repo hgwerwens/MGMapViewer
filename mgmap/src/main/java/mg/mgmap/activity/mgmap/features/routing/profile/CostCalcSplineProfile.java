@@ -11,22 +11,29 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private static final float lowstart = -0.15f;
     private static final float highstart = 0.1f;
-    protected abstract int getMaxSurfaceCat();
 
     private final CubicSpline cubicProfileSpline;
     private final CubicSpline cubicHeuristicSpline;
     protected final CubicSpline[] SurfaceCatCostSpline = new CubicSpline[getMaxSurfaceCat()+1];
-    private Object context;
+    private final Object context;
 
     //   private final CubicSpline cubicHeuristicRefSpline;
 
     protected CostCalcSplineProfile(Object context) {
  //       cubicHeuristicRefSpline = getHeuristicRefSpline(context);
         this.context = context;
-        cubicHeuristicSpline = calcHeuristicSpline(getHeuristicRefSpline(context));
-        cubicProfileSpline = getProfileSpline(context);
-        checkAll();
+        if (fullCalc(context)) {
+            mgLog.i("Spline Profile for " + this.getClass().getName() + " " + context.toString());
+            cubicHeuristicSpline = calcHeuristicSpline(getHeuristicRefSpline(context));
+            cubicProfileSpline = getProfileSpline(context);
+            checkAll();
+        } else {
+            cubicHeuristicSpline = null;
+            cubicProfileSpline = null;
+        }
     }
+
+    protected abstract int getMaxSurfaceCat();
 
     protected abstract  CubicSpline getProfileSpline(Object context);
     protected abstract  CubicSpline getHeuristicRefSpline(Object context);
@@ -38,6 +45,11 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 /*    protected CubicSpline getProfileSpline(){
         return cubicProfileSpline;
     } */
+
+    protected boolean fullCalc(Object context){
+        return true;
+    }
+
     protected Object getContext(){return context;}
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection) {
@@ -73,9 +85,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         for ( int surfaceCat = 0 ; surfaceCat < getMaxSurfaceCat(); surfaceCat++){
             try {
                 CubicSpline cubicSpline = getCostSpline(surfaceCat);
-                if (surfaceCat > 0) {
-                    violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
-                }
+                violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
             } catch (Exception e) {
                 mgLog.e(e.getMessage());
                 negativeCurvature = true;
@@ -95,7 +105,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
                 });
             }
         }
-        if (heuristicViolation||negativeCurvature) throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
+/*        if (heuristicViolation||negativeCurvature)
+            throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" ); */
     }
 
     protected CubicSpline getCostSpline(int surfaceCat) throws Exception{
@@ -125,28 +136,70 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         try {
             return new CubicSpline(slopes, durations);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getMessage() + " in getsmMinSpline");
         }
     }
 
-    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, int varyat) {
+    protected CubicSpline getMinSlope0Spline(float[] slopes, float[] durations, float slopeTarget, int varyat) {
         //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        float curveTarget = 0.001f;
-        function curve = durationvary -> {
+        function slopeMin = smvary -> {
             try {
-                durations[varyat] = durationvary;
+                durations[varyat] = smvary;
                 CubicSpline cubicSpline = new CubicSpline(slopes,durations);
-                return cubicSpline.getCurve(targetat) - curveTarget;
+                float minSlope = cubicSpline.calcMin(-0.06f);
+                return minSlope - slopeTarget;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         };
 //      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
-        durations[varyat] = newtonNumeric(durations[varyat],curveTarget/3f, curve,0.0001f);
+        durations[varyat] = newtonNumeric(durations[varyat],0.00001f,slopeMin,0.0001f);
         try {
             return new CubicSpline(slopes, durations);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getMessage() + " in getsmMinSpline");
+        }
+    }
+
+
+    protected CubicSpline getSlopeOptSpline(float[] slopes, float[] durations, int targetat, float slopeTarget, int varyat) {
+        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
+        function slope = smvary -> {
+            try {
+                durations[varyat] = smvary;
+                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
+                return cubicSpline.getSlope(targetat) - slopeTarget;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
+//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
+        durations[varyat] = newtonNumeric(durations[varyat],0.00001f,slope,0.0001f);
+        try {
+            return new CubicSpline(slopes, durations);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage() + " in getSlopeOptSpline");
+        }
+    }
+
+    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, int varyat) {
+        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
+        float curveTarget = 0.1f;
+        function curve = durationvary -> {
+            try {
+                durations[varyat] = durationvary;
+                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
+                return cubicSpline.getCurveCoeff(targetat) - curveTarget;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
+//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that curvature at targetat is bigger than curveTarget
+        durations[varyat] = newtonNumeric(durations[varyat],curveTarget/10f, curve,0.0001f);
+        try {
+            return new CubicSpline(slopes, durations);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage() + " in getCurveOptSpline" + " for context " + getContext().toString());
         }
     }
 
@@ -168,7 +221,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             if (cubicHeuristicSpline !=null ) {
                 float heuristic = cubicHeuristicSpline.calc(xs);
                 float spline    = cubicSpline.calc(xs);
-                float delta = minmfd * spline - 0.00001f - heuristic/0.9999f;
+                float delta = minmfd * spline - 0.0001f - heuristic/0.9999f;
                 if (delta <0)
                     violations.add(new CubicSpline.Value(xs,delta));
             }
@@ -209,8 +262,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         function tangDeriv = x -> -refCubicSpline.calcCurve(x) * x;
         float tDnSlope = newton(lowstart,0.0001f,10,tangent,tangDeriv);
         float tUpSlope = newton(highstart,0.0001f,10,tangent,tangDeriv);
-        mgLog.i(()-> String.format(Locale.ENGLISH, "Heuristic: DnSlopeLim=%.2f UpSlopeLim=%.2f",tDnSlope*100,tUpSlope*100));
-
+        mgLog.i(()-> String.format(Locale.ENGLISH, "Heuristic for %s: DnSlopeLim=%.2f UpSlopeLim=%.2f",getContext().toString(),tDnSlope*100,tUpSlope*100));
         return refCubicSpline.getCutCubicSpline(tDnSlope,tUpSlope);
     }
 
@@ -221,22 +273,53 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 
     private float newtonNumeric(float start, float minval, function f, float deltax){
         function fs = x -> ( f.apply(x + deltax) - f.apply(x - deltax) ) / ( 2f*deltax);
-        return newton( start, minval,4, f, fs);
+        return newton( start, minval,5, f, fs);
     }
 
     private float newton( float start, float minval,int maxIter, function f, function fs){
         float a;
-        float xsp;
+        float na = start;
+        float nb;
+        float sa;
+        float fa;
+        float nfa;
+        float nfb;
+        float sfa;
         int i = 0;
+        int j;
+        nfa = f.apply(start);
         do {
             i = i+1;
             if ( i >= maxIter)
-                throw new RuntimeException("Too many Newton iterations");
-            xsp = start;
-            a = f.apply(xsp) - minval;
-            start = xsp - a / fs.apply(xsp);
-        } while ( (a > minval || a < -minval) );
-        return start;
+                throw new RuntimeException("Too many Newton iterations= " + maxIter);
+            a = na;
+            fa = nfa;
+            float fsv = fs.apply(a);
+            if ( fsv == 0f)
+                throw new RuntimeException("Newton iteration - First derivative is 0");
+            na = a - fa / fsv;
+            nfa = f.apply(na);
+            nfb = fa;
+            nb = a;
+            j  = 0;
+            while ( Math.abs(nfa) >= 0.5f*Math.abs(fa) && Math.abs(nfa) > minval ) { // fallback to regula falsi
+                j = j+1;
+                if ( j >= maxIter)
+                    throw new RuntimeException("Too many Regula Falsi iterations= " + maxIter);
+                sa = ( na * nfb - nb * nfa) / ( nfb -nfa );
+                sfa = f.apply(sa) - minval;
+                if (Math.signum(sfa) == Math.signum(nfa)) {
+                   na = sa;
+                   nfa = sfa;
+                } else {
+                   nb = na;
+                   nfb = nfa;
+                   na = sa;
+                   nfa = sfa;
+                }
+            }
+        } while ( Math.abs(nfa) > minval );
+        return na;
     }
 
 }

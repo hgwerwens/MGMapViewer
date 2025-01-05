@@ -94,36 +94,42 @@ public class CubicSpline {
         }
     }
 
-    public float getCurve(int pos){
+    public float getCurveCoeff(int pos){
         return polynominals[pos+1][2] ;
     }
+    public float getSlope(int pos){
+        return polynominals[pos+1][1] ;
+    }
+    public float getVal(int pos){
+        return polynominals[pos+1][0] ;
+    }
 
-    public ArrayList<Value> getNegativeCurvaturePoints(){
+    public ArrayList<Value> getCurveRadiusForNegCurvaturePoints(){
         ArrayList<Value> result = new ArrayList<>(0);
         for (int i=1; i<x.length-1;i++){
            if (polynominals[i][2]<0)
-               result.add(new Value(x[i - 1], 2 * polynominals[i][2]));
+               result.add(new Value(x[i - 1], (float) Math.pow((1f+polynominals[i][1]*polynominals[i][1]),1.5d) / (2f*polynominals[i][2])));
         }
         return result.isEmpty()? null : result;
     }
 
     public float calcMin(float start) throws Exception{
-        return calcMin(start, 0);
+        int in = geti(start);
+        return calcMin(in, 0);
     }
 
-    private float calcMin(float start, int depth) throws Exception{
+    private float calcMin(int in, int depth) throws Exception{
         // slope needs to be 0 -> quadratic equation
-        int in = geti(start);
         if ( in == 0 || in == this.x.length)
             throw new Exception("Start in first or last linear segment without minimum");
         float p2 = polynominals[in][2]/( 3f*polynominals[in][3]);
         float q  = polynominals[in][1]/(3f*polynominals[in][3]);
         float xmin = polynominals[in][3] <0 ? -p2-(float)Math.sqrt(p2*p2-q)+this.x[in-1] : -p2+(float)Math.sqrt(p2*p2-q)+this.x[in-1]  ;
-        if ( (xmin < this.x[in-1] || xmin > this.x[in]))
-            if (depth < 2)
-               return calcMin(xmin, ++depth);
+        if ( xmin < this.x[in-1] || xmin > this.x[in] || Float.isNaN(xmin))
+            if (depth < 3)
+               return calcMin(in+1, ++depth);
             else
-              throw new Exception("No Minimum found"+start + "in recursion depth" + depth);
+              throw new Exception("No Minimum found in recursion depth" + depth);
         return xmin;
     }
 
