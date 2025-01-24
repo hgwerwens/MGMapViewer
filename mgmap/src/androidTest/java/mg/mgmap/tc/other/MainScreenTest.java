@@ -54,24 +54,22 @@ public class MainScreenTest extends BaseTestCase {
         SystemClock.sleep(1000);
 
         addRegex(".*onClick mi_bbox.*");
-        animateToViewAndClick(R.id.menu_bb);
-        animateToViewAndClick(R.id.mi_bbox);
+        animateMenu(R.id.menu_bb, R.id.mi_bbox);
         assert prefBboxOn.getValue();
 
         PointModelImpl p1_3 = new PointModelImpl(54.427888,13.43528);
         PointModelImpl p2_3 = new PointModelImpl(54.408888,13.45528);
         FSBB fsbb = mgMapActivity.getFS(FSBB.class);
+        while ((fsbb.getP1() == null) || (fsbb.getP2() == null)) SystemClock.sleep(50);
         animateSwipeLatLong(fsbb.getP1(), p1_3);
         animateSwipeLatLong(fsbb.getP2(), p2_3);
 
         addRegex(".*onClick mi_load_from_bb.*");
-        animateToViewAndClick(R.id.menu_bb);
-        animateToViewAndClick(R.id.mi_load_from_bb);
+        animateMenu(R.id.menu_bb, R.id.mi_load_from_bb);
         Assert.assertEquals(3, mgMapApplication.availableTrackLogsObservable.availableTrackLogs.size() );
 
         addRegex(".*onClick mi_bbox.*");
-        animateToViewAndClick(R.id.menu_bb);
-        animateToViewAndClick(R.id.mi_bbox);
+        animateMenu(R.id.menu_bb, R.id.mi_bbox);
         assert !prefBboxOn.getValue();
 
         Assert.assertEquals(3, mgMapApplication.availableTrackLogsObservable.availableTrackLogs.size());

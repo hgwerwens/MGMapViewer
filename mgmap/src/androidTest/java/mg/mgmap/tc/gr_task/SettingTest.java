@@ -60,8 +60,7 @@ public class SettingTest extends BaseTestCase {
 
         setCursorToCenterPos();
         addRegex(".*onClick mi_settings.*");
-        animateToViewAndClick(R.id.menu_task);
-        animateToViewAndClick(R.id.mi_settings);
+        animateMenu(R.id.menu_task, R.id.mi_settings);
 
 // keep this sample code in comment, just in case it will be needed later ... for whatever reason
 //        onView(withId(androidx.preference.R.id.recycler_view))
@@ -91,12 +90,13 @@ public class SettingTest extends BaseTestCase {
 
         setCursorToCenterPos();
         addRegex(".*onClick mi_settings.*");
-        animateToViewAndClick(R.id.menu_task);
-        animateToViewAndClick(R.id.mi_settings);
+        animateMenu(R.id.menu_task, R.id.mi_settings);
         AppCompatActivity settingsActivity = waitForActivity(SettingsActivity.class);
 
-        animateSwipeToPos(new Point(dim.width/2,(dim.height*4)/5), new Point(dim.width/2,dim.height/5));
-        SystemClock.sleep(2000);
+        while (PreferenceUtil.getPreferenceCenter(settingsActivity,R.string.preference_choose_theme_key) == null){
+            animateSwipeToPos(new Point(dim.width/2,(dim.height*4)/5), new Point(dim.width/2,dim.height/5));
+            SystemClock.sleep(1000);
+        }
 
         Assert.assertEquals(elevatexy+"/Elevate.xml", mgMapApplication.getSharedPreferences().getString(mgMapApplication.getResources().getString(R.string.preference_choose_theme_key),""));
 
@@ -125,8 +125,7 @@ public class SettingTest extends BaseTestCase {
 
         setCursorToCenterPos();
         addRegex(".*onClick mi_settings.*");
-        animateToViewAndClick(R.id.menu_task);
-        animateToViewAndClick(R.id.mi_settings);
+        animateMenu(R.id.menu_task, R.id.mi_settings);
         AppCompatActivity settingsActivity = waitForActivity(SettingsActivity.class);
 
         Assert.assertEquals("Graphhopper", mgMapApplication.getSharedPreferences().getString(mgMapApplication.getResources().getString(R.string.preference_choose_search_key),""));

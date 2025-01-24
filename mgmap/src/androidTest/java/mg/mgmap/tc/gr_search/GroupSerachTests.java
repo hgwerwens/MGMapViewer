@@ -59,8 +59,7 @@ public class GroupSerachTests extends BaseTestCase {
         Assert.assertEquals("Graphhopper", mgMapApplication.getPrefCache().get(R.string.preference_choose_search_key, "").getValue());
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Espresso.onView(ViewMatchers.withId(R.id.search_edit_text)).perform(ViewActions.typeText("Hunne"));
@@ -88,7 +87,7 @@ public class GroupSerachTests extends BaseTestCase {
         SystemClock.sleep(1000);
         animateToViewAndClick(R.id.search_result2);
 
-        PointModel pmCenter = getPointModel4Point(getCenterPos());
+        PointModel pmCenter = getPointModel4Point(getCenterPos().point());
         Assert.assertEquals(54.317866, pmCenter.getLat(), 0.00001);
         Assert.assertEquals(13.34888, pmCenter.getLon(), 0.00001);
         SystemClock.sleep(2000);
@@ -103,8 +102,7 @@ public class GroupSerachTests extends BaseTestCase {
         Assert.assertEquals("Graphhopper", mgMapApplication.getPrefCache().get(R.string.preference_choose_search_key, "").getValue());
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Point pSearch = getPoint4PointModel(new PointModelImpl(54.317866, 13.34888));
@@ -125,19 +123,18 @@ public class GroupSerachTests extends BaseTestCase {
 //        Assert.assertEquals("Graphhopper", mgMapApplication.getPrefCache().get(R.string.preference_choose_search_key, "").getValue());
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Espresso.onView(ViewMatchers.withId(R.id.search_edit_text)).perform(ViewActions.typeText("Hunnenstr 13, Garz"));
         SystemClock.sleep(1000);
         Assert.assertEquals(currentActivity.findViewById(R.id.search_result1).getVisibility(), View.INVISIBLE);
 //        Assert.assertEquals ("", waitForView(TextView.class, R.id.search_result1).getText());
-        Espresso.onView(ViewMatchers.withId(R.id.search_edit_text)).perform(ViewActions.typeText(" "), ViewActions.pressImeActionButton());
+        Espresso.onView(ViewMatchers.withId(R.id.search_edit_text)).perform(ViewActions.pressImeActionButton());
         SystemClock.sleep(1000);
         animateToViewAndClick(R.id.search_result1);
 
-        PointModel pmCenter = getPointModel4Point(getCenterPos());
+        PointModel pmCenter = getPointModel4Point(getCenterPos().point());
         Assert.assertEquals(54.317751, pmCenter.getLat(), 0.00001);
         Assert.assertEquals(13.349125, pmCenter.getLon(), 0.00001);
         SystemClock.sleep(2000);
@@ -157,8 +154,7 @@ public class GroupSerachTests extends BaseTestCase {
         prefSearchProvider.setValue("Nominatim");
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Point pSearch = getPoint4PointModel(new PointModelImpl(54.317866, 13.34888));
@@ -179,8 +175,7 @@ public class GroupSerachTests extends BaseTestCase {
 //        Assert.assertEquals("Graphhopper", mgMapApplication.getPrefCache().get(R.string.preference_choose_search_key, "").getValue());
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Espresso.onView(ViewMatchers.withId(R.id.search_edit_text)).perform(ViewActions.typeText("Hunnenstr Garz"));
@@ -191,7 +186,7 @@ public class GroupSerachTests extends BaseTestCase {
         SystemClock.sleep(1000);
         animateToViewAndClick(R.id.search_result1);
 
-        PointModel pmCenter = getPointModel4Point(getCenterPos());
+        PointModel pmCenter = getPointModel4Point(getCenterPos().point());
         Assert.assertEquals(54.317257, pmCenter.getLat(), 0.00001);
         Assert.assertEquals(13.348735, pmCenter.getLon(), 0.00001);
         SystemClock.sleep(2000);
@@ -211,8 +206,7 @@ public class GroupSerachTests extends BaseTestCase {
         prefSearchProvider.setValue("POI");
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Point pSearch = getPoint4PointModel(new PointModelImpl(54.317257, 13.348735));
@@ -231,11 +225,9 @@ public class GroupSerachTests extends BaseTestCase {
         SystemClock.sleep(1000);
         Pref<String> prefSearchProvider = mgMapApplication.getPrefCache().get(R.string.preference_choose_search_key, "");
         prefSearchProvider.setValue("GeoLatLong");
-//        Assert.assertEquals("Graphhopper", mgMapApplication.getPrefCache().get(R.string.preference_choose_search_key, "").getValue());
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Espresso.onView(ViewMatchers.withId(R.id.search_edit_text)).perform(ViewActions.typeText("54.317257, 13.348735"));
@@ -245,7 +237,7 @@ public class GroupSerachTests extends BaseTestCase {
         SystemClock.sleep(1000);
         animateToViewAndClick(R.id.search_result1);
 
-        PointModel pmCenter = getPointModel4Point(getCenterPos());
+        PointModel pmCenter = getPointModel4Point(getCenterPos().point());
         Assert.assertEquals(54.317257, pmCenter.getLat(), 0.00001);
         Assert.assertEquals(13.348735, pmCenter.getLon(), 0.00001);
         SystemClock.sleep(2000);
@@ -265,8 +257,7 @@ public class GroupSerachTests extends BaseTestCase {
         prefSearchProvider.setValue("GeoLatLong");
         setCursorToCenterPos();
         addRegex(".*onClick mi_search.*");
-        animateToViewAndClick(R.id.menu_search);
-        animateToViewAndClick(R.id.mi_search);
+        animateMenu(R.id.menu_search, R.id.mi_search);
         SystemClock.sleep(1000);
 
         Point pSearch = getPoint4PointModel(new PointModelImpl(54.317257, 13.348735));

@@ -22,14 +22,15 @@ import org.mapsforge.core.model.Dimension;
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.core.util.MercatorProjection;
 import org.mapsforge.map.android.view.MapView;
-import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.scalebar.DefaultMapScaleBar;
+import org.mapsforge.map.scalebar.MapScaleBar;
 
 import mg.mgmap.activity.mgmap.MGMapActivity;
 import mg.mgmap.generic.model.BBox;
 import mg.mgmap.generic.model.PointModel;
 import mg.mgmap.generic.model.PointModelImpl;
 import mg.mgmap.generic.model.PointModelUtil;
+import mg.mgmap.generic.util.basic.MGLog;
 
 /**
  * Utility for functionality related to the mapsforge MapView.
@@ -78,6 +79,7 @@ public class MapViewUtility {
         double closeThresholdForZoomLevel = PointModelUtil.getCloseThreshold();
         closeThresholdForZoomLevel = closeThresholdForZoomLevel / (1 << 9);
         closeThresholdForZoomLevel = closeThresholdForZoomLevel * (1 << (25 - currentZoomLevel));
+        MGLog.sd("currentZoomLevel="+currentZoomLevel+" closeThreshold="+closeThresholdForZoomLevel * 1.5);
         return closeThresholdForZoomLevel * 1.5;
     }
 
@@ -98,6 +100,9 @@ public class MapViewUtility {
     public int getZoomLevel() {
         return this.mapView.getModel().mapViewPosition.getZoomLevel();
     }
+    public void setZoomLevel(byte zoom) {
+        this.mapView.getModel().mapViewPosition.setZoomLevel(zoom);
+    }
 
     public PointModel getCenter() {
         return new PointModelImpl(this.mapView.getModel().mapViewPosition.getCenter());
@@ -110,11 +115,6 @@ public class MapViewUtility {
 
     public float getTrackWidth() {
         return DEFAULT_TRACK_WIDTH * mapView.getModel().displayModel.getScaleFactor();
-    }
-
-    public static PointModel getMapDataStoreCenter(MapDataStore mds){
-        LatLong startPos = mds.startPosition();
-        return new PointModelImpl(startPos.getLatitude(), startPos.getLongitude());
     }
 
     public Point getPoint4PointModel(PointModel pm) {
@@ -152,8 +152,11 @@ public class MapViewUtility {
     }
 
     public void setScaleBarVMargin(int vMargin){
-        mapView.getMapScaleBar().setMarginVertical(vMargin);
-        mapView.getMapScaleBar().redrawScaleBar();
+        MapScaleBar mapScaleBar = mapView.getMapScaleBar();
+        if (mapScaleBar != null){
+            mapScaleBar.setMarginVertical(vMargin);
+            mapScaleBar.redrawScaleBar();
+        }
     }
     public void setScaleBarColor(int color){
         if (mapView.getMapScaleBar() instanceof DefaultMapScaleBar mapScaleBar) {
@@ -162,8 +165,11 @@ public class MapViewUtility {
         }
     }
     public void setScaleBarVisibility(boolean visibility){
-        mapView.getMapScaleBar().setVisible(visibility);
-        mapView.invalidate();
+        MapScaleBar mapScaleBar = mapView.getMapScaleBar();
+        if (mapScaleBar != null) {
+            mapScaleBar.setVisible(visibility);
+            mapView.invalidate();
+        }
     }
 
     public boolean getTrackVisibility(){

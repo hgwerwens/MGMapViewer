@@ -60,6 +60,7 @@ public class ShowHideTest extends BaseTestCase {
         setCursorToCenterPos();
         addRegex(".*onClick mi_alpha_layers.*");
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled() );
         assert( !mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled() );
         assert( !mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled() );
@@ -70,13 +71,14 @@ public class ShowHideTest extends BaseTestCase {
 
         LabeledSlider lsl = waitForView(LabeledSlider.class, R.id.slider_map2);
         Point p0 = lsl.getThumbPos(0);
-        animateTo(p0);
+        PointOfView pov = new PointOfView(p0, lsl);
+        animateTo(pov);
         addRegex(".*context=MGMapActivity key=alpha_MAPSFORGE: ruegen.map value=0.0");
-        animateClick(p0);
+        animateClick(pov);
         Assert.assertEquals(0.0f, mgMapActivity.getPrefCache().get("alpha_MAPSFORGE: ruegen.map",0f).getValue(), 0.01f);
         SystemClock.sleep(2000);
-        addRegex(".*context=MGMapActivity key=alpha_MAPSFORGE: ruegen.map value=0.2.");
-        addRegex(".*context=MGMapActivity key=alpha_MAPSFORGE: ruegen.map value=0.3.");
+        addRegex(".*context=MGMapActivity key=alpha_MAPSFORGE: ruegen.map value=0.2.?");
+        addRegex(".*context=MGMapActivity key=alpha_MAPSFORGE: ruegen.map value=0.3.?");
         addRegex(".*context=MGMapActivity key=alpha_MAPSFORGE: ruegen.map value=0.8.?");
         animateSwipeToPos(lsl.getThumbPos(20),lsl.getThumbPos(81));
         Assert.assertEquals(0.8f, mgMapActivity.getPrefCache().get("alpha_MAPSFORGE: ruegen.map",0f).getValue(), 0.01f);
@@ -91,8 +93,7 @@ public class ShowHideTest extends BaseTestCase {
         setCursorToCenterPos();
 
         addRegex(".*onClick mi_marker_edit.*");
-        animateToViewAndClick(R.id.menu_marker);
-        animateToViewAndClick(R.id.mi_marker_edit);
+        animateMenu(R.id.menu_marker, R.id.mi_marker_edit);
 
         animateToPosAndClick(54.323734, 13.359813);
         animateToPosAndClick(54.311409, 13.346893);
@@ -100,6 +101,7 @@ public class ShowHideTest extends BaseTestCase {
 
         addRegex(".*onClick mi_alpha_tracks.*");
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled() );
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled() );
         assert( !mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled() );
@@ -110,8 +112,9 @@ public class ShowHideTest extends BaseTestCase {
 
         LabeledSlider lslRotl = waitForView(LabeledSlider.class, R.id.slider_rotl);
         Point p0 = lslRotl.getThumbPos(0);
-        animateTo(p0);
-        animateClick(p0);
+        PointOfView pov = new PointOfView(p0, lslRotl);
+        animateTo(pov);
+        animateClick(pov);
         Assert.assertEquals(0.0f, mgMapActivity.getPrefCache().get("FSRouting.alphaRoTL",0f).getValue(), 0.001f);
         SystemClock.sleep(2000);
         addRegex(".*context=MGMapActivity key=FSRouting.alphaRoTL value=0.2.");
@@ -149,9 +152,10 @@ public class ShowHideTest extends BaseTestCase {
         SystemClock.sleep(3000); // wait some time to make sure that init meta files is finished
 
         addRegex(".*onClick mi_statistic.*");
-        animateToViewAndClick(R.id.menu_task);
-        animateToViewAndClick(R.id.mi_statistic);
+        animateMenu(R.id.menu_task, R.id.mi_statistic);
         waitForActivity(TrackStatisticActivity.class);
+        waitForPref(prefMetaLoading, false); // make sure that there is no interference with end of meta loading
+        SystemClock.sleep(100);
 
         animateToStatAndClick(".*20221029_122839.*");
         animateToStatAndClick(".*20221025_095831.*");
@@ -163,6 +167,7 @@ public class ShowHideTest extends BaseTestCase {
 
         addRegex(".*onClick mi_hide_stl.*");
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled() );
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled() );
         assert(  mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled() );
@@ -175,6 +180,7 @@ public class ShowHideTest extends BaseTestCase {
 
         addRegex(".*onClick mi_hide_atl.*");
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled() );
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled() );
         assert( !mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled() );
@@ -196,9 +202,10 @@ public class ShowHideTest extends BaseTestCase {
         SystemClock.sleep(3000); // wait some time to make sure that init meta files is finished
 
         addRegex(".*onClick mi_statistic.*");
-        animateToViewAndClick(R.id.menu_task);
-        animateToViewAndClick(R.id.mi_statistic);
+        animateMenu(R.id.menu_task, R.id.mi_statistic);
         waitForActivity(TrackStatisticActivity.class);
+        waitForPref(prefMetaLoading, false); // make sure that there is no interference with end of meta loading
+        SystemClock.sleep(100);
 
         animateToStatAndClick(".*20221029_122839.*");
         animateToStatAndClick(".*20221025_095831.*");
@@ -210,6 +217,7 @@ public class ShowHideTest extends BaseTestCase {
 
         addRegex(".*onClick mi_hide_all.*");
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled() );
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled() );
         assert(  mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled() );
@@ -221,6 +229,7 @@ public class ShowHideTest extends BaseTestCase {
         SystemClock.sleep(1000);
 
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert(  mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled() );
         assert( !mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled() );
         assert( !mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled() );
@@ -238,8 +247,7 @@ public class ShowHideTest extends BaseTestCase {
         setCursorToCenterPos();
 
         addRegex(".*onClick mi_marker_edit.*");
-        animateToViewAndClick(R.id.menu_marker);
-        animateToViewAndClick(R.id.mi_marker_edit);
+        animateMenu(R.id.menu_marker, R.id.mi_marker_edit);
 
         animateToPosAndClick(54.323734, 13.359813);
         animateToPosAndClick(54.311409, 13.346893);
@@ -247,6 +255,7 @@ public class ShowHideTest extends BaseTestCase {
 
         addRegex(".*onClick mi_hide_mtl.*");
         animateToViewAndClick(R.id.menu_show_hide);
+        waitForPref(prefMenuInflated, true);
         assert (mgMapActivity.findViewById(R.id.mi_alpha_layers).isEnabled());
         assert (mgMapActivity.findViewById(R.id.mi_alpha_tracks).isEnabled());
         assert (!mgMapActivity.findViewById(R.id.mi_hide_stl).isEnabled());

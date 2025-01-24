@@ -22,8 +22,8 @@ import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import org.mapsforge.core.model.Dimension;
+import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.layer.Layer;
-import org.mapsforge.map.layer.renderer.TileRendererLayer;
 
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -32,6 +32,7 @@ import java.util.TreeMap;
 
 import mg.mgmap.activity.mgmap.ControlView;
 import mg.mgmap.activity.mgmap.MGMapActivity;
+import mg.mgmap.activity.mgmap.MGMapLayerFactory;
 import mg.mgmap.activity.mgmap.view.ControlMVLayer;
 import mg.mgmap.activity.mgmap.view.HgtGridView;
 import mg.mgmap.activity.mgmap.FeatureService;
@@ -47,8 +48,6 @@ import mg.mgmap.generic.model.WriteablePointModelImpl;
 import mg.mgmap.generic.util.basic.MGLog;
 import mg.mgmap.generic.model.PointModelUtil;
 import mg.mgmap.generic.util.Pref;
-import mg.mgmap.generic.util.hints.AbstractHint;
-import mg.mgmap.generic.util.hints.NewHgtHint;
 import mg.mgmap.generic.view.DialogView;
 import mg.mgmap.generic.view.ExtendedTextView;
 
@@ -62,6 +61,8 @@ public class FSBB extends FeatureService {
     private final Pref<Boolean> prefAutoDlHgt = getPref(R.string.FSBB_pref_autoDlHgt_key, true);
     private final Pref<String> prefAutoDlHgtAsked = getPref(R.string.FSBB_pref_autoDlHgt_AskedList, "");
     private final Pref<Integer> prefBBActionLayer = getPref(R.string.FSBB_pref_bb_action_layer, 0);
+    private final Pref<Boolean> prefBBLoadTransparentLayers = getPref(R.string.FSBB_pref_load_transparent_layer, false);
+    private final Pref<String> prefLayerConfig = getPref(MGMapLayerFactory.PREF_LAYER_CONFIG, "");
 
     private final Pref<Boolean> triggerLoadFromBB = new Pref<>(Boolean.FALSE);
     private final Pref<Boolean> prefLoadFromBBEnabled = new Pref<>(Boolean.FALSE);
@@ -70,10 +71,9 @@ public class FSBB extends FeatureService {
     private final Pref<Boolean> triggerTSLoadAll = new Pref<>(Boolean.FALSE);
     private final Pref<Boolean> triggerTSDeleteAll = new Pref<>(Boolean.FALSE);
 
-    private final TreeMap<String, Layer> tsAndHgtLayerEntries = identifyTsAndHgt();
+    private TreeMap<String, Layer> tsAndHgtLayerEntries = identifyTsAndHgt();
     private TreeMap<String, Layer> visibleTsAndHgtLayerEntries;
     private boolean initSquare = false;
-    final private AbstractHint hgtHint;
 
     public FSBB(MGMapActivity mmActivity) {
         super(mmActivity);
@@ -88,8 +88,10 @@ public class FSBB extends FeatureService {
         prefAutoDlHgt.addObserver((e) -> {
             if (!prefAutoDlHgt.getValue()) prefAutoDlHgtAsked.setValue("");
         });
-        hgtHint = new NewHgtHint(getActivity(), getApplication().getHgtProvider());
-        hgtHint.addGotItAction(()-> getApplication().getHgtProvider().loadHgt(getActivity(), true, getApplication().getHgtProvider().getEhgtList(), null, null) );
+        prefLayerConfig.addObserver(evt -> {
+            tsAndHgtLayerEntries = identifyTsAndHgt();
+            checkHgtAvailability();
+        });
     }
 
     private WriteablePointModel p1 = null;
@@ -150,7 +152,7 @@ public class FSBB extends FeatureService {
         prefBboxOn.setValue(false);
         refreshObserver.onChange();
         getTimer().postDelayed(ttCheckHgt, 100) ;
-        getTimer().postDelayed(hgtHint, 500);
+//        getTimer().postDelayed(hgtHint, 500);
     }
 
     @Override
@@ -329,14 +331,17 @@ public class FSBB extends FeatureService {
     }
 
     private TreeMap<String, Layer> identifyTsAndHgt(){
+        MGMapLayerFactory mapLayerFactory = getMapLayerFactory();
         TreeMap<String, Layer> layerEntries = new TreeMap<>();
-        for (Map.Entry<String, Layer> entry : getMapLayerFactory().getMapLayers().entrySet()){
-            if (entry.getValue() instanceof MGTileStoreLayer mgTileStoreLayer) {
+        for (int idx=0; idx< MGMapLayerFactory.NUM_MAP_LAYERS; idx++){
+            String key = mapLayerFactory.getMapLayerKey(idx);
+            Layer layer = mapLayerFactory.getMapLayer(idx);
+            if (layer instanceof MGTileStoreLayer mgTileStoreLayer) {
                 if (mgTileStoreLayer.getMGTileStore().hasConfig()){
-                    layerEntries.put(entry.getKey(), entry.getValue());
+                    layerEntries.put(key, layer);
                 }
-            } else if (entry.getValue() instanceof HgtGridView) {
-                layerEntries.put(entry.getKey(), entry.getValue());
+            } else if (layer instanceof HgtGridView) {
+                layerEntries.put(key, layer);
             }
         }
         return layerEntries;
@@ -345,7 +350,7 @@ public class FSBB extends FeatureService {
     private TreeMap<String, Layer> identifyVisibleTsAndHgt() {
         TreeMap<String, Layer> visibleTsAndHgtLayerEntries = new TreeMap<>();
         for (Map.Entry<String, Layer> entry : tsAndHgtLayerEntries.entrySet()) {
-            if (entry.getValue().isVisible()){
+            if (entry.getValue().isVisible() || prefBBLoadTransparentLayers.getValue()){
                 visibleTsAndHgtLayerEntries.put(entry.getKey(), entry.getValue());
             }
         }
@@ -355,12 +360,13 @@ public class FSBB extends FeatureService {
 
     void checkHgtAvailability(){
         if (prefAutoDlHgt.getValue()){
-            for (Map.Entry<String, Layer> entry : tsAndHgtLayerEntries.entrySet()){
-                if ((entry.getValue() instanceof TileRendererLayer) && (!prefAutoDlHgtAsked.getValue().contains("\"" + entry.getKey() + "\""))){
-                    prefAutoDlHgtAsked.setValue(prefAutoDlHgtAsked.getValue()+" \""+entry.getKey()+"\"");
-                    BBox bBox = BBox.fromBoundingBox(((TileRendererLayer)entry.getValue()).getMapDataStore().boundingBox());
-                    mgLog.i("layer="+entry.getKey()+" bbox="+bBox);
-                    loadHgt(bBox, false, entry.getKey(), null);
+            for (Map.Entry<MapDataStore, String> entry : getActivity().getMapLayerFactory().getMapDataStoreMap().entrySet()){
+                String id = "\""+entry.getValue()+"\"";
+                if (!prefAutoDlHgtAsked.getValue().contains(id)){
+                    prefAutoDlHgtAsked.setValue(prefAutoDlHgtAsked.getValue()+" "+id);
+                    BBox bBox = BBox.fromBoundingBox(entry.getKey().boundingBox());
+                    mgLog.d("layer="+id+" bbox="+bBox);
+                    loadHgt(bBox, false, id, null);
                 }
             }
         }
@@ -465,8 +471,8 @@ public class FSBB extends FeatureService {
 
     private void dropHgt(BBox bBox, HgtGridView hgtLayer){
         ArrayList<String> hgtNames = new ArrayList<>();
-        for (int latitude = PointModelUtil.getLower(bBox.minLatitude); latitude<PointModelUtil.getLower(bBox.maxLatitude)+1; latitude++ ) {
-            for (int longitude = PointModelUtil.getLower(bBox.minLongitude); longitude < PointModelUtil.getLower(bBox.maxLongitude) + 1; longitude++) {
+        for (int latitude = PointModelUtil.getLower(bBox.minLatitude)+1; latitude<PointModelUtil.getLower(bBox.maxLatitude); latitude++ ) {
+            for (int longitude = PointModelUtil.getLower(bBox.minLongitude)+1; longitude < PointModelUtil.getLower(bBox.maxLongitude); longitude++) {
                 String hgtName = HgtProvider.getHgtName(latitude, longitude);
                 hgtNames.add(hgtName);
             }

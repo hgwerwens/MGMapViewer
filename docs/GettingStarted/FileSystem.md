@@ -4,9 +4,14 @@
 
 
 1. Storage location: The main storage location of this app is  
-   `/<sdcard>/Andorid/data/<flavorType>/files/MGMapViewer`  
-   where \<sdcard> is not necessarily a real sdcard. It's rather the default external storage location. Often the path is "/storage/emulated/0".
-   Sometimes the term "internal storage" or "main storage" is used. 
+   `/sdcard/Andorid/data/<flavorType>/files/MGMapViewer`  
+   where `sdcard` is not a real sdcard. It's rather the default external storage location of Android. 
+   Typically it's a symlink to `/storage/self/primary`, which again is a symlink to `/storage/emulated/0`.
+   Depending on your device there might be diffetent names. In any case it has following typpical layout:
+   
+      <img src="./sdcard_fs.jpg" width="150" />&nbsp;
+
+   
    The \<flavorType\> is depending on your installation one of these values
       - de.soft4mg.mgmap.rel (official playstore variant)
       - de.soft4mg.mgmap     (debug version of playstore flavor - apk only installable via AndroidStudio)
@@ -16,19 +21,20 @@
    Remember the storage location, you might need it. Blame Google, if you don't like it :-)
 
    Keep in mind that the uninstall of the app deletes this directory including all data!  
-   With each Android version it became more difficult to access this location with a file manager on the device. 
-   Currently (Android 13) you can use "Dateimanager+" and "QuickEdit" (after granting permissions) to manipulate files in this tree. 
-   Alternatively you can access this file system via PC or Laptop and
-   a USB cable. 
+   With each Android version it became more difficult to access this location with a file manager on the device. Now (Android 15) access doesn't work any longer. 
    
-   Update: With Android 14 the access becomes again more restrictive. The above mentioned apps still work, when the MGMapViewer app is running.
-   The good news is: There is a new feature [file manager](../Features/FurtherFeatures/FileManager/filemanager.md). It allows you to show, edit,
+   With a USB cable connected to your device you can access the /sdcard folder - on a PC this folder is shown as the "root" folder of your device.
+   
+   But there is also a good news: There is a new feature [file manager](../Features/FurtherFeatures/FileManager/filemanager.md). It allows you to show, edit,
    share and delete all files as needed.
 
 
 2. The app creates below the MGMapViewer directory new subdirectories:
 ```
    MGMapViewer/apk/                          // to store downloaded apk
+              /backup                        // backup and restore related data
+                     /backup                 // contains backup related files
+                     /restore                // contains restore related files
               /config/                       // configuration data
                      /search/                // search configuration data
               /hgt/                          // store hgt height data files

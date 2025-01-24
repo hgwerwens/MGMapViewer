@@ -94,7 +94,7 @@
             app:iconSpaceReserved="false"
             />
         <SwitchPreference
-            app:defaultValue="false"
+            app:defaultValue="true"
             app:key="@string/preferences_display_show_km_key"
             app:title="@string/preferences_display_show_km_title"
             app:summary="@string/preferences_display_show_km_desc"
@@ -119,6 +119,13 @@
             app:title="@string/preference_choose_theme_title"
             app:iconSpaceReserved="false"
             />
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="@string/preferences_hill_shading_key"
+            app:summary="@string/preferences_hill_shading_desc"
+            app:title="@string/preferences_hill_shading_title"
+            app:iconSpaceReserved="false"
+            />
 
         <ListPreference
             app:defaultValue="1.0"
@@ -134,7 +141,7 @@
             app:defaultValue="metric"
             app:entries="@array/pref_scalebar_entries"
             app:entryValues="@array/pref_scalebar_values"
-            app:key="scalebar"
+            app:key="@string/preferences_scalebar_key"
             app:negativeButtonText="@string/cancelbutton"
             app:summary="@string/preferences_scalebar_desc"
             app:title="@string/preferences_scalebar"
@@ -144,7 +151,7 @@
             app:defaultValue="de"
             app:entries="@array/pref_language_selection_entries"
             app:entryValues="@array/pref_language_selection_values"
-            app:key="language_selection"
+            app:key="@string/preferences_language_key"
             app:negativeButtonText="@string/cancelbutton"
             app:summary="@string/preferences_language_desc"
             app:title="@string/preferences_language"
@@ -158,7 +165,7 @@
         app:iconSpaceReserved="false"
         >
         <SwitchPreference
-            app:defaultValue="false"
+            app:defaultValue="true"
             app:key="@string/preferences_routingProfile_key"
             app:summary="@string/preferences_routingProfile_desc"
             app:title="@string/preferences_routingProfile_title"
@@ -173,7 +180,7 @@
             />
 
         <SwitchPreference
-            app:defaultValue="false"
+            app:defaultValue="true"
             app:key="@string/preferences_smoothing4routing_key"
             app:summary="@string/preferences_smoothing4routing_desc"
             app:title="@string/preferences_smoothing4routing_title"
@@ -224,6 +231,7 @@
 
     <PreferenceCategory
         app:title="@string/preferences_cat_gnss_title"
+        app:key="@string/preferences_cat_gnss_key"
         app:iconSpaceReserved="false"
         >
         <SwitchPreference
@@ -231,13 +239,6 @@
             app:key="@string/FSPosition_pref_FusedLocationProvider"
             app:summary="@string/preferences_gnss_fused_desc"
             app:title="@string/preferences_gnss_fused_title"
-            app:iconSpaceReserved="false"
-            />
-        <SwitchPreference
-            app:defaultValue="false"
-            app:key="@string/preferences_gnss_locationBuilder_key"
-            app:summary="@string/preferences_gnss_locationBuilder_desc"
-            app:title="@string/preferences_gnss_locationBuilder_title"
             app:iconSpaceReserved="false"
             />
         <EditTextPreference
@@ -267,6 +268,7 @@
 
     <PreferenceCategory
         app:title="@string/preferences_cat_behaviour_title"
+        app:key="@string/preferences_cat_behaviour_key"
         app:iconSpaceReserved="false"
         >
         <SwitchPreference

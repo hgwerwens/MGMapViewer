@@ -43,18 +43,16 @@ import androidx.appcompat.app.AlertDialog;
 
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.core.model.Point;
-import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
+import org.mapsforge.core.util.MercatorProjection;
+import org.mapsforge.core.util.Parameters;
 import org.mapsforge.map.android.view.MapView;
-import org.mapsforge.map.datastore.MapDataStore;
 
 import org.mapsforge.map.layer.Layer;
 import org.mapsforge.map.layer.Layers;
 import org.mapsforge.map.layer.download.TileDownloadLayer;
 
 import org.mapsforge.map.model.DisplayModel;
-import org.mapsforge.map.model.IMapViewPosition;
 import org.mapsforge.map.rendertheme.ExternalRenderTheme;
-import org.mapsforge.map.rendertheme.InternalRenderTheme;
 import org.mapsforge.map.rendertheme.XmlRenderTheme;
 import org.mapsforge.map.rendertheme.XmlRenderThemeMenuCallback;
 import org.mapsforge.map.rendertheme.XmlRenderThemeStyleLayer;
@@ -85,11 +83,11 @@ import mg.mgmap.application.util.PersistenceManager;
 import mg.mgmap.generic.graph.GGraphTileFactory;
 import mg.mgmap.generic.model.BBox;
 import mg.mgmap.generic.model.PointModel;
-import mg.mgmap.generic.model.PointModelImpl;
 import mg.mgmap.generic.model.TrackLogRef;
 import mg.mgmap.generic.model.TrackLogRefApproach;
 import mg.mgmap.generic.model.TrackLogRefZoom;
 import mg.mgmap.generic.model.WriteablePointModel;
+import mg.mgmap.generic.util.BackupUtil;
 import mg.mgmap.generic.util.BgJob;
 import mg.mgmap.generic.util.BgJobGroup;
 import mg.mgmap.generic.util.BgJobGroupCallback;
@@ -128,7 +126,7 @@ import java.util.Set;
  * The main activity of the MgMapViewer. It is based on the mapsforge MapView and provides track logging
  * and modification functionality.
  */
-public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCallback {
+public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCallback,SharedPreferences.OnSharedPreferenceChangeListener{
 
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 
@@ -145,16 +143,17 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
     protected XmlRenderThemeStyleMenu renderThemeStyleMenu;
 
     MGMapLayerFactory mapLayerFactory = null;
-    /** Reference to the MapViewUtility - provides so services around the MapView object */
-    MapViewUtility mapViewUtility = null;
 
     private PrefCache prefCache;
 
     private MapDataStoreUtil mapDataStoreUtil = null;
     private GGraphTileFactory gGraphTileFactory = null;
     private final Runnable ttUploadGpxTrigger = () -> prefCache.get(R.string.preferences_sftp_uploadGpxTrigger, false).toggle();
+    private final Runnable ttCheckFullBackup = () ->
+        BackupUtil.checkFullBackup(MGMapActivity.this, application.getPersistenceManager(), prefCache.get(R.string.preferences_last_full_backup_time, 0L));
     private final PropertyChangeListener prefGpsObserver = (e) -> triggerTrackLoggerService();
     private Pref<Boolean> prefTracksVisible;
+    private List<String> recreatePreferences;
 
     public MGMapApplication getMGMapApplication(){
         return application;
@@ -171,9 +170,6 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
     }
     public PrefCache getPrefCache(){
         return prefCache;
-    }
-    public MapDataStoreUtil getMapDataStoreUtil() {
-        return mapDataStoreUtil;
     }
     public GGraphTileFactory getGGraphTileFactory() {
         return gGraphTileFactory;
@@ -196,29 +192,42 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         }
         setContentView(R.layout.mgmapactivity);
 
+        recreatePreferences = Arrays.asList( // in fact this is not anymore an activity recreate - its rather an internal map recreate
+                getResources().getString(R.string.MGMapActivity_trigger_recreate),
+                getResources().getString(R.string.FSGrad_pref_WayDetails_key),
+                getResources().getString(R.string.Layers_pref_chooseMap1_key),
+                getResources().getString(R.string.Layers_pref_chooseMap2_key),
+                getResources().getString(R.string.Layers_pref_chooseMap3_key),
+                getResources().getString(R.string.Layers_pref_chooseMap4_key),
+                getResources().getString(R.string.Layers_pref_chooseMap5_key),
+                getResources().getString(R.string.preference_theme_changed),
+                getResources().getString(R.string.preferences_hill_shading_key),
+                getResources().getString(R.string.preference_choose_theme_key),
+                getResources().getString(R.string.preferences_scale_key),
+                getResources().getString(R.string.preferences_scalebar_key),
+                getResources().getString(R.string.preferences_language_key));
+
+        initTheme();
+        initMapsforgeNumRenderThreads();
         PointModelUtil.init(getResources().getInteger(R.integer.CLOSE_THRESHOLD));
 
         mapLayerFactory = new MGMapLayerFactory(this);
+        mapDataStoreUtil = new MapDataStoreUtil(mapLayerFactory);
 
         prefCache = new PrefCache(this);
 
         initMapView();
         createLayers();
 
-        mapDataStoreUtil = new MapDataStoreUtil().onCreate(mapLayerFactory, sharedPreferences); // includes init of mapLayerKeys with "none"
-        String themeKey = getResources().getString(R.string.preference_choose_theme_key);
-        getSharedPreferences().edit().putString(themeKey, sharedPreferences.getString(themeKey, "Elevate5.2/Elevate.xml") ).apply(); // set default for theme
-        initSharedPreferencesDone(); // after MapDatastoreUtil creation
+        this.sharedPreferences.registerOnSharedPreferenceChangeListener(this);
         mapViewUtility = new MapViewUtility(this, mapView);
-        initializePosition();
-        mgLog.i("Tilesize initial " + this.mapView.getModel().displayModel.getTileSize());
 
         // don't change orientation when device is rotated
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
 
         coView = getControlView();
         boolean wayDetails = prefCache.get(R.string.FSGrad_pref_WayDetails_key, false).getValue();
-        Pref<Boolean> prefSmooth4Routing = prefCache.get(R.string.preferences_smoothing4routing_key, false);
+        Pref<Boolean> prefSmooth4Routing = prefCache.get(R.string.preferences_smoothing4routing_key, true);
         gGraphTileFactory = new GGraphTileFactory().onCreate(mapDataStoreUtil, application.getElevationProvider(), wayDetails, prefSmooth4Routing);
 
         featureServices.add(new FSTime(this));
@@ -244,7 +253,10 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         // use prefGps from applications prefCache to prevent race conditions during startup phase
         application.prefGps.addObserver(prefGpsObserver);
         application.prefGps.onChange();
-        prefCache.get(R.string.preferences_sftp_uploadGpxTrigger, false).addObserver((e) -> new GpxSyncUtil().trySynchronisation(application));
+        prefCache.get(R.string.preferences_sftp_uploadGpxTrigger, false).addObserver((e) -> {
+            FeatureService.getTimer().postDelayed(()->BackupUtil.checkLatestBackup(MGMapActivity.this, application.getPersistenceManager(), prefCache.get(R.string.preferences_last_full_backup_time, 0L)), 10);
+            FeatureService.getTimer().postDelayed(()->new GpxSyncUtil().trySynchronisation(application), 10000);
+        });
         prefTracksVisible = prefCache.get(R.string.preferences_tracks_visible, true);
         prefTracksVisible.addObserver(pcl -> getFS(FSAvailableTrackLogs.class).redraw());
     }
@@ -294,6 +306,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         application.lastPositionsObservable.changed();
 
         FeatureService.getTimer().postDelayed(ttUploadGpxTrigger, 25*1000);
+        FeatureService.getTimer().postDelayed(ttCheckFullBackup, 100*1000);
         application.finishAlarm(); // just in case there is one
     }
 
@@ -323,12 +336,14 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
             }
         }
         FeatureService.getTimer().removeCallbacks(ttUploadGpxTrigger);
+        FeatureService.getTimer().removeCallbacks(ttCheckFullBackup);
         super.onPause();
     }
 
     @Override
     protected void onDestroy() {
         mgLog.w("Destroy started");
+        this.sharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
         for (int i = featureServices.size() - 1; i >= 0; i--) { // reverse order
             FeatureService microService = featureServices.get(i);
             try {
@@ -345,11 +360,15 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
 
         application.prefGps.deleteObserver(prefGpsObserver);
 
+        mapLayerFactory.onDestroy();
+        mapView.getLayerManager().getLayers().clear(); // cleanup TileRendererLayer (incl DatabaseRenderer etc)
         mapView.destroyAll();
-        mapDataStoreUtil.onDestroy();
         gGraphTileFactory.onDestroy();
         prefCache.cleanup();
-        AndroidGraphicFactory.clearResourceMemoryCache(); // do this as very last action - otherwise some crash might occur
+// Comment out the cleanup as it may cause native crashes due to longer running jobs from DatabaseRenderer in combination with recreate activity tasks.
+// Anyway the question is whether this call makes really sense ...
+// On the other hand threads (like DatabaseRenderer and HillShading should be stopped here (but right now they may still run)
+//        AndroidGraphicFactory.clearResourceMemoryCache(); // do this as very last action - otherwise some crash might occur
         mgLog.w("Destroy finished");
         super.onDestroy();
     }
@@ -386,7 +405,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
 
         mgLog.i("Device scale factor " + DisplayModel.getDeviceScaleFactor());
         mgLog.i("Device screen size " + getResources().getDisplayMetrics().widthPixels + "x" + getResources().getDisplayMetrics().heightPixels);
-        float fs = Float.parseFloat(sharedPreferences.getString(getResources().getString(R.string.preferences_scale_key), Float.toString(DisplayModel.getDefaultUserScaleFactor())));
+        float fs = getUserScaleFactor();
         mgLog.i("User ScaleFactor " + fs);
         if (fs != DisplayModel.getDefaultUserScaleFactor()) {
             DisplayModel.setDefaultUserScaleFactor(fs);
@@ -502,16 +521,14 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
                         @Override
                         public void afterGroupFinished(BgJobGroup jobGroup, int total, int success, int fail) {
                             if (success > 0){
-                                Intent intent = new Intent(MGMapActivity.this, SettingsActivity.class);
-                                intent.putExtra("FSControl.info", MainPreferenceScreen.class.getName());
-                                startActivity(intent);
+                                prefCache.get(R.string.MGMapActivity_trigger_recreate,"").setValue("trigger recreate at "+System.currentTimeMillis()+" due to download map: "+uri);
                             }
                         }
                     }){
                         @Override
                         public String getResultDetails() {
                             if (successCounter > 0){
-                                return super.getDetails() + " finished successful.\n\n Now you can assign this map to a layer";
+                                return super.getDetails() + " finished successful.";
                             } else {
                                 return super.getResultDetails();
                             }
@@ -557,7 +574,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
                         @Override
                         public void afterGroupFinished(BgJobGroup jobGroup, int total, int success, int fail) {
                             BgJobGroupCallback.super.afterGroupFinished(jobGroup, total, success, fail);
-                            prefCache.get(R.string.MGMapActivity_trigger_recreate,"").setValue("trigger recreate at "+System.currentTimeMillis());
+//                            prefCache.get(R.string.MGMapActivity_trigger_recreate,"").setValue("trigger recreate at "+System.currentTimeMillis());
                         }
                     };
                     BgJobGroup bgJobGroup = new BgJobGroup(application, this, "Install zip archive", bgJobGroupCallback );
@@ -679,44 +696,56 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
 
 
 
-
-    /**
-     * There are are three cases distinguished:
-     * 1.) take last position - if it is inside of a Mapsforge Map (of any map layer)
-     * 2.) else take the first Mapsforge Map (in the sequece of map layers) and take the startPosition+startZoom from this
-     * 3.) else take a hardcoded fix position in Heidelberg :-)
-     */
-    protected void initializePosition() {
-        IMapViewPosition mvp = mapView.getModel().mapViewPosition;
-        if (mapDataStoreUtil.getMapDataStore(new BBox().extend(mapViewUtility.getCenter())) == null){ // current position is no inside any Mapsforge Map layer
-            MapDataStore mds = mapDataStoreUtil.getMapDataStore();
-            if (mds != null){ // is there any mapsforge layer
-                mapViewUtility.setCenter(MapViewUtility.getMapDataStoreCenter(mds));
-                mvp.setZoomLevel(mds.startZoomLevel());
-            } else {
-                mapViewUtility.setCenter(new PointModelImpl(49.4057, 8.6789));
-                mvp.setZoomLevel((byte)15);
+    protected void initTheme(){
+        mgLog.d("Theme Asset handling - started");
+        try {
+            //noinspection DataFlowIssue
+            for (String assetName : getAssets().list("")){
+                if (assetName.matches("Elevate.+\\.zip")){ // assume there is only one Elevate<x.y>.zip in the assets path - otherwise entries should be handled sorted
+                    String assetDir = assetName.replace(".zip", "");
+                    if (!new File(application.getPersistenceManager().getThemesDir(), assetDir).exists()){
+                        Zipper zipper = new Zipper(null);
+                        zipper.unpack(application.getAssets().open("Elevate5.5.zip"), new File(application.getPersistenceManager().getThemesDir(),"Elevate5.5"), null, null);
+                        if (getSharedPreferences().getString(getResources().getString(R.string.preference_choose_theme_key),"Elevate.xml").endsWith("Elevate.xml")){
+                            getSharedPreferences().edit().putString(getResources().getString(R.string.preference_choose_theme_key), assetDir+"/Elevate.xml").apply();
+                        }
+                    } else {
+                        mgLog.d("Theme Asset handling - already installed: "+assetName);
+                    }
+                }
             }
+        } catch (Exception e) {
+            mgLog.e(e);
         }
-        mvp.setZoomLevelMax(MapViewUtility.ZOOM_LEVEL_MAX);
-        mvp.setZoomLevelMin(MapViewUtility.ZOOM_LEVEL_MIN);
+        mgLog.d("Theme Asset handling - finished");
     }
 
-
-
+    public void initMapsforgeNumRenderThreads(){
+        int numRenderThreads = Runtime.getRuntime().availableProcessors()+1;
+        try {
+            numRenderThreads = Integer.parseInt( getSharedPreferences().getString(getResources().getString(R.string.preferences_mapsforge_renderThreads),""+numRenderThreads) );
+        } catch (NumberFormatException e) {
+            mgLog.e(e.getMessage());
+        }
+        if (numRenderThreads > 0){
+            Parameters.NUMBER_OF_THREADS = numRenderThreads;
+        }
+        mgLog.d("Mapsforge number of render threads: Parameters.NUMBER_OF_THREADS="+Parameters.NUMBER_OF_THREADS);
+    }
 
     protected XmlRenderTheme getRenderTheme() {
+        String themeName = "";
         try {
             File theme = new File(application.getPersistenceManager().getThemesDir(), sharedPreferences.getString(getResources().getString(R.string.preference_choose_theme_key), "invalid.xml"));
+            themeName = theme.getAbsolutePath();
             ExternalRenderTheme renderTheme = new ExternalRenderTheme( theme.getAbsolutePath() );
             renderTheme.setMenuCallback(this);
             return renderTheme;
         } catch (FileNotFoundException e) {
-            if ((e.getMessage()!=null) && (!e.getMessage().contains("invalid.xml"))){
-                mgLog.e(e.getMessage());
-            }
-            return InternalRenderTheme.DEFAULT;
+            mgLog.e("Theme not found: "+themeName);
+            mgLog.e(e.getMessage());
         }
+        return null;
     }
 
     public XmlRenderThemeStyleMenu getRenderThemeStyleMenu(){
@@ -754,25 +783,40 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         return mapViewUtility;
     }
 
+    public void onSharedPreferenceChanged(SharedPreferences preferences, String key) {
+        // Some preference changes take effect due to mapLayerFactory.recreateMapLayers - those need to be listed in recreatePreferences
+        if (recreatePreferences.contains(key) && (!preferences.getBoolean(getResources().getString(R.string.MGMapApplication_pref_Restart), true))){
+            FeatureService.getTimer().postDelayed(() -> {
+                boolean recreateAllMapsforge = !key.startsWith(MGMapLayerFactory.LAYER_PREF_KEY_PREFIX);
+                if (key.startsWith("mapsforge")){ // R.string.preferences_scale_key, R.string.preferences_scalebar_key, R.string.preferences_language_key
+                    // reset mapsforge settings
+                    mapView.getModel().displayModel.setUserScaleFactor(getUserScaleFactor());
+                    setMapScaleBar();
+                }
+                mgLog.i("recreate: call mapLayerFactory.recreateMapLayers("+recreateAllMapsforge+") due to key="+key+" value="+ preferences.getAll().get(key));
+                mapLayerFactory.recreateMapLayers(recreateAllMapsforge);
 
-    /** Depending on the preferences for the five map layers the corresponding layer object are created. */
+                if ((key.startsWith(MGMapLayerFactory.LAYER_PREF_KEY_PREFIX)) && ("MAPGRID: hgt".equals(preferences.getAll().get(key)))){
+                    mapView.getModel().mapViewPosition.setZoomLevel((byte)7);
+                }
+            }, 10);
+        }
+    }
+
     protected void createLayers() {
         Layers layers = mapView.getLayerManager().getLayers();
-        for (String prefKey : mapLayerFactory.getMapLayerKeys()){
-            String key = sharedPreferences.getString(prefKey, "");
-            mgLog.d("prefKey="+prefKey+" key="+key);
-            Layer layer = mapLayerFactory.getMapLayer(key);
-            if (layer != null){
-                if (!layers.contains(layer)){
-                    layers.add(layer);
-
-                }
-            }
-        }
+        // Depending on the preferences for the five map layers the corresponding layer object are created.
+        mapLayerFactory.recreateMapLayers(true);
         // create additional control layer to be handle tap events. */
         layers.add(new MVLayer() {
             @Override
             protected boolean onTap(WriteablePointModel point) {
+                byte zoomLevel = (byte) MGMapActivity.this.getMapViewUtility().getZoomLevel();
+                long mapSize = MercatorProjection.getMapSize(zoomLevel, TILE_SIZE);
+                int tileX = MercatorProjection.pixelXToTileX( MercatorProjection.longitudeToPixelX( point.getLon() , mapSize) , zoomLevel, TILE_SIZE);
+                int tileY = MercatorProjection.pixelYToTileY( MercatorProjection.latitudeToPixelY( point.getLat() , mapSize) , zoomLevel, TILE_SIZE);
+                mgLog.d("tap Position: "+point);
+                mgLog.d("tap Tile: x="+tileX+" y="+tileY+" z="+zoomLevel);
                 if (getFS(FSPosition.class).check4MapMovingOff(point)) return true;
                 TrackLogRef ref = selectCloseTrack( point );
                 if (ref.getTrackLog() != null){

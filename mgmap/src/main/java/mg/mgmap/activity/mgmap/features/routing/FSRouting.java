@@ -99,8 +99,9 @@ public class FSRouting extends FeatureService {
             1000000, // no limit
             false, // no extra snap, since FSMarker snaps point zoom level dependent
             20, // accept long detours in interactive mode
-            1); // approachLimit 1 is ok, since FSMarker snaps point zoom level dependent
-
+            10); // approachLimit 1 is ok, since FSMarker snaps point zoom level dependent
+                 // 30.11.24: changed to 10 - new maps may contain slight changes, adopt routes to current map
+                 // but still do not snap - so it's possible to recognize this
 
     private final FSMarker.MtlSupportProvider mtlSupportProvider;
 
@@ -225,7 +226,7 @@ public class FSRouting extends FeatureService {
         prefGps.addObserver(routingHintsEnabledObserver);
         prefMtlVisibility.addObserver(routingHintsEnabledObserver);
 
-        Pref<Boolean> prefUseRoutingProfiles = getPref(R.string.preferences_routingProfile_key, false);
+        Pref<Boolean> prefUseRoutingProfiles = getPref(R.string.preferences_routingProfile_key, true);
         prefUseRoutingProfiles.addObserver(evt -> {
             mgLog.d("reset to defaultRoutingProfileId");
             prefRoutingProfileId.setValue(defaultRoutingProfileId);
@@ -453,7 +454,7 @@ public class FSRouting extends FeatureService {
         if (mtl != null){
             showTrack(mtl, CC.getAlphaCloneFill(PAINT_ROUTE_STROKE2, prefAlphaRotl.getValue()) , false,  6, true);
         }
-        if ((prefZoomLevel.getValue() >= 12) && getPref(R.string.preferences_display_show_km_key, false).getValue()){
+        if (getPref(R.string.preferences_display_show_km_key, true).getValue()){
             showTrack(rotl,CC.getAlphaCloneFill(PAINT_ROUTE_STROKE2, prefAlphaRotl.getValue()),false, 3, true, true);
         }
         getControlView().setDashboardValue(prefMtlVisibility.getValue(), dashboardRoute, calcRemainingStatistic(rotl));
@@ -468,7 +469,6 @@ public class FSRouting extends FeatureService {
             mgLog.d("Start");
             long tStart = System.currentTimeMillis();
             rotl = routingEngine.updateRouting2(mtl, application.routeTrackLogObservable.getTrackLog());
-//            mtl.setRoutingProfileId(prefRoutingProfileId.getValue());
             mgLog.d("End duration="+(System.currentTimeMillis()-tStart)+"ms");
         }
         application.routeTrackLogObservable.setTrackLog(rotl);

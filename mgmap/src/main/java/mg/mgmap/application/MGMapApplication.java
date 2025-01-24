@@ -32,8 +32,8 @@ import org.mapsforge.map.android.graphics.AndroidGraphicFactory;
 import mg.mgmap.BuildConfig;
 import mg.mgmap.activity.mgmap.features.rtl.RecordingTrackLog;
 import mg.mgmap.generic.model.TrackLogPoint;
+import mg.mgmap.generic.util.BackupUtil;
 import mg.mgmap.generic.util.CC;
-import mg.mgmap.activity.mgmap.util.OpenAndroMapsUtil;
 import mg.mgmap.activity.statistic.TrackStatisticFilter;
 import mg.mgmap.application.util.ActivityLifecycleAdapter;
 import mg.mgmap.application.util.ElevationProvider;
@@ -50,8 +50,6 @@ import mg.mgmap.generic.model.TrackLog;
 import mg.mgmap.generic.model.TrackLogRef;
 import mg.mgmap.generic.model.WriteableTrackLog;
 import mg.mgmap.generic.util.BgJob;
-import mg.mgmap.generic.util.BgJobGroup;
-import mg.mgmap.generic.util.BgJobGroupCallback;
 import mg.mgmap.generic.util.ObservableImpl;
 import mg.mgmap.generic.util.Observer;
 import mg.mgmap.generic.util.Pref;
@@ -149,6 +147,7 @@ public class MGMapApplication extends Application {
 
         MGLog.logConfig.put("mg.mgmap", BuildConfig.DEBUG? MGLog.Level.DEBUG:MGLog.Level.INFO);
 //        MGLog.logConfig.put("mg.mgmap.test.TestControl", MGLog.Level.VERBOSE);
+//        MGLog.logConfig.put("mg.mgmap.activity.mgmap.MultiMapDataStore", MGLog.Level.VERBOSE);
         mgLog.evaluateLevel();
 
         setup = new Setup(this);
@@ -163,8 +162,13 @@ public class MGMapApplication extends Application {
         startLogging(persistenceManager.getLogDir());
         CC.init(this);
         AndroidGraphicFactory.createInstance(this);
+        File svgCacheDir = new File(getCacheDir(), "svgCache");
+        if (!svgCacheDir.mkdirs()) mgLog.e("create svgCacheDir failed: "+svgCacheDir.getAbsolutePath());
+        AndroidGraphicFactory.INSTANCE.setSvgCacheDir(svgCacheDir);
         prefCache = new PrefCache(this);
 
+        initVersionCode();
+        BackupUtil.restore(this, persistenceManager);
         hgtProvider = new HgtProvider(this, persistenceManager, getAssets()); // for hgt file handling
         elevationProvider = new ElevationProviderImpl(hgtProvider); // for height data handling
         geoidProvider = new GeoidProvider(this); // for difference between wgs84 and nmea elevation
@@ -204,45 +208,19 @@ public class MGMapApplication extends Application {
             mgLog.i("init finished!");
         }).start();
 
+        if (persistenceManager.isFirstRun()){ // initialize lastFullBackupTime with install time - otherwise the first backup request would appear almost directly after installation.
+            prefCache.get(R.string.preferences_last_full_backup_time, 0L).setValue(System.currentTimeMillis());
+        }
+        BackupUtil.restore2(this, persistenceManager, true); // restore backup_latest.zip (if exists)
+        BackupUtil.restore2(this, persistenceManager, false); // restore backup_full.zip (if exists) (Remark: there is no use case, where both backup files have to be restored in the same run)
 
-
-        // initialize Theme and MetaData (as used from AvailableTrackLogs service and statistic)
+        // initialize MetaData (as used from AvailableTrackLogs service and statistic)
         new Thread(() -> {
             UUID uuid = currentRun;
-            Pref<Boolean> metaLoading = prefCache.get(R.string.MGMapApplication_pref_MetaData_loading, true);
-            metaLoading.setValue(true);
-            mgLog.i("Theme Asset handling - started");
-            try {
-                //noinspection DataFlowIssue
-                for (String assetName : getAssets().list("")){
-                    if (assetName.matches("Elevate.+\\.zip")){ // assume there is only one Elevate<x.y>.zip in the assets path - otherwise entries should be handled sorted
-                        String assetDir = assetName.replace(".zip", "");
-                        if (!new File(persistenceManager.getThemesDir(), assetDir).exists()){
-                            mgLog.i("Theme Asset handling - install: "+assetName);
-                            BgJobGroup jobGroup = new BgJobGroup(this, null, null, new BgJobGroupCallback() {
-                                @Override
-                                public void afterGroupFinished(BgJobGroup jobGroup, int total, int success, int fail) {
-                                    if (getSharedPreferences().getString(getResources().getString(R.string.preference_choose_theme_key),"Elevate.xml").endsWith("Elevate.xml")){
-                                        getSharedPreferences().edit().putString(getResources().getString(R.string.preference_choose_theme_key), assetDir+"/Elevate.xml").apply();
-                                    }
-                                }
-                            });
-                            jobGroup.addJob( OpenAndroMapsUtil.createBgJobsFromAssetTheme(persistenceManager, getAssets(), assetName, assetDir) );
-                            jobGroup.setConstructed(null);
-
-                        } else {
-                            mgLog.i("Theme Asset handling - already installed: "+assetName);
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                mgLog.e(e);
-            }
-            mgLog.i("Theme Asset handling - finished");
-            if (uuid == currentRun) {
-                checkCreateLoadMetaData(false);
-            }
-            metaLoading.setValue(false);
+            Pref<Boolean> prefMetaLoading = prefCache.get(R.string.MGMapApplication_pref_MetaData_loading, true);
+            prefMetaLoading.setValue(true);
+            checkCreateLoadMetaData(false);
+            prefMetaLoading.setValue(false);
         }).start();
 
         // initialize handling of new points from TrackLoggerService
@@ -341,6 +319,10 @@ public class MGMapApplication extends Application {
     }
 
     public void checkCreateLoadMetaData(boolean onlyNew){
+        File restoreJob = new File(persistenceManager.getRestoreDir(), "restore.job");
+        while (restoreJob.exists()){ // don't start as restore may add files
+            SystemClock.sleep(1000);
+        }
         ArrayList<String> newNames = ExtrasUtil.checkCreateMeta(this, this.currentRun);
     }
 
@@ -638,5 +620,18 @@ public class MGMapApplication extends Application {
     }
     public void finishAlarm(){
         notificationUtil.finishAlarm();
+    }
+
+    private void initVersionCode(){
+        Pref<Integer> version = prefCache.get(R.string.MGMapApplication_pref_version, 0);
+        if (version.getValue() != BuildConfig.VERSION_CODE){
+            version.setValue(BuildConfig.VERSION_CODE);
+
+            if (version.getValue() == 34){ // defaults change with version code 34
+                prefCache.get(R.string.preferences_smoothing4routing_key, true).setValue(true);
+                prefCache.get(R.string.preferences_routingProfile_key, true).setValue(true);
+                prefCache.get(R.string.preferences_display_show_km_key, true).setValue(true);
+            }
+        }
     }
 }

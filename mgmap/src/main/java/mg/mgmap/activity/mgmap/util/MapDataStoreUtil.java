@@ -14,108 +14,41 @@
  */
 package mg.mgmap.activity.mgmap.util;
 
-import android.content.SharedPreferences;
-
 import org.mapsforge.core.model.Tag;
 import org.mapsforge.core.model.Tile;
-import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.datastore.MapReadResult;
 import org.mapsforge.map.datastore.Way;
-import org.mapsforge.map.layer.Layer;
-import org.mapsforge.map.layer.renderer.TileRendererLayer;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import mg.mgmap.activity.mgmap.MGMapLayerFactory;
-import mg.mgmap.generic.model.BBox;
 import mg.mgmap.generic.util.WayProvider;
 
 public class MapDataStoreUtil implements WayProvider {
 
-    private boolean active = false;
-    private ArrayList<BBox> mapBBoxList = null;
-    private ArrayList<MapDataStore> mapDataStoreList = null;
-    private HashMap<Tile, MapDataStore> tile2MapDataStore = null;
+    MGMapLayerFactory mapLayerFactory;
 
+    public MapDataStoreUtil(MGMapLayerFactory mapLayerFactory) {
+        this.mapLayerFactory = mapLayerFactory;
+    }
 
-
-    public MapDataStoreUtil onCreate(MGMapLayerFactory mapLayerFactory, SharedPreferences sharedPreferences){
-        mapBBoxList = new ArrayList<>();
-        mapDataStoreList = new ArrayList<>();
-        tile2MapDataStore = new HashMap<>();
-
-        for (String prefKey : mapLayerFactory.getMapLayerKeys()){
-            String key = sharedPreferences.getString(prefKey, "none");
-            sharedPreferences.edit().putString(prefKey,key).apply(); // so if pref was not existing, then default value "none" is now set - this helps to prevent recreate activity on initial set
-
-            Layer layer = mapLayerFactory.getMapLayer(key);
-            if (layer instanceof TileRendererLayer) {
-                MapDataStore mds = ((TileRendererLayer)layer).getMapDataStore();
-                if (mds != null){
-                    mapBBoxList.add(BBox.fromBoundingBox(mds.boundingBox()));
-                    mapDataStoreList.add(mds);
-                }
+    public List<Way> getWays(Tile tile) {
+        List<Way> wayList = new ArrayList<>();
+            MapReadResult mapReadResult = mapLayerFactory.readMapData(tile);
+            if (mapReadResult != null) {
+                wayList = mapReadResult.ways;
             }
-        }
-        active = true;
-        return this;
+
+        return wayList;
     }
 
-    public void onDestroy(){
-        mapBBoxList = null;
-        mapDataStoreList = null;
-        tile2MapDataStore = null;
-        active = false;
-    }
-
-    public MapDataStore getMapDataStore(){
-        if (!mapDataStoreList.isEmpty()){
-            return mapDataStoreList.get(0);
-        }
-        return null;
-    }
-
-    public MapDataStore getMapDataStore(BBox bBox){
-        for (int idx=0; idx < mapBBoxList.size(); idx++){
-            if (mapBBoxList.get(idx).contains(bBox)){
-                return mapDataStoreList.get(idx);
+    public boolean isWayForRouting(Way way) {
+        for (Tag tag : way.tags) {
+            if (tag.key.equals("highway")) {
+                return true;
             }
-        }
-        return null;
-    }
-
-    public List<Way> getWays(Tile tile){
-        List<Way> wayList = null;
-        if (active){
-            MapDataStore mds = tile2MapDataStore.get(tile);
-            if (mds != null) {
-                wayList = mds.readMapData(tile).ways;
-            } else { // mds == null -> try to find proper MapDataStore
-                for (int idx=0; idx < mapBBoxList.size(); idx++){
-                    if (mapBBoxList.get(idx).contains(tile.getBoundingBox())){
-                        mds = mapDataStoreList.get(idx);
-                        MapReadResult mapReadResult = mds.readMapData(tile);
-                        if (wayList == null){
-                            wayList = mapReadResult.ways;
-                            tile2MapDataStore.put(tile, mds);
-                        } else { // there is more than one TileStoreLayer containing this tile - try to identify the better one
-                            if (mapReadResult.ways.size() > wayList.size()){ // seems to have more ways -> update
-                                wayList = mapReadResult.ways;
-                                tile2MapDataStore.put(tile, mds);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return (wayList==null)?new ArrayList<>():wayList;
-    }
-
-    public boolean isHighway(Way way){
-        for (Tag tag : way.tags){
-            if (tag.key.equals("highway")){
+            if (tag.key.equals("route") && tag.value.equals("ferry")) {
                 return true;
             }
         }

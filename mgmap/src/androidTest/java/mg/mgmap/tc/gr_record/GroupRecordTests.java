@@ -24,6 +24,7 @@ import mg.mgmap.generic.model.PointModel;
 import mg.mgmap.generic.model.PointModelImpl;
 import mg.mgmap.generic.model.TrackLogPoint;
 import mg.mgmap.generic.util.basic.MGLog;
+import mg.mgmap.generic.view.TestView;
 import mg.mgmap.test.BaseTestCase;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -58,12 +59,10 @@ public class GroupRecordTests extends BaseTestCase {
         setCursorToCenterPos();
 
         addRegex(".*onClick mi_gps_toggle.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_gps_toggle);
+        animateMenu(R.id.menu_gps, R.id.mi_gps_toggle);
 
         addRegex(".*onClick mi_gps_center.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_gps_center);
+        animateMenu(R.id.menu_gps, R.id.mi_gps_center);
 
         SystemClock.sleep(1000);
         animateAndClick(54.3160, 13.3520, 11.1f, 60.1f, 48.6f, 55.5f);
@@ -73,42 +72,40 @@ public class GroupRecordTests extends BaseTestCase {
         Assert.assertNull(mgMapApplication.recordingTrackLogObservable.getTrackLog());
 
         addRegex(".*onClick mi_gps_center.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_gps_center);
+        animateMenu(R.id.menu_gps, R.id.mi_gps_center);
 
         animateAndClick(54.3200, 13.3517, 11.1f, 78.1f, 48.6f, 55.5f);
         animateAndClick(54.3220, 13.3515, 11.1f, 83.1f, 48.6f, 55.5f);
 
         animateSwipeLatLong(54.3220, 13.3515, 54.3220, 13.3545);
         Point p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertNotEquals(getCenterPos(), p);
+        Assert.assertNotEquals(getCenterPos().point(), p);
         SystemClock.sleep(5000);
         p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertNotEquals(getCenterPos(), p);
+        Assert.assertNotEquals(getCenterPos().point(), p);
         SystemClock.sleep(3000);
         p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertEquals(getCenterPos(), p);
+        Assert.assertEquals(getCenterPos().point(), p);
 
         SystemClock.sleep(1000);
 
         animateSwipeLatLong(54.3220, 13.3515, 54.3220, 13.3545);
         p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertNotEquals(getCenterPos(), p);
+        Assert.assertNotEquals(getCenterPos().point(), p);
         SystemClock.sleep(4000);
         animateSwipeLatLong(54.3220, 13.3485, 54.3220, 13.3515);
         p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertNotEquals(getCenterPos(), p);
+        Assert.assertNotEquals(getCenterPos().point(), p);
         SystemClock.sleep(5000);
         p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertNotEquals(getCenterPos(), p);
+        Assert.assertNotEquals(getCenterPos().point(), p);
         SystemClock.sleep(3000);
         p = getPoint4PointModel(new PointModelImpl(54.3220, 13.3515));
-        Assert.assertEquals(getCenterPos(), p);
+        Assert.assertEquals(getCenterPos().point(), p);
 
 
         addRegex(".*onClick mi_gps_toggle.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_gps_toggle);
+        animateMenu(R.id.menu_gps, R.id.mi_gps_toggle);
 
         SystemClock.sleep(2000);
         mgLog.i("finished");
@@ -121,8 +118,7 @@ public class GroupRecordTests extends BaseTestCase {
 
         setCursorToCenterPos();
         addRegex(".*onClick mi_gps_toggle.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_gps_toggle);
+        animateMenu(R.id.menu_gps, R.id.mi_gps_toggle);
         SystemClock.sleep(1000);
         animateAndClick(54.3160, 13.3520, 11.1f, 60.1f, 48.6f, 55.5f);
         animateAndClick(54.3166, 13.3511, 11.1f, 66.1f, 48.6f, 55.5f);
@@ -140,8 +136,7 @@ public class GroupRecordTests extends BaseTestCase {
         SystemClock.sleep(1000);
 
         addRegex(".*onClick mi_gps_toggle.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_gps_toggle);
+        animateMenu(R.id.menu_gps, R.id.mi_gps_toggle);
 
         SystemClock.sleep(2000);
         mgLog.i("finished");
@@ -154,8 +149,7 @@ public class GroupRecordTests extends BaseTestCase {
 
         setCursorToCenterPos();
         addRegex(".*onClick mi_record_track.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_track);
+        animateMenu(R.id.menu_gps, R.id.mi_record_track);
         SystemClock.sleep(1000);
         animateAndClick(54.3160, 13.3520, 11.1f, 60.1f, 48.6f, 55.5f);
         animateAndClick(54.3166, 13.3511, 11.1f, 66.1f, 48.6f, 55.5f);
@@ -171,9 +165,7 @@ public class GroupRecordTests extends BaseTestCase {
         addRegex(".*Test Statistic: .* duration=0:00 totalLength=721.18 gain=20.5 loss=0.0 minEle=11.5 maxEle=34.5 numPoints=6");
         mgLog.i("Test Statistic: " + mgMapApplication.recordingTrackLogObservable.getTrackLog().getTrackStatistic());
 
-
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_track);
+        animateMenu(R.id.menu_gps, R.id.mi_record_track);
 
         SystemClock.sleep(2000);
         mgLog.i("finished");
@@ -186,13 +178,11 @@ public class GroupRecordTests extends BaseTestCase {
         SystemClock.sleep(5000);
 
         setCursorToCenterPos();
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_segment);
+        animateMenu(R.id.menu_gps, R.id.mi_record_segment);
         Assert.assertNull(mgMapApplication.recordingTrackLogObservable.getTrackLog());
         SystemClock.sleep(2000);
         addRegex(".*onClick mi_record_track.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_track);
+        animateMenu(R.id.menu_gps, R.id.mi_record_track);
 
         Assert.assertNotNull(mgMapApplication.recordingTrackLogObservable.getTrackLog());
         SystemClock.sleep(1000);
@@ -201,13 +191,11 @@ public class GroupRecordTests extends BaseTestCase {
         animateAndClick(54.3171, 13.3521, 11.1f, 72.1f, 48.6f, 55.5f);
         animateAndClick(54.3180, 13.3520, 11.2f, 73.1f, 48.7f, 55.6f);
         addRegex(".*onClick mi_record_segment.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_segment);
+        animateMenu(R.id.menu_gps, R.id.mi_record_segment);
         Assert.assertNotNull(mgMapApplication.recordingTrackLogObservable.getTrackLog());
         SystemClock.sleep(2000);
         addRegex(".*onClick mi_record_segment.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_segment);
+        animateMenu(R.id.menu_gps, R.id.mi_record_segment);
         animateAndClick(54.3200, 13.3517, 11.1f, 78.1f, 48.6f, 55.5f);
         animateAndClick(54.3220, 13.3515, 11.1f, 83.1f, 48.6f, 55.5f);
 
@@ -217,8 +205,7 @@ public class GroupRecordTests extends BaseTestCase {
 
 
         addRegex(".*onClick mi_record_track.*");
-        animateToViewAndClick(R.id.menu_gps);
-        animateToViewAndClick(R.id.mi_record_track);
+        animateMenu(R.id.menu_gps, R.id.mi_record_track);
 
         SystemClock.sleep(2000);
         mgLog.i("finished");
@@ -229,15 +216,17 @@ public class GroupRecordTests extends BaseTestCase {
 
 
     protected void animateAndClick(double lat, double lon, float acc, float wgs84ele, float geoidOffset, float wgs84eleAcc){
+        TestView testView = waitForView(TestView.class, mg.mgmap.R.id.testview);
         PointModel pm = new PointModelImpl(lat, lon);
         Point p = getPoint4PointModel(pm);
-        animateTo(p);
+        PointOfView pov = new PointOfView(p, testView);
+        animateTo(pov);
         TrackLogPoint tlp = TrackLogPoint.createGpsLogPoint(System.currentTimeMillis(), lat, lon, acc, wgs84ele, geoidOffset, wgs84eleAcc);
         mgLog.i("tlp="+tlp);
-        animateClick(p, ()->{setCursorVisibility(false); mgMapApplication.logPoints2process.add(tlp);});
+        animateClick(pov, ()->{setCursorVisibility(false); mgMapApplication.logPoints2process.add(tlp);});
         p = getPoint4PointModel(pm); // due to center on new location the "pos" might be changed
-        Assert.assertEquals(mgMapApplication.getPrefCache().get(R.string.FSPosition_pref_Center, true).getValue(), p.equals(getCenterPos()));
-        setCursorPos(getPoint4PointModel(pm));
+        Assert.assertEquals(mgMapApplication.getPrefCache().get(R.string.FSPosition_pref_Center, true).getValue(), p.equals(getCenterPos().point()));
+        setCursorPos(new PointOfView(p, testView));
         setCursorVisibility(true);
     }
 }

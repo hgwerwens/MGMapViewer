@@ -30,7 +30,9 @@ import java.io.PrintWriter;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -45,9 +47,104 @@ public class PersistenceManager {
 
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 
+    public static final String SUFFIX_GPX = ".gpx";
+    public static final String SUFFIX_META = ".meta";
+
+
+    private static ArrayList<File> getFilesRecursive(File dir, String nameEndsWith, ArrayList<File> matchedList){
+        File[] entries = dir.listFiles();
+        if (entries != null){
+            for (File entry : entries) {
+                if (entry.isDirectory()) {
+                    getFilesRecursive(entry, nameEndsWith, matchedList);
+                } else {
+                    if (entry.getName().endsWith(nameEndsWith)) {
+                        matchedList.add(entry);
+                    }
+                }
+            }
+        }
+        return matchedList;
+    }
+
+    public static ArrayList<File> getFilesRecursive(File dir, String suffix){
+        return getFilesRecursive(dir, suffix, new ArrayList<>());
+    }
+
+    public static  List<String> getNamesRecursive(File dir, String suffix){
+        return getFilesRecursive(dir, suffix, new ArrayList<>())
+                .stream().map(f->f.getAbsolutePath()
+                        .substring(dir.getAbsolutePath().length() + File.separator.length(), f.getAbsolutePath().length()-suffix.length()) )
+                .collect(Collectors.toList());
+    }
+
+    public static boolean forceDelete(File file){
+        File[] contents = file.listFiles();
+        if (contents != null) {
+            for (File f : contents) {
+                if (! Files.isSymbolicLink(f.toPath())) {
+                    forceDelete(f);
+                }
+            }
+        }
+        return file.delete();
+    }
+
+    public static void mergeDir(File mergeFrom, File mergeTo){ // recursive merge dir
+        assert mergeFrom.exists();
+        assert mergeTo.exists();
+        File[] fromArray = mergeFrom.listFiles();
+        if (fromArray != null){
+            for (File file : fromArray){
+                if (Files.isSymbolicLink(file.toPath())) continue;
+                File toFile = new File(mergeTo, file.getName());
+
+                if (toFile.exists() && (file.isFile() != toFile.isFile())){
+                    mgLog.e("cannot merge "+file.getAbsolutePath()+" with type "+(file.isFile()?"file":"directory")+" to "+toFile.getAbsolutePath()+" with type "+(toFile.isFile()?"file":"directory"));
+                    continue;
+                }
+                if (file.isFile()){
+                    if (toFile.exists()){
+                        if ( file.lastModified() > toFile.lastModified() ){
+                            if (!toFile.delete()) mgLog.e("failed to delete "+toFile.getAbsolutePath());
+                            if (!file.renameTo(toFile)) mgLog.e("failed to rename from "+file.getAbsolutePath()+" to "+toFile.getAbsolutePath());
+                        }
+                    } else {
+                        if (!file.renameTo(toFile)) mgLog.e("failed to rename from "+file.getAbsolutePath()+" to "+toFile.getAbsolutePath());
+                    }
+                } else { // file is directory
+                    if (!toFile.exists()){
+                        if (!toFile.mkdir()) mgLog.e("failed to create "+toFile.getAbsolutePath());
+                    }
+                    mergeDir(file, toFile);
+                }
+            } // for (File file : fromArray){
+        } // if (fromArray != null){
+    }
+
+    public static boolean checkFilesOlderThan(File dir, long timestamp){
+        File[] entries = dir.listFiles();
+        if (entries != null){
+            for (File entry : entries) {
+                if (entry.isDirectory()) {
+                    checkFilesOlderThan(entry, timestamp);
+                } else {
+                    if (entry.lastModified() >= timestamp) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+
+
+
+
     private final MGMapApplication application;
     private final Context context;
-
+    private boolean firstRun = false;
 
     private File baseDir;
     private final File appDir;
@@ -63,6 +160,8 @@ public class PersistenceManager {
     private final File configDir;
     private final File searchConfigDir;
     private final File apkDir;
+    private final File backupDir;
+    private final File restoreDir;
 
     private final File fRaw;
     private FileOutputStream fosRaw = null;
@@ -75,19 +174,23 @@ public class PersistenceManager {
         baseDir = context.getExternalFilesDir(null);
         mgLog.i("Default Storage: "+getBaseDir().getAbsolutePath());
 
-        if (! new File(baseDir, sAppDir).exists()){
-            mgLog.i("Default Storage not found - check alternatives");
+        File appDir2Check = new File(baseDir, sAppDir);
+        if (! appDir2Check.exists()){
+            firstRun = true;
+            mgLog.i("Default App Storage ("+appDir2Check.getAbsolutePath()+") not found - check alternatives");
             for (File f : context.getExternalFilesDirs(null)){
-                boolean exists = new File(f, sAppDir).exists();
-                mgLog.i("check Storage: "+baseDir.getAbsolutePath()+" ->exists: "+exists);
+                appDir2Check = new File(f, sAppDir);
+                boolean exists = appDir2Check.exists();
+                mgLog.i("check App Storage: "+appDir2Check.getAbsolutePath()+" ->exists: "+exists);
                 if (exists){
                     baseDir = f;
+                    firstRun = false;
+                    break;
                 }
-                mgLog.i("f= "+f.getAbsolutePath());
             }
         }
 
-        mgLog.i("Storage: "+baseDir.getAbsolutePath());
+        mgLog.i("Storage baseDir="+baseDir.getAbsolutePath()+" firstRun="+firstRun);
 
         appDir = createIfNotExists(baseDir, sAppDir);
         File trackDir = createIfNotExists(getAppDir(), "track");
@@ -98,6 +201,7 @@ public class PersistenceManager {
 
         mapsDir = createIfNotExists(appDir, "maps");
         mapsMapsforgeDir = createIfNotExists(mapsDir, "mapsforge");
+        createIfNotExists(mapsMapsforgeDir, "all");
         createIfNotExists(mapsDir, "mapstores");
         createIfNotExists(mapsDir, "maponline");
         createIfNotExists(mapsDir, "mapgrid");
@@ -111,13 +215,22 @@ public class PersistenceManager {
         createGraphhopperCfgIfNotExists("Graphhopper.cfg");
         createFileIfNotExists(searchConfigDir,"GeoLatLong.cfg");
         apkDir = createIfNotExists(appDir, "apk");
+        File backupBaseDir = createIfNotExists(appDir, "backup");
+        backupDir = createIfNotExists(backupBaseDir, "backup");
+        restoreDir = createIfNotExists(backupBaseDir, "restore");
     }
 
+    public boolean isFirstRun() {
+        return firstRun;
+    }
     public File getBaseDir(){
         return baseDir;
     }
     public File getAppDir(){
         return appDir;
+    }
+    public File getHgtDir(){
+        return hgtDir;
     }
     public File getLogDir(){
         return logDir;
@@ -134,10 +247,16 @@ public class PersistenceManager {
     public File getTrackGpxDir(){
         return trackGpxDir;
     }
-
     public File getApkDir(){
         return apkDir;
     }
+    public File getBackupDir() {
+        return backupDir;
+    }
+    public File getRestoreDir() {
+        return restoreDir;
+    }
+
     public void cleanApkDir(){
         try {
             File[] files  = apkDir.listFiles();
@@ -245,12 +364,12 @@ public class PersistenceManager {
     }
 
     public boolean existsGpx(String filename) {
-        File file = getAbsoluteFile(trackGpxDir, filename, ".gpx");
+        File file = getAbsoluteFile(trackGpxDir, filename, SUFFIX_GPX);
         return file.exists();
     }
     public boolean isGpxOlderThanMeta(String filename){
-        File gpxFile = getAbsoluteFile(trackGpxDir, filename, ".gpx");
-        File metaFile = getAbsoluteFile(trackMetaDir, filename, ".meta");
+        File gpxFile = getAbsoluteFile(trackGpxDir, filename, SUFFIX_GPX);
+        File metaFile = getAbsoluteFile(trackMetaDir, filename, SUFFIX_META);
         assert gpxFile.exists();
         if (metaFile.exists()){
             return gpxFile.lastModified() <= metaFile.lastModified();
@@ -260,7 +379,7 @@ public class PersistenceManager {
     }
     public PrintWriter openGpxOutput(String filename) {
         try {
-            File file = getAbsoluteFile(trackGpxDir, filename, ".gpx");
+            File file = getAbsoluteFile(trackGpxDir, filename, SUFFIX_GPX);
             checkCreatePath(file);
             return new PrintWriter(file);
         } catch (FileNotFoundException e) {
@@ -270,7 +389,7 @@ public class PersistenceManager {
     }
     public InputStream openGpxInput(String filename) {
         try {
-            File file = getAbsoluteFile(trackGpxDir, filename, ".gpx");
+            File file = getAbsoluteFile(trackGpxDir, filename, SUFFIX_GPX);
             return new FileInputStream(file);
         } catch (FileNotFoundException e) {
             mgLog.e(e);
@@ -279,7 +398,7 @@ public class PersistenceManager {
     }
     public Uri getGpxUri(String filename) {
         try {
-            File file = getAbsoluteFile(trackGpxDir, filename, ".gpx");
+            File file = getAbsoluteFile(trackGpxDir, filename, SUFFIX_GPX);
             return FileProvider.getUriForFile(context, context.getPackageName() + ".provider", file);
         } catch (Exception e) {
             mgLog.e(e);
@@ -289,7 +408,7 @@ public class PersistenceManager {
 
     public FileOutputStream openMetaOutput(String filename) {
         try {
-            File file = getAbsoluteFile(trackMetaDir, filename, ".meta");
+            File file = getAbsoluteFile(trackMetaDir, filename, SUFFIX_META);
             checkCreatePath(file);
             return new FileOutputStream(file);
         } catch (FileNotFoundException e) {
@@ -300,7 +419,7 @@ public class PersistenceManager {
 
     public FileInputStream openMetaInput(String filename) {
         try {
-            File file = getAbsoluteFile(trackMetaDir, filename, ".meta");
+            File file = getAbsoluteFile(trackMetaDir, filename, SUFFIX_META);
             return new FileInputStream(file);
         } catch (FileNotFoundException e) {
             mgLog.e(e);
@@ -308,29 +427,12 @@ public class PersistenceManager {
         return null;
     }
 
-    /** Retruns a list of relative path name, but without extension */
-    public ArrayList<String> getNames(File baseDir, File dir, String endsWith, ArrayList<String> matchedList) {
-        File[] entries = dir.listFiles();
-        if (entries != null){
-            for (File entry : entries) {
-                if (entry.isDirectory()) {
-                    getNames(baseDir, entry, endsWith, matchedList);
-                } else {
-                    if (entry.getName().endsWith(endsWith)) {
-                        String sPath = entry.getAbsolutePath();
-                        matchedList.add(sPath.substring((baseDir.getAbsolutePath()+File.pathSeparator ).length(), sPath.length() - endsWith.length()));
-                    }
-                }
-            }
-        }
-        return matchedList;
-    }
 
-    public ArrayList<String> getGpxNames() {
-        return getNames(trackGpxDir, trackGpxDir, ".gpx", new ArrayList<>());
+    public List<String> getGpxNames() {
+        return  getNamesRecursive(trackGpxDir, SUFFIX_GPX);
     }
-    public ArrayList<String> getMetaNames() {
-        return getNames(trackMetaDir, trackMetaDir, ".meta", new ArrayList<>());
+    public List<String> getMetaNames() {
+        return  getNamesRecursive(trackMetaDir, SUFFIX_META);
     }
 
     public File getThemesDir(){
@@ -357,7 +459,11 @@ public class PersistenceManager {
     }
 
     public File getHgtFile(String hgtName){
-        return new File(hgtDir, getHgtFilename(hgtName));
+        File hgtFile = new File(hgtDir, hgtName+".hgt"); // prefer unzipped if exists
+        if (!hgtFile.exists()){
+            hgtFile = new File(hgtDir, hgtName+".SRTMGL1.hgt.zip");
+        }
+        return hgtFile;
     }
 
     public ArrayList<String> getExistingHgtNames(){
@@ -375,11 +481,6 @@ public class PersistenceManager {
         deleteFile(getHgtFile(hgtName));
     }
 
-
-    public String getHgtFilename(String hgtName) {
-        return hgtName+".SRTMGL1.hgt.zip";
-    }
-
     public FileOutputStream openHgtOutput(String hgtName){
         try {
             return new FileOutputStream(getHgtFile(hgtName));
@@ -389,28 +490,22 @@ public class PersistenceManager {
         return null;
     }
 
-    public boolean hgtIsAvailable(String hgtName){
-        return getHgtFile(hgtName).exists();
-    }
-
     public byte[] getHgtBuf(String hgtName){
         byte[] buf = new byte[0];
         try {
             File hgtFile = getHgtFile(hgtName);
             if (hgtFile.exists()){
                 if (hgtFile.length()>0){
-                    ZipFile zipFile = new ZipFile(hgtFile);
-                    ZipEntry zipEntry = zipFile.getEntry(hgtName+".hgt");
-                    InputStream zis = zipFile.getInputStream(zipEntry);
-                    int todo = zis.available();
-                    buf = new byte[todo];
-                    int done = 0;
-                    while (todo > 0) {
-                        int step = zis.read(buf, done, todo);
-                        todo -= step;
-                        done += step;
+                    if (hgtFile.getName().endsWith("zip")){
+                        try (ZipFile zipFile = new ZipFile(hgtFile)){
+                            ZipEntry zipEntry = zipFile.getEntry(hgtName+".hgt");
+                            buf = readHgtData( zipFile.getInputStream(zipEntry) );
+                        }
+                    } else {
+                        try (FileInputStream is = new FileInputStream(hgtFile)){
+                            buf = readHgtData( is );
+                        }
                     }
-                    zipFile.close();
                 } else { // is dummy hgt file
                     buf = new byte[1];
                 }
@@ -418,6 +513,18 @@ public class PersistenceManager {
         } catch (IOException e) { // should not happen
             mgLog.e(e);
             buf = new byte[0]; // but if so, prevent accessing inconsistent data
+        }
+        return buf;
+    }
+
+    private byte[] readHgtData(InputStream is) throws IOException{
+        int todo = is.available();
+        byte[] buf = new byte[todo];
+        int done = 0;
+        while (todo > 0) {
+            int step = is.read(buf, done, todo);
+            todo -= step;
+            done += step;
         }
         return buf;
     }

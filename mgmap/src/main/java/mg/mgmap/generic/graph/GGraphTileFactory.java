@@ -23,6 +23,7 @@ import org.mapsforge.map.datastore.Way;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+import mg.mgmap.activity.mgmap.MapViewerBase;
 import mg.mgmap.application.util.ElevationProvider;
 import mg.mgmap.generic.model.BBox;
 import mg.mgmap.generic.model.MultiPointModelImpl;
@@ -40,7 +41,7 @@ public class GGraphTileFactory {
 
     final static int CACHE_LIMIT = 2000;
     private final byte ZOOM_LEVEL = 15;
-    private final int TILE_SIZE = 256;
+    private final int TILE_SIZE = MapViewerBase.TILE_SIZE;
     static final int LOW_MEMORY_THRESHOLD = 1;
 
     static int getKey(int tileX,int tileY){
@@ -71,17 +72,19 @@ public class GGraphTileFactory {
     }
 
     public void resetCosts(){
-        for (GGraphTile graph : gTileCache.getAll()){
-             for (GNode node : graph.getNodes()){
-                 GNeighbour neighbour = node.getNeighbour();
-                 while ((neighbour = graph.getNextNeighbour(node, neighbour)) != null) {
-                     neighbour.resetCost();
-                     WayAttributs wayAttributs = neighbour.getWayAttributs();
-                     if (wayAttributs != null) {
-                         wayAttributs.setDerivedData(null);
-                     }
-                 }
-             }
+        if (gTileCache != null){
+            for (GGraphTile graph : gTileCache.getAll()){
+                for (GNode node : graph.getNodes()){
+                    GNeighbour neighbour = node.getNeighbour();
+                    while ((neighbour = graph.getNextNeighbour(node, neighbour)) != null) {
+                        neighbour.resetCost();
+                        WayAttributs wayAttributs = neighbour.getWayAttributs();
+                        if (wayAttributs != null) {
+                            wayAttributs.setDerivedData(null);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -144,11 +147,16 @@ public class GGraphTileFactory {
     public GGraphTile getGGraphTile(int tileX, int tileY, boolean load){
         GGraphTile gGraphTile = gTileCache.get(tileX, tileY);
         if (load && (gGraphTile == null)){
-            gGraphTile = loadGGraphTile(tileX, tileY);
-            if (prefSmooth4Routing.getValue()){
-                smoothGGraphTile(gGraphTile);
+            synchronized (this){  // prevent parallel access from routing thread and FSGraphDetails
+                gGraphTile = gTileCache.get(tileX, tileY); // check, if tile is meanwhile in cache
+                if (gGraphTile == null) {
+                    gGraphTile = loadGGraphTile(tileX, tileY);
+                    if (prefSmooth4Routing.getValue()){
+                        smoothGGraphTile(gGraphTile);
+                    }
+                    gTileCache.put(tileX, tileY, gGraphTile);
+                }
             }
-            gTileCache.put(tileX, tileY, gGraphTile);
         }
         return gGraphTile;
     }
@@ -159,7 +167,7 @@ public class GGraphTileFactory {
         Tile tile = new Tile(tileX, tileY, ZOOM_LEVEL, TILE_SIZE);
         GGraphTile gGraphTile = new GGraphTile(elevationProvider, tile);
         for (Way way : wayProvider.getWays(tile)) {
-            if (wayProvider.isHighway(way)){
+            if (wayProvider.isWayForRouting(way)){
 
                 WayAttributs wayAttributs = new WayAttributs(way);
                 gGraphTile.addLatLongs( wayAttributs, way.latLongs[0]);

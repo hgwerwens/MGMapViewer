@@ -17,6 +17,8 @@ Each feature contains a link to the corresponding detailed feature description.
 ### Main map features
 - [mapsforge](./Features/MainMapFeatures/Mapsforge/mapsforge.md): show vector maps e.g. from [openandromaps](https://www.openandromaps.org/). 
   This is the main map type for this app.
+- [mapsforge multi map](./Features/MainMapFeatures/MapsforgeMulti/mapsforge_multi.md): show multiple vector maps in one layer. This prevents the
+  need to toggle between different map configurations.
 - [mapsforge themes](./Features/MainMapFeatures/MapsforgeThemes/mapsforgethemes.md): Themes provide a customisation of the layout of mapsforge maps e.g. for hiking or MTB usage. 
 - [mapstores](./Features/MainMapFeatures/MapStore/mapstore.md): show maps, which are provided via an offline tile store
 - [maponline](./Features/MainMapFeatures/MapOnline/maponline.md): show maps, which are provided via an online tile store (e.g. openstreetmap via Mapnik renderer)
@@ -51,6 +53,7 @@ Each feature contains a link to the corresponding detailed feature description.
 - [SshSync](./Features/FurtherFeatures/SshSync/sshsync.md): synchronize your gpx files with a configured path on a ssh server in your local net.
 - [Software update](./Features/FurtherFeatures/SoftwareUpdate/softwareUpdate.md): Update your software
 - [file manager](./Features/FurtherFeatures/FileManager/filemanager.md): show, edit, share and delete files
+- [backup](./Features/FurtherFeatures/Backup/backup.md): backup gpx files
 
 ### Developer features
 There [application design document](./more/add.pdf) provides an extensive description documentation. Additionally these pages are available:

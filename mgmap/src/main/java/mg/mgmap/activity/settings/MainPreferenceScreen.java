@@ -21,23 +21,15 @@ import android.text.InputType;
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
 
-import java.lang.invoke.MethodHandles;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import mg.mgmap.BuildConfig;
 import mg.mgmap.R;
-import mg.mgmap.activity.mgmap.MGMapLayerFactory;
 import mg.mgmap.application.MGMapApplication;
 import mg.mgmap.generic.util.Observer;
 import mg.mgmap.generic.util.Pref;
 import mg.mgmap.generic.util.PrefCache;
-import mg.mgmap.generic.util.basic.MGLog;
-import mg.mgmap.generic.util.hints.HintMapLayerAssignment;
 
 public class MainPreferenceScreen extends MGPreferenceScreen {
 
-    private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private PrefCache prefCache;
 
     @SuppressWarnings("ConstantConditions")
@@ -46,14 +38,8 @@ public class MainPreferenceScreen extends MGPreferenceScreen {
         getPreferenceManager().setSharedPreferencesName(MGMapApplication.getByContext(getContext()).getPreferencesName());
         setPreferencesFromResource(R.xml.main_preferences, rootKey);
 
-        try {
-            MGMapApplication application = (MGMapApplication) requireActivity().getApplication();
-            prefCache = application.getPrefCache();
-            List<String> mapKeys = MGMapLayerFactory.getMapLayerKeys(getContext()).stream().map(key->prefCache.get(key,"").getValue()).collect(Collectors.toList());
-            application.getHintUtil().showHint( new HintMapLayerAssignment(getActivity(), mapKeys) );
-        } catch (Exception e) {
-            mgLog.e(e);
-        }
+        MGMapApplication application = (MGMapApplication) requireActivity().getApplication();
+        prefCache = application.getPrefCache();
 
         setEditTextPreferenceNumeric(R.string.preferences_display_fullscreen_offset_key);
         setEditTextPreferenceNumeric(R.string.preferences_pressure_smoothing_gl_key);
@@ -94,10 +80,11 @@ public class MainPreferenceScreen extends MGPreferenceScreen {
                 R.string.FSSearch_pref_SearchDetails_key,
                 R.string.preferences_alarm_ps_key,
                 R.string.FSGrad_pref_WayDetails_key,
-                R.string.FSRouting_routing_category_key,
-                R.string.preferences_gnss_locationBuilder_key,
-                R.string.preferences_gnss_minMeter_key,
-                R.string.preferences_gnss_minMillis_key
+                R.string.FSRouting_routing_profiles_menu_key,
+                R.string.preferences_smoothing4routing_key,
+                R.string.preferences_cat_gnss_key,
+                R.string.preferences_cat_behaviour_key,
+                R.string.preferences_hints_key,
         };
         for (int prefId : developerPrefIds){
             Preference preference = findPreference(getResources().getString(prefId));
@@ -106,7 +93,7 @@ public class MainPreferenceScreen extends MGPreferenceScreen {
             }
         }
 
-        Pref<Boolean> prefUseRoutingProfiles = prefCache.get(R.string.preferences_routingProfile_key, false);
+        Pref<Boolean> prefUseRoutingProfiles = prefCache.get(R.string.preferences_routingProfile_key, true);
         Preference pRoutingProfiles = findPreference(getResources().getString(R.string.FSRouting_routing_profiles_menu_key));
         prefUseRoutingProfiles.addObserver((Observer) evt -> pRoutingProfiles.setEnabled(prefUseRoutingProfiles.getValue()) );
         prefUseRoutingProfiles.onChange();

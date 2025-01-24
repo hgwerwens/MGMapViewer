@@ -48,6 +48,27 @@ DownloadMapsDirect=Boolean:true
 ```
 
 
+### Load tiles for transparent layers
+
+When you use tile stores and also the hgt layer, then you can use the bounding box to load further tiles/hgt files. 
+If there is more than one layer that mght be the target of such an operation, you will get a dialog to select the 
+layer on which the operation (load remaining, load all or delete all) shall be executed. 
+The standard behaviour is to offer all Tilestore and HgtGridLayers, except these layers are fully transparent at that point of time.
+With the property
+```
+FSBB.loadTransparent=Boolean:true
+```
+you will get also transparent layers offered for the operation.
+
+### Mapsforget Number of Render Threads
+
+This property allows to manipulate the number of render threads in mapsforge. 
+```
+prefMapsforgeNumRenderThreads=4
+```
+
+
+
 ### Sample config
 
 The following sample configuration
@@ -57,6 +78,8 @@ FSRouting.RoutingAlgorithm=BidirectionalAStar
 FSSearch.reverseSearchOn=Boolean:true
 FSSearch.locationBasedSearchOn=Boolean:true
 DownloadMapsDirect=Boolean:false
+#FSBB.loadTransparent=Boolean:false
+#prefMapsforgeNumRenderThreads=4
 ```
 can be downloaded and installed [here](mgmap-install://mg4gh.github.io/MGMapViewer/Features/DeveloperFeatures/Preferences/config.zip).
 After installation you can use the internal [FileManager](../../FurtherFeatures/FileManager/filemanager.md) to modify these preferences.
