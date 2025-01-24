@@ -7,22 +7,22 @@ import mg.mgmap.generic.graph.WayAttributs;
 
 public class MTB_K1S1 extends RoutingProfile {
 
-    public MTB_K1S1( ) {
-        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(50,0,0,0.5f) ));
+/*    public MTB_K1S1( ) {
+        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(200,400,400,0.5f) ));
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
         return new CostCalcSplineMTB(wayAttributs, (CostCalcSplineProfileMTB) profileCalculator);
-    }
+    } */
 
 
-    /* public MTB_K1S1( ) {
+    public MTB_K1S1( ) {
         super(new CostCalculatorTwoPieceFunc( (short) 1, (short)1, (short)1));
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
         return new CostCalculatorMTB(wayAttributs, (CostCalculatorTwoPieceFunc) profileCalculator);
-    } */
+    }
 
 
     @Override

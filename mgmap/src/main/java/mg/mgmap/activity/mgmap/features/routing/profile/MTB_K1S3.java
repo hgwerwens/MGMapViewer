@@ -7,10 +7,10 @@ import mg.mgmap.generic.graph.WayAttributs;
 
 public class MTB_K1S3 extends RoutingProfile {
     public MTB_K1S3( ) {
-        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(100,200,200,0.5f) ));
-        for( int power = 50;power <= 250;power = power + 50) {
-            for (int sUp = 0; sUp <= 300; sUp = sUp + 100) {
-                for (int sDn = 0; sDn <= 300; sDn = sDn + 100) {
+        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(105,250,250,0.5f) ));
+        for( int power = 50;power <= 250;power = power*2 ) {
+            for (int sUp = 0; sUp <= 400; sUp = sUp + 100) {
+                for (int sDn = 0; sDn <= 400; sDn = sDn + 100) {
                     new CostCalcSplineProfileMTB(new CostCalcSplineProfileMTB.Context(power, sUp, sDn, 0.5f));
                 }
             }

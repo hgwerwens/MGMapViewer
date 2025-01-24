@@ -105,8 +105,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
                 });
             }
         }
-/*        if (heuristicViolation||negativeCurvature)
-            throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" ); */
+        if (negativeCurvature) //heuristicViolation||
+            throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
     }
 
     protected CubicSpline getCostSpline(int surfaceCat) throws Exception{
@@ -182,9 +182,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
     }
 
-    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, int varyat) {
+    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, float curveTarget, int varyat) {
         //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        float curveTarget = 0.1f;
         function curve = durationvary -> {
             try {
                 durations[varyat] = durationvary;

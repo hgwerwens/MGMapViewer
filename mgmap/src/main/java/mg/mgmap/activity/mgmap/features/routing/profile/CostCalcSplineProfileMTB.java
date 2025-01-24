@@ -65,8 +65,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 //   than subsequent 5 are for surfaceLevel 0-5; Nr 6 is for path; subsequent are for mtbscale dependant
     private static final int[] HeuristicRefSurfaceCats = {0,1,2,3,6,7,8};
 
-    private static final float[] distFactforCostFunct = { 2.7f  ,2.3f  ,1.9f  ,1.50f ,1.3f  ,1.2f  };
-    private static final float[] scr                  = { 0.005f,0.006f,0.008f,0.015f,0.020f,0.03f,0.025f ,0.020f,0.025f,0.030f,0.035f,0.06f,0.1f,0.15f,0.2f,0.25f,0.3f};
+    private static final float[] distFactforCostFunct = { 2.7f   ,2.4f  ,2f    ,1.50f ,1.3f  ,1.2f  };
+    private static final float[] scr                  = { 0.005f,0.006f ,0.008f,0.015f,0.020f,0.03f,0.025f ,0.020f,0.025f,0.030f,0.035f,0.06f,0.1f,0.15f,0.2f,0.25f,0.3f};
     private static final float[] sf1u                 = { 1.1f  ,1.15f  ,1.15f,1.15f ,1.3f  ,1.6f ,2.2f   ,1.2f  ,1.25f ,1.3f  ,1.8f  ,2.4f ,3.0f,3.0f ,3.0f,3.5f ,4f };
     private static final float[] sf2u                 = { 3f    ,3f    ,3f    ,3.1f  ,3.3f  ,3.3f ,3.3f   ,3.3f  ,3.3f  ,3.3f  ,3.3f  ,3.5f ,5f  ,6f   ,6f  ,7.0f ,8f};
     private static final float[] svmax                = { 42f   ,36f   ,28f   , 24f  ,22f   ,15f  ,21f    ,22f   ,20f   ,18f   ,15f   ,11f  };
@@ -119,7 +119,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             indRefDnSlope = 2;
             int i=0;
             if ( sUp >= 0) {
-                slopesAll[slopesAll.length-3] = 0.05f + 0.025f*sUp/100f;
+                slopesAll[slopesAll.length-3] = 0.05f + 0.02f*sUp/100f;
                 slopesAll[slopesAll.length-2] = slopesAll[slopesAll.length-3] + 0.04f;
                 slopesAll[slopesAll.length-1] = 0.6f;
             }
@@ -155,9 +155,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                 srelSlope = new float[maxScDn];
                 deltaSM20Dn = new float[maxScDn];
                 factorDown  = new float[maxScDn];
-                refSM20Dn = 0.35f-sDn/1000f;
 
-                double foff = 150d*4d/(sUp+150d);
+                double foff = 2.5d*Math.exp(-sUp/150d)+1d;// 150d*4d/(sUp+150d);//2.73d*Math.exp(-sUp/150d)+1d;//2.5d/(sUp/100d+1d)+1d;//150d*4d/(sUp+150d);
                 for (i = 0; i<maxScUp;i++){
                     if (i < maxSL) {
                         sig = sig((3-i)*2.); // sigmoid function to shift factors
@@ -168,37 +167,37 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 //                        vmax[i] = 42f-7f*i+7.5f*(float) sig((3d-i)*3d);
                         srelSlope[i]  = ssrelSlope[i];
                         factorDown[i] = (float) (5.-sDn/140d+sig(1.5-i+sDn/100d));
-                        deltaSM20Dn[i] = (float) (0.1 + 0.15*sig((3-i)/1.2d));
+                        deltaSM20Dn[i] = (float) (0.1 + 0.16*sig((2-i)*2d));
                     }
                     else if(i>maxSL){
                         off = i - ( maxSL + 1 ) - sUp/100d;
-                        sig = sig((1.5-off)*2d); // sigmoid function to shift factors
-                        f1u[i] = (float) (1.01 + sig*0.25);
-                        f2u[i] = (float) (foff + sig*7d);
-                        crUp[i] = (float) (0.019 + 0.16*sig(2.5-off));
+                        sig = sig((1d-off)*2d); // sigmoid function to shift factors
+                        f1u[i] = (float) (1.01 + sig*0.1);
+                        f2u[i] = (float) (foff + sig*2d);
+                        crUp[i] = (float) (0.02 + 0.005*(i-(maxSL+1)) + 0.1*sig(2d*(3d-off)));
                     }
                 }
+
+                refSM20Dn = 0.35f-sDn/100f*0.08f;
+
                 for (i = maxSL+1; i<maxScDn;i++){
                     off = i - ( maxSL + 1 ) - sDn/100d;
-                    crDn[i] = (float) (0.019 + 0.16*sig(2.5-off));
-//                    vmax[i] = 22f-2f*(i-(maxSL+1))-6f*(float) sig((1.5-off)*3d); //22-2*$B126-6/(1+EXP(($C$124+1,5-$B126)*3))
-                    srelSlope[i]  =  ssrelSlope[i]+1f-2f*(float) sig((sDn/100d-2d)*2d);
+                    crDn[i] = (float) (0.02 + 0.005*(i-(maxSL+1)) + 0.1*sig(2d*(3d-off)));
+                    srelSlope[i]  =  ssrelSlope[i]+(sDn/100f-2.5f)/5;
                     sig = sig((1.5-off)*2); // sigmoid function to shift factors
                     factorDown[i] = (float) (4.5-sDn/150d + 3d*sig);
-                    deltaSM20Dn[i] = (float) (0.17 + 0.65*sig);
+                    deltaSM20Dn[i] = (float) (0.18 + 0.65*sig);
                 }
-                f1u[maxSL]=f1u[maxSL+1+5];
-                f2u[maxSL]=f2u[maxSL+1+5];
+                f1u[maxSL]=f1u[maxSL+1+4];
+                f2u[maxSL]=f2u[maxSL+1+4];
                 crUp[maxSL] = crUp[maxSL+1+1];
                 crDn[maxSL] = crDn[maxSL+1+1];
-//                vmax[maxSL] = vmax[maxSL+1+1];
                 srelSlope[maxSL] = ssrelSlope[maxSL];
                 factorDown[maxSL] = factorDown[maxSL+1+4];
                 deltaSM20Dn[maxSL] = 0.29f+0.15f*(float) sig(sDn/100d-1.5d) ;
                 watt0 =   contxt.power;
 //                watt =  (watt0 - (sUp+100f)/10f)/ (1f-2f/1000f*(sUp+100f));
-                watt = (1f+sUp*3f/800f)*watt0; //( watt0 - 30f)/0.4f;
-
+                watt = (1.6f+sUp/100f*0.08f)*watt0; //( watt0 - 30f)/0.4f;
             }
         }
 
@@ -211,6 +210,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private double sig(double base){
         return 1./(1.+Math.exp(base));
     }
+
 
 
     private void checkAll() {
@@ -248,7 +248,20 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                         minDurations[s] = duration;
                 }
             }
-            return getSpline(slopesAll,minDurations);
+            CubicSpline cubicSpline = getSpline(slopesAll,minDurations);
+            /*            float curveTarget = 0.5f;
+            String contextString = context.toString();
+
+            if (cubicSpline.getCurveCoeff(slopesAll.length-3)<curveTarget){
+                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for heuristic spline %s at slope=%.2f, correct at slope=%.2f",contextString,slopesAll[slopesAll.length-3]*100f,slopesAll[slopesAll.length-2]*100f));
+                cubicSpline = getCurveOptSpline(slopesAll,minDurations,slopesAll.length-3,curveTarget,slopesAll.length-2);
+            }
+            if (cubicSpline.getCurveCoeff(2)<curveTarget){
+                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for heuristic spline %s at slope=%.2f, correct at slope=%.2f", contextString,slopesAll[2]*100f,slopesAll[1]*100f));
+                cubicSpline = getCurveOptSpline(slopesAll,minDurations,2,curveTarget,1);
+            }
+            checkNegCurvature(cubicSpline,String.format(Locale.ENGLISH,"heuristic spline for %s ",contextString)); */
+            return cubicSpline;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -283,8 +296,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float crD = crDn[scDn];
         float f1Up = f1u[scUp];
         float f2Up = f2u[scUp];
-        float split =  1f;
-        float cr0 = (crD+split*cr)/(1f+split);
+        float cr0 = (crD+cr)/2f;
         float sm20Dn = refSM20Dn + deltaSM20Dn[scDn];
         float factorDn = factorDown[scDn];
 
@@ -339,34 +351,26 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             }
         }
 
+        String OptSpline = contxt.withRef ? "with ref" : allSlopes ? "Optimized ref" :"ref";
+        String SplineType = costSpline ? " cost":" duration";
+        String contextString = String.format(Locale.ENGLISH,"%s%s spline %s ",OptSpline,SplineType,getSurfaceCatTxt(surfaceCat));
+
+        float slopeTarget = 0f;
         CubicSpline cubicSplineTmp;
         if (contxt.withRef) {
             float factor = ( costSpline && distFactCostFunct>0 ) ? distFactCostFunct: 1f;
             int mtbDn = getMtbDn(surfaceCat);
             cubicSplineTmp = contxt.refProfile.getDurationSpline(getSurfaceCat(getSurfaceLevel(surfaceCat),mtbDn,mtbDn));
-            durations[indRefDnSlopeOpt] = cubicSplineTmp.calc(slopes[indRefDnSlopeOpt])  * factor;
-            float slopeTarget = cubicSplineTmp.getSlope(indRefDnSlope)*factor;
+            for ( int i = 0; slopes[i]<0;i++) {
+                durations[i] = cubicSplineTmp.calc(slopes[i]) * factor;
+            }
+            slopeTarget = cubicSplineTmp.getSlope(indRefDnSlope)*factor;
             cubicSplineTmp = getSlopeOptSpline(slopes, durations, indRefDnSlope, slopeTarget, indRefDnSlopeOpt);
 
-            if (isHeuristicRefSpline&&cubicSplineTmp.getCurveCoeff(slopes.length-4)<=0){
-                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for slope=%.2f, correct at slope=%.2f",slopes[slopes.length-4]*100f,slopes[indRefDnSlopeOpt]*100));
-                cubicSplineTmp = getCurveOptSpline(slopes,durations,slopes.length-4,indRefDnSlopeOpt);
-
-            }
-//            if (isHeuristicRefSpline&&cubicSplineTmp.getCurve(indRefDnSlopeOpt)<=0){
-//                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for slope=%.2f, Optimize to Min at -0.01 slope , correct at slope=%.2f",slopes[indRefDnSlopeOpt]*100f,slopes[indRefDnSlopeOpt]*100));
-//                cubicSplineTmp = getMinSlope0Spline(slopes,durations,-0.0001f,indRefDnSlopeOpt);
-            if (isHeuristicRefSpline&&cubicSplineTmp.getCurveCoeff(indRefDnSlopeOpt)<=0){
-                 mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for slope=%.2f, correct at slope=%.2f",slopes[indRefDnSlopeOpt]*100f,slopes[indRefDnSlopeOpt]*100));
-                 cubicSplineTmp = getCurveOptSpline(slopes,durations,indRefDnSlopeOpt,indRefDnSlopeOpt);
-            }
-            float slope2slopeTarget = cubicSplineTmp.getSlope(indRefDnSlope)/slopeTarget;
-            if (Math.abs(slope2slopeTarget - 1f ) > 0.01f){
-                String msg = String.format(Locale.ENGLISH,"For %s Slope to Slopetarget=%.3f at %.2f",getSurfaceCatTxt(surfaceCat),slope2slopeTarget,slopes[indRefDnSlope]*100f);
-                if (slope2slopeTarget > 0.85f && slope2slopeTarget < 1.1f)
-                   mgLog.w(msg);
-                else
-                   throw new Exception("Out of range for " + msg);
+            if ( cubicSplineTmp.getVal(indRefDnSlopeOpt)>cubicSplineTmp.getVal(indRefDnSlopeOpt+1)&&cubicSplineTmp.getVal(indRefDnSlopeOpt)>cubicSplineTmp.getVal(indRefDnSlope)){
+                mgLog.w(String.format(Locale.ENGLISH,"Correct decreasing downhill speed for %s. Set duration at slope=%.2f to duration at slope=%.2f",contextString,slopes[indRefDnSlopeOpt]*100f,slopes[indRefDnSlopeOpt+1]*100f));
+                durations[indRefDnSlopeOpt] = durations[indRefDnSlopeOpt+1];
+                cubicSplineTmp = getSpline(slopes,durations);
             }
         }
         else {
@@ -376,43 +380,39 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             } else {
                 cubicSplineTmp = getSpline(slopes, durations);
             }
-            if (isHeuristicRefSpline&&cubicSplineTmp.getCurveCoeff(slopes.length-4)<=0){
-                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",getSurfaceCatTxt(surfaceCat),slopes[slopes.length-4]*100f,slopes[slopes.length-3]*100f));
-                cubicSplineTmp = getCurveOptSpline(slopes,durations,slopes.length-4,slopes.length-3);
+            float curveTarget = 0.01f;
+            if (isHeuristicRefSpline&&cubicSplineTmp.getCurveCoeff(slopes.length-4)<0.01f){
+                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",contextString,slopes[slopes.length-4]*100f,slopes[slopes.length-3]*100f));
+                cubicSplineTmp = getCurveOptSpline(slopes,durations,slopes.length-4,curveTarget,slopes.length-3);
             }
-            if (isHeuristicRefSpline&&allSlopes && cubicSplineTmp.getCurveCoeff(3)<=0){
-                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",getSurfaceCatTxt(surfaceCat),slopes[3]*100f,slopes[3]*100f));
-                cubicSplineTmp = getCurveOptSpline(slopes,durations,3,3);
+            if (isHeuristicRefSpline&&allSlopes && cubicSplineTmp.getCurveCoeff(3)<0.01f){
+                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",contextString,slopes[3]*100f,slopes[3]*100f));
+                cubicSplineTmp = getCurveOptSpline(slopes,durations,3,curveTarget,3);
+            }
+        }
+        float curveTarget = 0.2f;
+        if (cubicSplineTmp.getCurveCoeff(slopes.length-3)<curveTarget){
+            mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",contextString,slopes[slopes.length-3]*100f,slopes[slopes.length-2]*100f));
+            cubicSplineTmp = getCurveOptSpline(slopes,durations,slopes.length-3,curveTarget,slopes.length-2);
+        }
+        if (cubicSplineTmp.getCurveCoeff(2)<curveTarget){
+            mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f", contextString,slopes[2]*100f,slopes[1]*100f));
+            cubicSplineTmp = getCurveOptSpline(slopes,durations,2,curveTarget,1);
+        }
+
+        if (contxt.withRef ) {
+            float slope2slopeTarget = cubicSplineTmp.getSlope(indRefDnSlope) / slopeTarget;
+            if (Math.abs(slope2slopeTarget - 1f) > 0.01f) {
+                String msg = String.format(Locale.ENGLISH, "for %s Slope to Slopetarget=%.3f at %.2f", contextString, slope2slopeTarget, slopes[indRefDnSlope] * 100f);
+                if (slope2slopeTarget > 0.5f && slope2slopeTarget < 2f)
+                    mgLog.w(msg);
+                else
+                    throw new Exception("Out of range " + msg);
             }
         }
 
-        if (cubicSplineTmp.getCurveCoeff(slopes.length-3)<=0){
-            mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",getSurfaceCatTxt(surfaceCat),slopes[slopes.length-3]*100f,slopes[slopes.length-2]*100f));
-            cubicSplineTmp = getCurveOptSpline(slopes,durations,slopes.length-3,slopes.length-2);
-        }
-        if (cubicSplineTmp.getCurveCoeff(2)<=0){
-            mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f", getSurfaceCatTxt(surfaceCat),slopes[2]*100f,slopes[1]*100f));
-            cubicSplineTmp = getCurveOptSpline(slopes,durations,2,1);
-        }
-        String OptSpline = contxt.withRef ? "With Ref" : allSlopes ? "Optimized" :"";
-        String SplineType = costSpline ? " Cost":" Duration";
+        checkNegCurvature(cubicSplineTmp,contextString);
 
-
-        ArrayList<CubicSpline.Value> negativeCurvatures = cubicSplineTmp.getCurveRadiusForNegCurvaturePoints();
-        if (negativeCurvatures != null) {
-            StringBuilder msg = new StringBuilder(String.format(Locale.ENGLISH,"%s%s Spline for %s has negative curvature at",OptSpline,SplineType,getSurfaceCatTxt(surfaceCat)));
-            boolean threshold = false;
-            for (CubicSpline.Value negCurvature : negativeCurvatures) {
-                if (-negCurvature.y() < 0.1f) threshold = true;
-                msg.append(": ");
-                msg.append(String.format(Locale.ENGLISH," slope=%.2f",100*negCurvature.x()));
-                msg.append(String.format(Locale.ENGLISH," curve Radius=%.2f",-negCurvature.y()));
-            }
-            if(isHeuristicRefSpline || threshold)
-                throw new Exception( msg.toString());
-            else
-                mgLog.w(msg.toString());
-        }
         CubicSpline cubicSpline = cubicSplineTmp;
         long t = System.nanoTime() - t1;
         mgLog.i( ()-> {
@@ -421,12 +421,30 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                 float smMinOpt = cubicSpline.calc(slopeMin);
                 float smVary = durations[indRefDnSlopeOpt];
                 float sm0 = cubicSpline.calc(0f);
-                return String.format(Locale.ENGLISH, "%s%s Spline for %s t[µsec]=%s. Min at Slope=%.2f, smMin=%.3f, vmax=%.2f, smVary=%.3f, sm0=%.3f, v0=%.2f", OptSpline,SplineType,getSurfaceCatTxt(surfaceCat),t/1000,100f*slopeMin,smMinOpt,3.6f/smMinOpt,smVary,sm0,3.6f/sm0);
+                return String.format(Locale.ENGLISH, "For %s t[µsec]=%s. Min at Slope=%.2f, smMin=%.3f, vmax=%.2f, smVary=%.3f, sm0=%.3f, v0=%.2f", contextString,t/1000,100f*slopeMin,smMinOpt,3.6f/smMinOpt,smVary,sm0,3.6f/sm0);
             } catch (Exception e) {
-                return String.format(Locale.ENGLISH, "%s for %s",e.getMessage(),getSurfaceCatTxt(surfaceCat));
+                return String.format(Locale.ENGLISH, "%s for %s",e.getMessage(),contextString);
             }
         });
         return cubicSpline;
+    }
+
+    private void checkNegCurvature(CubicSpline cubicSpline, String context) throws Exception{
+        ArrayList<CubicSpline.Value> negativeCurvatures = cubicSpline.getCurveRadiusForNegCurvaturePoints();
+        if (negativeCurvatures != null) {
+            StringBuilder msg = new StringBuilder(String.format(Locale.ENGLISH,"Negative curvature for %s",context));
+            boolean threshold = false;
+            for (CubicSpline.Value negCurvature : negativeCurvatures) {
+                if (-negCurvature.y() < 0.01f) threshold = true;
+                msg.append(": ");
+                msg.append(String.format(Locale.ENGLISH," slope=%.2f",100*negCurvature.x()));
+                msg.append(String.format(Locale.ENGLISH," curve Radius=%.2f",-negCurvature.y()));
+            }
+            if(threshold)
+                throw new Exception( msg.toString());
+            else
+                mgLog.w(msg.toString());
+        }
     }
 
     protected String getSurfaceCatTxt(int surfaceCat){
