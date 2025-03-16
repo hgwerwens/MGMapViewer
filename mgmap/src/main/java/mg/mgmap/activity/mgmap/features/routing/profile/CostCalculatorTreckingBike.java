@@ -73,7 +73,7 @@ public class CostCalculatorTreckingBike implements CostCalculator {
                 else
                     distFactor = 20;
             } else {
-                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat);
+                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat,false);
                 surfaceCat = factors.surfaceCat;
                 distFactor = factors.distFactor;
             }

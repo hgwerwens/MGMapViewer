@@ -49,6 +49,7 @@ public class WayAttributs {
                     break;
                 case "network":
                     network = tag.value;
+                    if (network == "ocn") network = "lcn";
                     break;
                 case "bicycle":
                     bicycle = tag.value;

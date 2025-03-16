@@ -114,7 +114,7 @@ public class CostCalculatorMTB implements CostCalculator {
                 }
                 deltaDn = 2;
             } else {
-                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat);
+                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat,true);
                 surfaceCat = factors.surfaceCat;
                 double distFactor = (surfaceCat == 0) ? factors.distFactor*1.3 : factors.distFactor ;
                 mfud = distFactor;
@@ -211,6 +211,7 @@ public class CostCalculatorMTB implements CostCalculator {
         }
         if ( oneway && !primaryDirection)
             cost = cost + dist * 5;
+//        mgLog.d("cost="+cost + " dist="+dist+" vertDist="+vertDist);
         return cost + 0.0001;
     }
 

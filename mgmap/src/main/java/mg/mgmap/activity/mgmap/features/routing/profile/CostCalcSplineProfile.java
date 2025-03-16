@@ -10,7 +10,7 @@ import mg.mgmap.generic.util.basic.MGLog;
 public abstract class CostCalcSplineProfile implements CostCalculator {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private static final float lowstart = -0.15f;
-    private static final float highstart = 0.1f;
+    private static final float highstart = 0.15f;
 
     private final CubicSpline cubicProfileSpline;
     private final CubicSpline cubicHeuristicSpline;
@@ -24,7 +24,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         this.context = context;
         if (fullCalc(context)) {
             mgLog.i("Spline Profile for " + this.getClass().getName() + " " + context.toString());
-            cubicHeuristicSpline = calcHeuristicSpline(getHeuristicRefSpline(context));
+            CubicSpline cubicHeuristicRefSpline = getHeuristicRefSpline(context);
+            cubicHeuristicSpline = calcHeuristicSpline(cubicHeuristicRefSpline);
             cubicProfileSpline = getProfileSpline(context);
             checkAll();
         } else {
@@ -105,7 +106,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
                 });
             }
         }
-        if (negativeCurvature) //heuristicViolation||
+        if (negativeCurvature||heuristicViolation)
             throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
     }
 
@@ -211,20 +212,20 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     }
 
     protected ArrayList<CubicSpline.Value> checkSplineHeuristic(CubicSpline cubicSpline, int surfaceCat)  {
-        float xs = lowstart - 0.1f;
+        float xs = lowstart - 0.2f;
         float minmfd = (surfaceCat == 0) ? getMinDistFactSC0() : 1f;
         ArrayList<CubicSpline.Value> violations = new ArrayList<>();
         do {
-            xs = xs + 0.01f;
+            xs = xs + 0.001f;
             // make sure that costs are always lager than Heuristic
             if (cubicHeuristicSpline !=null ) {
                 float heuristic = cubicHeuristicSpline.calc(xs);
                 float spline    = cubicSpline.calc(xs);
-                float delta = minmfd * spline - 0.0001f - heuristic/0.9999f;
-                if (delta <0)
+                float delta = minmfd * spline - heuristic;
+                if (delta <= 0)
                     violations.add(new CubicSpline.Value(xs,delta));
             }
-        } while (xs < highstart + 0.2f);
+        } while (xs < highstart + 0.3f);
         return violations;
     }
 

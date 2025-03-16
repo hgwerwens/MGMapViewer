@@ -106,7 +106,7 @@ public class CubicSpline {
 
     public ArrayList<Value> getCurveRadiusForNegCurvaturePoints(){
         ArrayList<Value> result = new ArrayList<>(0);
-        for (int i=1; i<x.length-1;i++){
+        for (int i=1; i<x.length;i++){
            if (polynominals[i][2]<0)
                result.add(new Value(x[i - 1], (float) Math.pow((1f+polynominals[i][1]*polynominals[i][1]),1.5d) / (2f*polynominals[i][2])));
         }

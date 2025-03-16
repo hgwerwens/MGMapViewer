@@ -60,10 +60,10 @@ public class CostCalcSplineMTB implements CostCalculator {
                 surfaceLevel = (surfaceLevel>0) ? surfaceLevel :4;
                 distFactor = 1.0f;
             } else if ("steps".equals(wayTagEval.highway)) {
-                surfaceLevel = 5; // treat steps as mtb scale 3.
+                surfaceLevel = 6; // treat steps as mtb scale 3.
                 mtbDn = 3;
                 mtbUp = 6;
-                distFactor = 2f;
+                distFactor = 7f;
                 if ("up".equals(wayTagEval.incline_dir))
                     direction = dir.up;
                 else if ("down".equals(wayTagEval.incline_dir))
@@ -71,7 +71,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 else
                     direction = dir.none;
             } else {
-                TagEval.Factors factors = TagEval.getFactors(wayTagEval, (short) surfaceLevel);
+                TagEval.Factors factors = TagEval.getFactors(wayTagEval, (short) surfaceLevel, true);
                 surfaceLevel = factors.surfaceCat;
                 if (surfaceLevel==0)
                     distFactor = (float) (factors.distFactor / TagEval.minDistfSc0);
@@ -94,17 +94,26 @@ public class CostCalcSplineMTB implements CostCalculator {
 
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection){
+        if (dist<0.0000001) return 0.00001;
+        float costf = surfaceCatSpline.calc(vertDist / (float) dist);
+        double cost;
         if (direction!=null)
             if ( direction == dir.oneway && !primaryDirection)
-                return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + dist * 5 + 0.0001;
+                cost = mfd*dist*costf + dist * 5 + 0.00001;
             else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
-                return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
-            else if (direction!=dir.oneway)
-                return dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
+                cost = mfd*dist*costf + 0.00001;
+            else if (direction==dir.none)
+                cost = mfd/2*dist*costf + 0.00001;
+            else if (direction!=dir.oneway) {
+                cost = (1d + mfd / 2d * mProfileCalculator.sig(2d*(((CostCalcSplineProfileMTB.Context) mProfileCalculator.getContext()).sDn / 100d - 1d))) * dist * costf + 0.00001;
+            }
             else
-                return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
+                cost = mfd*dist*costf + 0.00001;
         else
-            return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + 0.0001;
+            cost = mfd*dist*costf + 0.00001;
+
+//        mgLog.d("cost="+cost+" costf="+costf + " dist="+dist+" vertDist="+vertDist+" primaryDir="+primaryDirection+" direction="+direction+" mfd="+mfd);
+        return cost;
     }
 
     public double heuristic(double dist, float vertDist) {
@@ -122,11 +131,11 @@ public class CostCalcSplineMTB implements CostCalculator {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            float cost = mfd*surfaceCatSpline.calc(slope);
+            float costf = surfaceCatSpline.calc(slope);
             float v = 3.6f/spm;
             float finalSpm = spm;
             mgLog.d(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f costf=%.2f",
-                    100f*slope,v, finalSpm *dist,dist,surfaceCat,mProfileCalculator.getSurfaceLevel(surfaceCat),mProfileCalculator.getMtbUp(surfaceCat),mProfileCalculator.getMtbDn(surfaceCat),mfd,cost));
+                    100f*slope,v, finalSpm *dist,dist,surfaceCat,mProfileCalculator.getSurfaceLevel(surfaceCat),mProfileCalculator.getMtbUp(surfaceCat),mProfileCalculator.getMtbDn(surfaceCat),mfd,costf));
             return (long) (1000*dist*spm);
         } else return 0;
     }

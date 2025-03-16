@@ -41,7 +41,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
                 minDurations[s] = 1e6f;
                 for ( int i=0;i<refSurfaceCats.length;i++){
                     float mfd = refSurfaceCats[i]==0 ? getMinDistFactSC0():1f;
-                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.00011f ) * 0.9999f;
+                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.0001f );// * 0.9999f;
                     if (duration < minDurations[s])
                         minDurations[s] = duration;
                 }

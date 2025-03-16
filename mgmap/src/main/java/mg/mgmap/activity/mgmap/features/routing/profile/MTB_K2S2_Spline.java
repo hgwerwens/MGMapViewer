@@ -7,7 +7,7 @@ import mg.mgmap.generic.graph.WayAttributs;
 
 public class MTB_K2S2_Spline extends RoutingProfile {
     public MTB_K2S2_Spline( ) {
-        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(100,-1,-1,0f) ));
+        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(300,300) ));
 /*        for( int power = 100;power <=250;power = power + 10){
             new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(power));
         } */

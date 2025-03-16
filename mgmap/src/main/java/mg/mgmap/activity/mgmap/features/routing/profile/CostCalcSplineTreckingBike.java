@@ -53,7 +53,7 @@ public class CostCalcSplineTreckingBike implements CostCalculator {
                 else
                     distFactor = 20f;
             } else {
-                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat);
+                TagEval.Factors factors = TagEval.getFactors(wayTagEval, surfaceCat,false);
                 surfaceCat = factors.surfaceCat;
                 distFactor = (float) factors.distFactor;
             }
