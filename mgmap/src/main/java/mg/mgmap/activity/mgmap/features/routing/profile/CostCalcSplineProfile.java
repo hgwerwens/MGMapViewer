@@ -82,15 +82,16 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     private void checkAll() {
         boolean negativeCurvature = false;
         //noinspection unchecked
+        CubicSpline cubicSpline = null;
         ArrayList<CubicSpline.Value>[] violations = (ArrayList<CubicSpline.Value>[]) new ArrayList[getMaxSurfaceCat()+1];
         for ( int surfaceCat = 0 ; surfaceCat < getMaxSurfaceCat(); surfaceCat++){
             try {
-                CubicSpline cubicSpline = getCostSpline(surfaceCat);
-                violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
+               cubicSpline = getCostSpline(surfaceCat);
             } catch (Exception e) {
                 mgLog.e(e.getMessage());
                 negativeCurvature = true;
             }
+            if (cubicSpline!= null ) violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
         }
         boolean heuristicViolation = false;
         for ( int surfaceCat=0; surfaceCat<violations.length;surfaceCat++) {

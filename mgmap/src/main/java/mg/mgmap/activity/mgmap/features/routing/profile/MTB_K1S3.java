@@ -8,11 +8,11 @@ import mg.mgmap.generic.graph.WayAttributs;
 public class MTB_K1S3 extends RoutingProfile {
     public MTB_K1S3( ) {
         super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(200,200) ));
-            for (int sUp = 0; sUp <= 300; sUp = sUp + 100) {
+/*            for (int sUp = 0; sUp <= 400; sUp = sUp + 100) {
                 for (int sDn = 0; sDn <= 400; sDn = sDn + 100) {
                     new CostCalcSplineProfileMTB(new CostCalcSplineProfileMTB.Context(sUp, sDn));
                 }
-            }
+            } */
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {

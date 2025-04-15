@@ -40,18 +40,19 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     protected static final int maxSL = 6; // SurfaceLevels without MTB scale
-    private static final int deltaUptoDn = 1; // mtbUp = mtbDn + 1 in case only mtbDn is specified
+//    private static final int deltaUptoDn = 1; // mtbUp = mtbDn + 1 in case only mtbDn is specified
     private static final int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
     private static final int maxDn = 6;
     private static final int maxScDn = maxSL+1+maxDn+1;
-    private static final int maxScUp = maxScDn+maxUptoDn;
+    private static final int maxScUp = maxScDn;//+maxUptoDn;
 
     private static final int[] HeuristicRefSurfaceCats = {7};
 
     private static final float[] sdistFactforCostFunct = {  3f   ,2.4f  ,2f    ,1.70f ,1.5f  ,1.4f, 1.6f };
     private static final float[] ssrelSlope            = { 1.4f  ,1.25f ,1f    ,1f    ,1f    ,1f   ,0f    ,1.4f  ,1.4f  ,1.5f  ,1.5f  ,1.2f ,1f   ,1f };
 
-    private static final int maxSurfaceCat = maxSL + 1 + (maxUptoDn+1)*(maxDn+1);
+    private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1);
+    private static final int maxSurfaceCat = maxCatUpDn + maxDn + 1 ;
     private static final float refDnSlopeOpt = -0.04f;
     private static final float refDnSlope = -0.2f;
     private static final float ACw = 0.45f;
@@ -144,8 +145,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     sig = sig((1.5-off)*2.);
 
                     f1u[sc] = (float) (1.15+0.3*sig);
-                    f2u[sc] = ( 1.1f )*f1u[sc] ;
-                    f3u[sc] = 2.2f + 0.5f*(float) sig;
+                    f2u[sc] = (float) ( 1.08 + 0.03*sig )*f1u[sc] ;
+                    f3u[sc] = 2.2f; // + 0.2f*(float) sig;
 
                     crUp[sc] = (float) (0.02 + 0.005*(sc-(maxSL+1)) + 0.05*sig(2d*(2d-off)));
                     distFactforCostFunct[sc] = 1f + 0.5f*(float) sig(-off*2.);
@@ -156,8 +157,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
             f3u[maxSL]=2.4f;
-            crUp[maxSL] = 0.025f;
-            crDn[maxSL] = 0.025f;
+            crUp[maxSL] = 0.03f;
+            crDn[maxSL] = 0.02f;
             srelSlope[maxSL] = srelSlope[maxSL+1];
 
             deltaSM20Dn[maxSL] = deltaSM20Dn[maxSL+1+2]; // + 0.04f * (float) Math.exp(-(sDn/100 - 2.5)*(sDn/100 - 2.5));
@@ -165,7 +166,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
             distFactforCostFunct[maxSL] = sdistFactforCostFunct[maxSL];
 
-            slopesAll[slopesAll.length-4] = 0.05f * ulStretch;  //basis for heuristic spline
+            slopesAll[slopesAll.length-4] = 0.065f * ulStretch;  //basis for heuristic spline
             slopesAll[slopesAll.length-3] = 0.17f * ulStretch;
             slopesAll[slopesAll.length-2] = slopesAll[slopesAll.length-3] + 0.025f*ulStretch;
             slopesAll[slopesAll.length-1] = slopesAll[slopesAll.length-2] + 0.1f;
@@ -226,19 +227,19 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             }
             CubicSpline cubicSpline = getSpline(slopesAll,minDurations);
 
-            checkNegCurvature(cubicSpline,String.format(Locale.ENGLISH,"heuristic spline for %s ",context.toString()));
+            checkNegCurvature(cubicSpline,String.format(Locale.ENGLISH,"heuristic spline for %s ",context.toString()),1e7f);
             return cubicSpline;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-/*    private boolean isHeuristicRefSpline(int surfaceCat){
+    private boolean isHeuristicRefSpline(int surfaceCat){
         for (int heuristicRefSurfaceCat : HeuristicRefSurfaceCats) {
             if (surfaceCat == heuristicRefSurfaceCat) return true;
         }
         return false;
-    } */
+    }
 
     protected boolean fullCalc(Object context){
         Context contxt = (Context) context;
@@ -255,9 +256,14 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     private CubicSpline calcSpline(boolean costSpline, int surfaceCat, Object context) throws Exception {
         setFromContext(context);
-        Context contxt = (Context) context;
-        int scDn = getCatDn(surfaceCat);
+
         int scUp = getCatUp(surfaceCat);
+        if (scUp >= maxScUp) return null;
+
+        int scDn = getCatDn(surfaceCat);
+
+        Context contxt = (Context) context;
+
         float cr = crUp[scUp] ;
         float crD = crDn[scDn];
         float f1Up = f1u[scUp];
@@ -388,7 +394,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             }
         }
 
-        checkNegCurvature(cubicSplineTmp,contextString);
+        checkNegCurvature(cubicSplineTmp,contextString,0.01f);
 
         CubicSpline cubicSpline = cubicSplineTmp;
         long t = System.nanoTime() - t1;
@@ -406,18 +412,19 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         return cubicSpline;
     }
 
-    private void checkNegCurvature(CubicSpline cubicSpline, String context) throws Exception{
+    private void checkNegCurvature(CubicSpline cubicSpline, String context, float threshold) throws Exception{
         ArrayList<CubicSpline.Value> curveRadiusForNegCurvaturePoint = cubicSpline.getCurveRadiusForNegCurvaturePoints();
         if (curveRadiusForNegCurvaturePoint != null) {
             StringBuilder msg = new StringBuilder(String.format(Locale.ENGLISH,"Negative curvature for %s",context));
-            boolean threshold = false;
+            boolean thresholdReached = false;
             for (CubicSpline.Value negCurvature : curveRadiusForNegCurvaturePoint) {
-                if (-negCurvature.y() < 0.01f) threshold = true;
+                if (-negCurvature.y() < threshold)
+                    thresholdReached = true;
                 msg.append(": ");
                 msg.append(String.format(Locale.ENGLISH," slope=%.2f",100*negCurvature.x()));
                 msg.append(String.format(Locale.ENGLISH," curve Radius=%.2f",-negCurvature.y()));
             }
-            if(threshold)
+            if(thresholdReached)
                 throw new Exception( msg.toString());
             else
                 mgLog.w(msg.toString());
@@ -456,8 +463,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     scUp = mtbDn-mtbUp>=0 ? 0 : (Math.min(mtbUp - mtbDn, maxUptoDn));
                     scDn = mtbDn;
                 } else {
-                    scUp = deltaUptoDn;
-                    scDn = mtbDn;
+//                    scUp = deltaUptoDn;
+//                    scDn = mtbDn;
+                    return maxCatUpDn+mtbDn;
                 }
             else if (mtbUp > -1) {
                 scUp = mtbUp == 0?0:1;
@@ -478,25 +486,28 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
 
     protected int getMtbUp(int surfaceCat){
-        if (surfaceCat <= maxSL) return -1;
-        else                     return (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        if (surfaceCat <= maxSL  )           return -1;
+        else  if (surfaceCat < maxCatUpDn)   return (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else                                 return -1;
     }
 
     private int getCatUp(int surfaceCat){
-        if (surfaceCat <= maxSL)
-            return surfaceCat;
-        else
-            return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        if (surfaceCat <= maxSL)           return surfaceCat;
+        else if (surfaceCat < maxCatUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else                               return maxSL;
     }
 
     protected int getMtbDn(int surfaceCat){
-        if (surfaceCat <= maxSL) return -1;
-        else                     return (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        if (surfaceCat <= maxSL)          return -1;
+        else if (surfaceCat < maxCatUpDn) return (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else                              return surfaceCat - maxCatUpDn;
     }
 
     protected int getCatDn(int surfaceCat){
-        if (surfaceCat <= maxSL) return surfaceCat;
-        else                     return maxSL+1 + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        if (surfaceCat <= maxSL)          return surfaceCat;
+        else if (surfaceCat < maxCatUpDn) return maxSL+1 + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else
+            return maxSL+1 + surfaceCat - maxCatUpDn;
     }
 }
 
