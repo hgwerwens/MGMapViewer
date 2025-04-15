@@ -78,7 +78,6 @@ import mg.mgmap.activity.mgmap.features.routing.FSRouting;
 import mg.mgmap.activity.mgmap.features.rtl.FSRecordingTrackLog;
 import mg.mgmap.activity.mgmap.features.search.FSSearch;
 import mg.mgmap.activity.mgmap.features.time.FSTime;
-import mg.mgmap.application.Setup;
 import mg.mgmap.application.util.PersistenceManager;
 import mg.mgmap.generic.graph.GGraphTileFactory;
 import mg.mgmap.generic.model.BBox;
@@ -150,7 +149,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
     private GGraphTileFactory gGraphTileFactory = null;
     private final Runnable ttUploadGpxTrigger = () -> prefCache.get(R.string.preferences_sftp_uploadGpxTrigger, false).toggle();
     private final Runnable ttCheckFullBackup = () ->
-        BackupUtil.checkFullBackup(MGMapActivity.this, application.getPersistenceManager(), prefCache.get(R.string.preferences_last_full_backup_time, 0L));
+        BackupUtil.checkFullBackup(MGMapActivity.this, application.getPersistenceManager());
     private final PropertyChangeListener prefGpsObserver = (e) -> triggerTrackLoggerService();
     private Pref<Boolean> prefTracksVisible;
     private List<String> recreatePreferences;
@@ -186,7 +185,6 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         super.onCreate(savedInstanceState);
 
         createSharedPreferences();
-        Setup.loadPropertiesToPreferences(getSharedPreferences(), application.getPersistenceManager().getConfigProperties("load", ".*.properties"));
         if (Build.VERSION.SDK_INT >= 27){
             setShowWhenLocked(true);
         }
@@ -254,7 +252,7 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
         application.prefGps.addObserver(prefGpsObserver);
         application.prefGps.onChange();
         prefCache.get(R.string.preferences_sftp_uploadGpxTrigger, false).addObserver((e) -> {
-            FeatureService.getTimer().postDelayed(()->BackupUtil.checkLatestBackup(MGMapActivity.this, application.getPersistenceManager(), prefCache.get(R.string.preferences_last_full_backup_time, 0L)), 10);
+            FeatureService.getTimer().postDelayed(()->BackupUtil.checkLatestBackup(MGMapActivity.this, application.getPersistenceManager()), 10);
             FeatureService.getTimer().postDelayed(()->new GpxSyncUtil().trySynchronisation(application), 10000);
         });
         prefTracksVisible = prefCache.get(R.string.preferences_tracks_visible, true);
@@ -493,6 +491,9 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
                             if (aTrackLog != null){
                                 if (aTrackLog.getReferencedTrackLog() != null){
                                     selectedTrackLog = aTrackLog.getReferencedTrackLog();
+                                    if (selectedTrackLog.getRoutingProfileId() == null){
+                                        selectedTrackLog.setRoutingProfileId(getFS(FSRouting.class).getDefaultRoutingProfileId());
+                                    }
                                     getFS(FSMarker.class).createMarkerTrackLog(selectedTrackLog);
                                 } else {
                                     selectedTrackLog = aTrackLog;
@@ -721,7 +722,8 @@ public class MGMapActivity extends MapViewerBase implements XmlRenderThemeMenuCa
     }
 
     public void initMapsforgeNumRenderThreads(){
-        int numRenderThreads = Runtime.getRuntime().availableProcessors()+1;
+//        int numRenderThreads = Runtime.getRuntime().availableProcessors()+1;
+        int numRenderThreads = 2; // seems like mapsforge has again build in some bottleneck
         try {
             numRenderThreads = Integer.parseInt( getSharedPreferences().getString(getResources().getString(R.string.preferences_mapsforge_renderThreads),""+numRenderThreads) );
         } catch (NumberFormatException e) {

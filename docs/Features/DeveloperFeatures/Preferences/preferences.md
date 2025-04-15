@@ -4,7 +4,7 @@
 
 **Caution:** use this feature only, if you exactly know what you do!
 
-There is an option to set manually shared preferences values. Create in the config folder a subfolder load containing files with the extension 
+There is an option to set manually shared preferences values. Create in the config folder a subfolder `load` containing any file with the extension 
 ".properties" which contain key value pairs. By default these preferences are considered as String preferences. Using the prefix "Boolean:" in the 
 value is changing this behaviour to a Boolean preference.
 
@@ -67,8 +67,6 @@ This property allows to manipulate the number of render threads in mapsforge.
 prefMapsforgeNumRenderThreads=4
 ```
 
-
-
 ### Sample config
 
 The following sample configuration
@@ -80,6 +78,7 @@ FSSearch.locationBasedSearchOn=Boolean:true
 DownloadMapsDirect=Boolean:false
 #FSBB.loadTransparent=Boolean:false
 #prefMapsforgeNumRenderThreads=4
+#trackGpxDir=/storage/180F-2D14/Android/data/mg.mgmap/files/gpx
 ```
 can be downloaded and installed [here](mgmap-install://mg4gh.github.io/MGMapViewer/Features/DeveloperFeatures/Preferences/config.zip).
 After installation you can use the internal [FileManager](../../FurtherFeatures/FileManager/filemanager.md) to modify these preferences.

@@ -180,20 +180,18 @@ public class FileManagerEntryView extends LinearLayout {
 
 
     public void unbind(){
-
-        mgLog.i(fileManagerEntryModel.getFile().getAbsolutePath());
+        mgLog.d(fileManagerEntryModel.getFile().getAbsolutePath());
         clearReferences();
         boundViews.remove(this);
     }
 
     private void clearReferences(){
-        mgLog.i("unbind_data "+fileManagerEntryModel.getFile().getAbsolutePath());
+        mgLog.d("unbind_data "+fileManagerEntryModel.getFile().getAbsolutePath());
         etvSelected.cleanup();
         etvSelected.setOnClickListener(null);
         etvSelected.setOnLongClickListener(null);
         llRight.setOnClickListener(null);
         llRight.setOnLongClickListener(null);
-        fileManagerEntryModel.getSelected().setValue(false);
         fileManagerEntryModel = null;
         setOnClickListener(null);     // OCL created during bind in FileManagerEntryAdapter/FileManagerActivity
         setOnLongClickListener(null); // OCL created during bind in FileManagerEntryAdapter/FileManagerActivity
@@ -228,7 +226,7 @@ public class FileManagerEntryView extends LinearLayout {
     }
 
     // For some unknown reason the name field shows initially only one line (and only for those in the first screen).
-    // This workaround triggers a refresh for long track names
+    // This workaround triggers a refresh for long track names (and taken over for file names)
     private void hack(){
         if ((fileManagerEntryModel != null) && (etvName != null)){
             if (fileManagerEntryModel.getFile().getName().length() > 26){

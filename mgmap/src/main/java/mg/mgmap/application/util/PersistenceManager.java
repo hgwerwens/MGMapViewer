@@ -51,7 +51,7 @@ public class PersistenceManager {
     public static final String SUFFIX_META = ".meta";
 
 
-    private static ArrayList<File> getFilesRecursive(File dir, String nameEndsWith, ArrayList<File> matchedList){
+    public static ArrayList<File> getFilesRecursive(File dir, String nameEndsWith, ArrayList<File> matchedList){
         File[] entries = dir.listFiles();
         if (entries != null){
             for (File entry : entries) {
@@ -79,6 +79,10 @@ public class PersistenceManager {
     }
 
     public static boolean forceDelete(File file){
+        forceDeleteContent(file);
+        return file.delete();
+    }
+    public static void forceDeleteContent(File file){
         File[] contents = file.listFiles();
         if (contents != null) {
             for (File f : contents) {
@@ -87,8 +91,25 @@ public class PersistenceManager {
                 }
             }
         }
-        return file.delete();
     }
+
+    public static void forceDeleteEmptyDirs(File file){
+        File[] contents = file.listFiles();
+        if (contents != null) {
+            for (File f : contents) {
+                if (f.isDirectory() && !Files.isSymbolicLink(f.toPath())) {
+                    forceDeleteEmptyDirs(f);
+                }
+            }
+            contents = file.listFiles(); // check contents after recursive walk through
+            assert (contents != null);
+            if (contents.length == 0){                                                          // Is it now empty?
+                if (!file.delete()) mgLog.e("failed to delete "+file.getAbsolutePath());   // then delete it
+            }
+        }
+    }
+
+
 
     public static void mergeDir(File mergeFrom, File mergeTo){ // recursive merge dir
         assert mergeFrom.exists();
@@ -144,9 +165,9 @@ public class PersistenceManager {
 
     private final MGMapApplication application;
     private final Context context;
-    private boolean firstRun = false;
 
     private File baseDir;
+    private File baseDirExt = null;
     private final File appDir;
 
     private final File trackMetaDir;
@@ -162,6 +183,7 @@ public class PersistenceManager {
     private final File apkDir;
     private final File backupDir;
     private final File restoreDir;
+    private final File tempZipDir;
 
     private final File fRaw;
     private FileOutputStream fosRaw = null;
@@ -174,9 +196,17 @@ public class PersistenceManager {
         baseDir = context.getExternalFilesDir(null);
         mgLog.i("Default Storage: "+getBaseDir().getAbsolutePath());
 
+        File[] externalFilesDirs = context.getExternalFilesDirs(null);
+        for (File f : externalFilesDirs) {
+            mgLog.i("Storage check: "+f.getAbsolutePath()+" exists="+f.exists());
+            if ((externalFilesDirs.length == 2) && (f != baseDir)){
+                baseDirExt = f;
+                mgLog.i("SDCard baseDir: "+f.getAbsolutePath()+" exists="+f.exists());
+            }
+        }
+
         File appDir2Check = new File(baseDir, sAppDir);
         if (! appDir2Check.exists()){
-            firstRun = true;
             mgLog.i("Default App Storage ("+appDir2Check.getAbsolutePath()+") not found - check alternatives");
             for (File f : context.getExternalFilesDirs(null)){
                 appDir2Check = new File(f, sAppDir);
@@ -184,15 +214,18 @@ public class PersistenceManager {
                 mgLog.i("check App Storage: "+appDir2Check.getAbsolutePath()+" ->exists: "+exists);
                 if (exists){
                     baseDir = f;
-                    firstRun = false;
                     break;
                 }
             }
         }
 
-        mgLog.i("Storage baseDir="+baseDir.getAbsolutePath()+" firstRun="+firstRun);
+        mgLog.i("Storage baseDir="+baseDir.getAbsolutePath());
 
         appDir = createIfNotExists(baseDir, sAppDir);
+        configDir = createIfNotExists(appDir, "config");
+        // load extra configured properties before first usage of preferences
+        MGMapApplication.loadPropertiesToPreferences(application.getSharedPreferences(), getConfigProperties("load", ".*.properties"));
+
         File trackDir = createIfNotExists(getAppDir(), "track");
         trackMetaDir = createIfNotExists(trackDir, "meta");
         trackGpxDir = createIfNotExists(trackDir, "gpx");
@@ -208,7 +241,6 @@ public class PersistenceManager {
         themesDir = createIfNotExists(appDir, "themes");
         hgtDir = createIfNotExists(appDir, "hgt");
         logDir = createIfNotExists(appDir, "log");
-        configDir = createIfNotExists(appDir, "config");
         searchConfigDir = createIfNotExists(configDir, "search");
         createFileIfNotExists(searchConfigDir, "POI.cfg");
         createFileIfNotExists(searchConfigDir, "Nominatim.cfg");
@@ -218,13 +250,15 @@ public class PersistenceManager {
         File backupBaseDir = createIfNotExists(appDir, "backup");
         backupDir = createIfNotExists(backupBaseDir, "backup");
         restoreDir = createIfNotExists(backupBaseDir, "restore");
+        tempZipDir = createIfNotExists(context.getFilesDir(), "tempZip");
+        forceDeleteContent(tempZipDir);
     }
 
-    public boolean isFirstRun() {
-        return firstRun;
-    }
     public File getBaseDir(){
         return baseDir;
+    }
+    public File getBaseDirExt(){
+        return baseDirExt;
     }
     public File getAppDir(){
         return appDir;
@@ -247,6 +281,9 @@ public class PersistenceManager {
     public File getTrackGpxDir(){
         return trackGpxDir;
     }
+    public File getTrackMetaDir(){
+        return trackMetaDir;
+    }
     public File getApkDir(){
         return apkDir;
     }
@@ -255,6 +292,9 @@ public class PersistenceManager {
     }
     public File getRestoreDir() {
         return restoreDir;
+    }
+    public File getTempZipDir() {
+        return tempZipDir;
     }
 
     public void cleanApkDir(){

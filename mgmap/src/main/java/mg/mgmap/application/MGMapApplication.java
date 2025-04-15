@@ -71,6 +71,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -163,7 +164,9 @@ public class MGMapApplication extends Application {
         CC.init(this);
         AndroidGraphicFactory.createInstance(this);
         File svgCacheDir = new File(getCacheDir(), "svgCache");
-        if (!svgCacheDir.mkdirs()) mgLog.e("create svgCacheDir failed: "+svgCacheDir.getAbsolutePath());
+        if (!svgCacheDir.exists()){
+            if (!svgCacheDir.mkdirs()) mgLog.e("create svgCacheDir failed: "+svgCacheDir.getAbsolutePath());
+        }
         AndroidGraphicFactory.INSTANCE.setSvgCacheDir(svgCacheDir);
         prefCache = new PrefCache(this);
 
@@ -208,9 +211,6 @@ public class MGMapApplication extends Application {
             mgLog.i("init finished!");
         }).start();
 
-        if (persistenceManager.isFirstRun()){ // initialize lastFullBackupTime with install time - otherwise the first backup request would appear almost directly after installation.
-            prefCache.get(R.string.preferences_last_full_backup_time, 0L).setValue(System.currentTimeMillis());
-        }
         BackupUtil.restore2(this, persistenceManager, true); // restore backup_latest.zip (if exists)
         BackupUtil.restore2(this, persistenceManager, false); // restore backup_full.zip (if exists) (Remark: there is no use case, where both backup files have to be restored in the same run)
 
@@ -319,8 +319,9 @@ public class MGMapApplication extends Application {
     }
 
     public void checkCreateLoadMetaData(boolean onlyNew){
-        File restoreJob = new File(persistenceManager.getRestoreDir(), "restore.job");
-        while (restoreJob.exists()){ // don't start as restore may add files
+        File backupLatest = new File(persistenceManager.getRestoreDir(), BackupUtil.getBackupFileName(true));
+        File backupFull = new File(persistenceManager.getRestoreDir(), BackupUtil.getBackupFileName(false));
+        while (backupLatest.exists() || backupFull.exists()){ // don't start as restore may add files
             SystemClock.sleep(1000);
         }
         ArrayList<String> newNames = ExtrasUtil.checkCreateMeta(this, this.currentRun);
@@ -445,6 +446,7 @@ public class MGMapApplication extends Application {
                                 if (selectedTrackLogRef.getTrackLog().getNameKey().equals(gpxTrackLog.getNameKey())){
                                     setSelectedTrackLogRef(gpxTrackLogRef);
                                 }
+                                metaTrackLogs.put(gpxTrackLog.getNameKey(), gpxTrackLog);
                             }
                         } catch (Exception e) {
                             mgLog.e(e);
@@ -634,4 +636,23 @@ public class MGMapApplication extends Application {
             }
         }
     }
+
+
+
+
+    public static void loadPropertiesToPreferences(SharedPreferences sharedPreferences, Properties properties){
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        for (Object oPrefName  : properties.keySet()){
+            String prefValue = properties.getProperty(oPrefName.toString());
+            if (prefValue.isEmpty()){
+                editor.remove(oPrefName.toString());
+            } else if (prefValue.startsWith("Boolean:")){
+                editor.putBoolean( oPrefName.toString(), prefValue.equals("Boolean:true"));
+            } else {
+                editor.putString( oPrefName.toString(), prefValue);
+            }
+        }
+        editor.apply();
+    }
+
 }
