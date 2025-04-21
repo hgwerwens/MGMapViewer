@@ -81,8 +81,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 
     private void checkAll() {
         boolean negativeCurvature = false;
-        //noinspection unchecked
         CubicSpline cubicSpline = null;
+        //noinspection unchecked
         ArrayList<CubicSpline.Value>[] violations = (ArrayList<CubicSpline.Value>[]) new ArrayList[getMaxSurfaceCat()+1];
         for ( int surfaceCat = 0 ; surfaceCat < getMaxSurfaceCat(); surfaceCat++){
             try {
@@ -119,7 +119,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
         return cubicSpline;
     }
-
+/*
     protected CubicSpline getsmMinSpline(float[] slopes, float[] durations, float smMinTarget, int varyat) {
  //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
         function smMin = smvary -> {
@@ -163,7 +163,26 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
     }
 
-
+    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, float curveTarget, int varyat) {
+        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
+        function curve = durationvary -> {
+            try {
+                durations[varyat] = durationvary;
+                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
+                return cubicSpline.getCurveCoeff(targetat) - curveTarget;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        };
+//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that curvature at targetat is bigger than curveTarget
+        durations[varyat] = newtonNumeric(durations[varyat],curveTarget/10f, curve,0.0001f);
+        try {
+            return new CubicSpline(slopes, durations);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage() + " in getCurveOptSpline" + " for context " + getContext().toString());
+        }
+    }
+    */
     protected CubicSpline getSlopeOptSpline(float[] slopes, float[] durations, int targetat, float slopeTarget, int varyat) {
         //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
         function slope = smvary -> {
@@ -184,25 +203,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
     }
 
-    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, float curveTarget, int varyat) {
-        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        function curve = durationvary -> {
-            try {
-                durations[varyat] = durationvary;
-                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
-                return cubicSpline.getCurveCoeff(targetat) - curveTarget;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
-//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that curvature at targetat is bigger than curveTarget
-        durations[varyat] = newtonNumeric(durations[varyat],curveTarget/10f, curve,0.0001f);
-        try {
-            return new CubicSpline(slopes, durations);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage() + " in getCurveOptSpline" + " for context " + getContext().toString());
-        }
-    }
+
 
     protected CubicSpline getSpline(float[] slopes, float[] durations)  {
         try {

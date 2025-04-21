@@ -29,7 +29,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
         public Context( int sUp, int sDn){
 //            this(60+20*sUp/100+sUp*sUp/20000,sUp,sDn,0,true);
-            this(50+25*sUp/100,sUp,sDn,true);
+            this((int)(47.5+25*sUp/100d),sUp,sDn,true);
         }
 
         @NonNull
@@ -48,8 +48,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     private static final int[] HeuristicRefSurfaceCats = {7};
 
-    private static final float[] sdistFactforCostFunct = {  3f   ,2.4f  ,2f    ,1.70f ,1.5f  ,1.4f, 1.6f };
-    private static final float[] ssrelSlope            = { 1.4f  ,1.25f ,1f    ,1f    ,1f    ,1f   ,0f    ,1.4f  ,1.4f  ,1.5f  ,1.5f  ,1.2f ,1f   ,1f };
+    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f, 1.6f };
+    private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f };
 
     private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1);
     private static final int maxSurfaceCat = maxCatUpDn + maxDn + 1 ;
@@ -67,6 +67,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private float[] f1u;
     private float[] f2u;
     private float[] f3u;
+    private float f2d;
+    private float f3d;
     private float[] crUp;
     private float[] crDn;
     private float[] srelSlope;
@@ -92,8 +94,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             int sDn = contxt.sDn;
             if (contxt.withRef)
                 contxt.refProfile = new CostCalcSplineProfileMTB(new Context(100,200,contxt.sDn,false));
-            slopesAll = new float[]{-2f, -0.4f, refDnSlope, refDnSlopeOpt, 0.0f, 0.1f,0.2f,0.24f, 0.34f};
-            indRefDnSlope = 2;
+            slopesAll = new float[]{-0.76f, -0.36f, -0.32f, refDnSlope, refDnSlopeOpt, 0.0f, 0.1f,0.2f,0.24f, 0.34f};
+            indRefDnSlope = 3;
             indRefDnSlopeOpt = indRefDnSlope + 1;
             int sc;
 
@@ -118,25 +120,24 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                 srelSlope[scDn]  =  ssrelSlope[scDn]+0.5f-(float) sig((sDn/100d-2d));
 
                 deltaSM20Dn[scDn] = deltaSM20DnMin + (float) (0.5*sig((1.5d-off)*2d))+lscDn*0.025f;
-                factorDown[scDn] = deltaSM20Dn[scDn]*8.5f;
+                factorDown[scDn] = deltaSM20Dn[scDn]*7.5f;
             }
-
-            float ulStretch = ( 1f + 0.18f * sUp/100);
             float deltaSM20DnMinscLow = deltaSM20Dn[maxSL+1];
+
             for (sc = 0; sc<maxScUp;sc++){
                 if (sc < maxSL) {
 
                     sig = sig((3.5-sc)*2.);
-                    f1u[sc] = (float) (1.15+0.3*sig);
+                    f1u[sc] = (float) (1.1+0.15*sig);
                     f2u[sc] = ( 1.1f )*f1u[sc] ;
                     f3u[sc] = 2.2f;
 
                     crUp[sc] = (float) (0.0047 + 0.029*sig((3.5-sc)*1.3));
                     crDn[sc] = crUp[sc];
-                    srelSlope[sc]  = ssrelSlope[sc];
+                    srelSlope[sc]  = ssrelSlope[sc] + (float) ( 0.5 *( 0.5 - sig(sDn/100-2)));
 
                     deltaSM20Dn[sc] = deltaSM20DnMinscLow - dSM20scDnLow(sc);
-                    factorDown[sc] = deltaSM20Dn[sc]*11f;
+                    factorDown[sc] = deltaSM20Dn[sc]*10f;
                     distFactforCostFunct[sc] = sdistFactforCostFunct[sc];
                 }
                 else if(sc>maxSL){
@@ -154,6 +155,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
             }
 
+            f2d = 1.07f;
+            f3d = 3.0f;
+
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
             f3u[maxSL]=2.4f;
@@ -162,10 +166,15 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             srelSlope[maxSL] = srelSlope[maxSL+1];
 
             deltaSM20Dn[maxSL] = deltaSM20Dn[maxSL+1+2]; // + 0.04f * (float) Math.exp(-(sDn/100 - 2.5)*(sDn/100 - 2.5));
-            factorDown[maxSL]  = deltaSM20Dn[maxSL+1+3]*(8.5f + 5f*(float)sig(2.*(sDn/100.-1.)));
+            factorDown[maxSL]  = deltaSM20Dn[maxSL+1+3]*(7.5f + 5f*(float)sig(2.*(sDn/100.-1.)));
 
             distFactforCostFunct[maxSL] = sdistFactforCostFunct[maxSL];
 
+            slopesAll[2] = -0.26f - (float) (0.05*sDn/100.);
+            slopesAll[1] = slopesAll[2]-0.04f;
+            slopesAll[0] = slopesAll[1]-0.4f;
+
+            float ulStretch = ( 1f + 0.18f * sUp/100);
             slopesAll[slopesAll.length-4] = 0.065f * ulStretch;  //basis for heuristic spline
             slopesAll[slopesAll.length-3] = 0.17f * ulStretch;
             slopesAll[slopesAll.length-2] = slopesAll[slopesAll.length-3] + 0.025f*ulStretch;
@@ -234,12 +243,6 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         }
     }
 
-    private boolean isHeuristicRefSpline(int surfaceCat){
-        for (int heuristicRefSurfaceCat : HeuristicRefSurfaceCats) {
-            if (surfaceCat == heuristicRefSurfaceCat) return true;
-        }
-        return false;
-    }
 
     protected boolean fullCalc(Object context){
         Context contxt = (Context) context;
@@ -304,9 +307,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float[] durations = new float[slopes.length];
         boolean allSlopes = slopes.length == slopesAll.length;
 
-        durations[0] = sm20Dn -(slopes[0]-refDnSlope)*Math.max(12f,factorDn*2f);
-        durations[1] = sm20Dn -(slopes[1]-refDnSlope)*factorDn;
-        durations[2] = sm20Dn -(slopes[2]-refDnSlope)*factorDn;
+        durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) * f3d;
+        durations[1] = ( sm20Dn -(slopes[1]-refDnSlope)*factorDn) * f2d;
+        durations[2] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
+        durations[3] =   sm20Dn ;
         durations[slopes.length-5] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-5], watt0, cr0, ACw, m) ;
         durations[slopes.length-4] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-4], watt, cr1, ACw, m) ;
         durations[slopes.length-3] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, cr, ACw, m)  ;

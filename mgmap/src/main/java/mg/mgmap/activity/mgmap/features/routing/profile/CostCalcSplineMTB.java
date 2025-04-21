@@ -49,7 +49,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 };
             }
             if ("path".equals(wayTagEval.highway)) {
-                if (surfaceLevel<=0 || surfaceLevel == 4 || mtbUp >= 0 || mtbDn >= 0) {
+                if (surfaceLevel<=0 || surfaceLevel >= 4 || mtbUp >= 0 || mtbDn >= 0) {
                     surfaceLevel = 6;
                     distFactor = 1f;
                 } else { // a path, which is not raw might be anything ...
@@ -57,13 +57,18 @@ public class CostCalcSplineMTB implements CostCalculator {
                     distFactor = 1.15f;
                 }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
-                surfaceLevel = (surfaceLevel>0) ? surfaceLevel :4;
-                distFactor = 1.0f;
+                if (  surfaceLevel >= 4  && ( mtbUp >= 0 || mtbDn >= 0)) {
+                    surfaceLevel = 6;
+                    distFactor = 1.05f;
+                } else {
+                    surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
+                    distFactor = 1.0f;
+                }
             } else if ("steps".equals(wayTagEval.highway)) {
                 surfaceLevel = 6; // treat steps as mtb scale 3.
                 mtbDn = 3;
                 mtbUp = 6;
-                distFactor = 7f;
+                distFactor = 3f;
                 if ("up".equals(wayTagEval.incline_dir))
                     direction = dir.up;
                 else if ("down".equals(wayTagEval.incline_dir))

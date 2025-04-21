@@ -6,13 +6,13 @@ import mg.mgmap.activity.mgmap.features.routing.RoutingProfile;
 import mg.mgmap.generic.graph.WayAttributs;
 
 public class MTB_K2S2 extends RoutingProfile {
+
     public MTB_K2S2( ) {
-        super(new CostCalculatorTwoPieceFunc((short)2,  (short)2, (short)1));
+        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(200,200) ));
     }
 
-
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
-        return new CostCalculatorMTB(wayAttributs, (CostCalculatorTwoPieceFunc) profileCalculator); //0.0,0.0,0.7,0.0,0.7,0.0);
+        return new CostCalcSplineMTB(wayAttributs, (CostCalcSplineProfileMTB) profileCalculator);
     }
 
 

@@ -5,13 +5,14 @@ import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
 import mg.mgmap.activity.mgmap.features.routing.RoutingProfile;
 import mg.mgmap.generic.graph.WayAttributs;
 
-public class MTB_K3S3_Spline extends RoutingProfile {
-    public MTB_K3S3_Spline( ) {
-        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(300,300) ));
+public class MTB_K3S3_2F extends RoutingProfile {
+
+    public MTB_K3S3_2F( ) {
+        super(new CostCalculatorTwoPieceFunc( (short) 3, (short)3, (short)1));
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
-        return new CostCalcSplineMTB(wayAttributs, (CostCalcSplineProfileMTB) profileCalculator);
+        return new CostCalculatorMTB(wayAttributs, (CostCalculatorTwoPieceFunc) profileCalculator);
     }
     @Override
     public int getIconIdActive() {
