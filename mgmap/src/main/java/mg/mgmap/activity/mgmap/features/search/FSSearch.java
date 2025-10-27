@@ -15,6 +15,7 @@
 package mg.mgmap.activity.mgmap.features.search;
 
 import android.content.Context;
+import android.os.Build;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.TypedValue;
@@ -27,9 +28,10 @@ import android.widget.RelativeLayout;
 
 import org.mapsforge.core.model.LatLong;
 import org.mapsforge.core.model.Point;
-import org.mapsforge.map.datastore.MapDataStore;
 
 import java.lang.invoke.MethodHandles;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,6 +41,7 @@ import mg.mgmap.activity.mgmap.ControlView;
 import mg.mgmap.activity.mgmap.MGMapActivity;
 import mg.mgmap.activity.mgmap.FeatureService;
 import mg.mgmap.R;
+import mg.mgmap.activity.mgmap.features.search.provider.Graphhopper;
 import mg.mgmap.activity.mgmap.util.MapViewUtility;
 import mg.mgmap.activity.mgmap.view.ControlMVLayer;
 import mg.mgmap.activity.settings.SearchProviderListPreference;
@@ -241,7 +244,8 @@ public class FSSearch extends FeatureService {
         try {
             this.searchProvider = (SearchProvider) Class.forName("mg.mgmap.activity.mgmap.features.search.provider."+prefSearchProvider.getValue()).getDeclaredConstructor().newInstance();
         } catch (Exception e) {
-            mgLog.e(e);
+            mgLog.e("Failed to create searchProvider: "+e.getMessage());
+            this.searchProvider = new Graphhopper();
         }
         searchProvider.init( getActivity(),this, searchView, getSharedPreferences());
     }
@@ -293,27 +297,27 @@ public class FSSearch extends FeatureService {
         setSearchResult(new SearchPos(pmSearchResult));
     }
     public void setSearchResult(SearchPos spSearchResult) {
-        boolean outside = true;
-        LatLong latLongSearchResult = spSearchResult.getLatLong();
-        for (MapDataStore mds : getActivity().getMapLayerFactory().getMapDataStoreMap().keySet()) {
-            if (mds.boundingBox().contains(latLongSearchResult)){
-                outside = false;
-                break;
-            }
-        }
-        if (outside){
-            mgLog.w("outside of map: "+spSearchResult);
-            DialogView dialogView = activity.findViewById(R.id.dialog_parent);
-            dialogView.lock(() -> dialogView
-                    .setTitle("Warning")
-                    .setMessage("Search result outside mapsforge map")
-                    .setLogPrefix("Search")
-                    .setPositive("Locate anyway", evt -> setSearchResult2(spSearchResult))
-                    .setNegative("Cancel",null)
-                    .show());
-        } else {
+//        boolean outside = true;
+//        LatLong latLongSearchResult = spSearchResult.getLatLong();
+//        for (MapDataStore mds : getActivity().getMapLayerFactory().getMapDataStoreMap().keySet()) {
+//            if (mds.boundingBox().contains(latLongSearchResult)){
+//                outside = false;
+//                break;
+//            }
+//        }
+//        if (outside){
+//            mgLog.w("outside of map: "+spSearchResult);
+//            DialogView dialogView = activity.findViewById(R.id.dialog_parent);
+//            dialogView.lock(() -> dialogView
+//                    .setTitle("Warning")
+//                    .setMessage("Search result outside mapsforge map")
+//                    .setLogPrefix("Search")
+//                    .setPositive("Locate anyway", evt -> setSearchResult2(spSearchResult))
+//                    .setNegative("Cancel",null)
+//                    .show());
+//        } else {
             setSearchResult2(spSearchResult);
-        }
+//        }
     }
     public void setSearchResult2(SearchPos spSearchResult) {
         mgLog.i(spSearchResult);
@@ -335,8 +339,11 @@ public class FSSearch extends FeatureService {
     }
 
 
-    /** @noinspection RegExpRedundantEscape */
+    /** @noinspection RegExpRedundantEscape, ReassignedVariable, DataFlowIssue */
     public void processGeoIntent(String sUri){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            sUri = URLDecoder.decode(sUri, StandardCharsets.UTF_8);
+        }
         mgLog.i("sUri="+sUri);
 
         // possible patterns are (according to https://developer.android.com/guide/components/intents-common#java)
@@ -347,8 +354,8 @@ public class FSSearch extends FeatureService {
 
         String d = "(\\-?\\d*\\.?\\d+)";
         Pattern p1 = Pattern.compile("geo:"+d+","+d);
-        Pattern p2 = Pattern.compile("geo:"+d+","+d+"\\?z=([12]?[0-9])");
-        Pattern p3 = Pattern.compile("geo:"+d+","+d+"\\?q="+d+","+d+"(\\(([^\\)]+)\\))?");
+        Pattern p2 = Pattern.compile("geo:"+d+","+d+"\\?(q="+d+", ?"+d+"&)?z=([12]?[0-9])");
+        Pattern p3 = Pattern.compile("geo:"+d+","+d+"\\?q="+d+", ?"+d+"(\\(([^\\)]+)\\))?");
         Pattern p4 = Pattern.compile("geo:0,0\\?q=(.*)");
 
         double lat = PointModel.NO_LAT_LONG;
@@ -367,7 +374,11 @@ public class FSSearch extends FeatureService {
                 mgLog.i("p2 matched");
                 lat = Double.parseDouble(m.group(1));
                 lon = Double.parseDouble(m.group(2));
-                zoom = Byte.parseByte(m.group(3));
+                if ((lat == 0) && (lon == 0) && (m.group(4) != null) && (m.group(5) != null)){
+                    lat = Double.parseDouble(m.group(4));
+                    lon = Double.parseDouble(m.group(5));
+                }
+                zoom = Byte.parseByte(m.group(6));
                 zoom = (byte)Math.max(Math.min(zoom, 22), 6);
             } else {
                 m = p3.matcher(sUri);

@@ -74,7 +74,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             float slope = vertDist / (float) dist;
             double spm = cubicProfileSpline.calc(slope);
             double v = 3.6/spm;
-            mgLog.d(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f",100f*slope,v,spm*dist,dist));
+            mgLog.v(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f",100f*slope,v,spm*dist,dist));
         }
         return (dist >= 0.00001) ? (long) (1000 * dist * cubicProfileSpline.calc(vertDist / (float) dist)) : 0;
     }

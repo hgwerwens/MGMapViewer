@@ -43,6 +43,7 @@ public class ElevationProviderImpl implements ElevationProvider{
         setElevation(tlpAdapter);
     }
 
+
     public void setElevation(WriteablePointModel wpm){
         double latitude = wpm.getLat();
         double longitude = wpm.getLon();
@@ -56,31 +57,26 @@ public class ElevationProviderImpl implements ElevationProvider{
         if ((hgtBuf != null) && (hgtBuf.length > 0)){ // hgt files exists (real one or dummy)
             if (hgtBuf.length > 1){ // ok, exists with content (length 1 indicates dummy file for sea level)
                 double dlat = 1 - (latitude - iLat);
-                int oLat = (int) (dlat * 3600);
+                double dlat3600 = dlat * 3600;
+                int oLat = (int) (dlat3600);
                 double dlon = longitude - iLon;
-                int oLon = (int) (dlon * 3600);
+                double dlon3600 = dlon * 3600;
+                int oLon = (int) (dlon3600);
+                int off = oLat * 7202 + oLon * 2;
 
-                double nwLat = iLat + (1 - oLat / 3600.0);  // nw - northWest
-                double nwLon = iLon + (oLon / 3600.0);
-                double nwEle = getEle(hgtBuf, oLat, oLon);
-                oLon++;
-                double neLon = iLon + (oLon / 3600.0);     // ne - northEast
-                double neEle = getEle(hgtBuf, oLat, oLon);
-                oLat++;
-                double seLon = iLon + (oLon / 3600.0);     // se - southEast
-                double seEle = getEle(hgtBuf, oLat, oLon);
-                oLon--;
-                double swLat = iLat + (1 - oLat / 3600.0); // sw - southWest
-                double swLon = iLon + (oLon / 3600.0);
-                double swEle = getEle(hgtBuf, oLat, oLon);
+                double nwEle = getEle(hgtBuf, off);
+                double neEle = getEle(hgtBuf, off+2);
+                double seEle = getEle(hgtBuf, off+7204);
+                double swEle = getEle(hgtBuf, off+7202);
 
-                double nhi = interpolate(nwLon, neLon, nwEle, neEle, longitude);
-                double shi = interpolate(swLon, seLon, swEle, seEle, longitude);
-                double hi = interpolate(nwLat, swLat, nhi, shi, latitude);
+                double nhi = PointModelUtil.interpolate(0, 1, nwEle, neEle, dlon3600 - oLon);
+                double shi = PointModelUtil.interpolate(0, 1, swEle, seEle, dlon3600 - oLon);
+                double hi = PointModelUtil.interpolate(0, 1, nhi, shi, dlat3600 - oLat);
 
                 double maxEle = Math.max( Math.max(nwEle,neEle), Math.max(seEle,swEle));
                 double minEle = Math.min( Math.min(nwEle,neEle), Math.min(seEle,swEle));
 
+                hi = Math.round(hi*PointModelUtil.ELE_FACTOR)/PointModelUtil.ELE_FACTOR;
                 wpm.setEle((float) hi);
                 wpm.setEleAcc((float) (maxEle-minEle));
             } else { // dummy file for sea level
@@ -93,10 +89,7 @@ public class ElevationProviderImpl implements ElevationProvider{
         }
     }
 
-    private float getEle(byte[] hgtBuf, int oLat, int oLon) {
-        int latOffset = oLat * 3601 * 2;
-        int lonOffset = oLon * 2;
-        int off = (latOffset+lonOffset);
+    private float getEle(byte[] hgtBuf, int off) {
         float res = PointModel.NO_ELE;
         if (hgtBuf.length >= off+2){
             byte b1 = hgtBuf[off];
@@ -106,7 +99,4 @@ public class ElevationProviderImpl implements ElevationProvider{
         return res;
     }
 
-    private double interpolate(double refMin, double refMax, double valMin, double valMax, double ref){
-        return PointModelUtil.interpolate(refMin,refMax, valMin, valMax, ref);
-    }
 }
