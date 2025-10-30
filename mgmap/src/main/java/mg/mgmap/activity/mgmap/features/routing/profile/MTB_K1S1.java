@@ -9,11 +9,15 @@ public class MTB_K1S1 extends RoutingProfile {
 
     public MTB_K1S1( ) {
         super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(100,100) ));
+/* successfully tested combination
         for (int sUp = 0; sUp <= 400; sUp = sUp + 100) {
             for (int sDn = 0; sDn <= 400; sDn = sDn + 100) {
-                new CostCalcSplineProfileMTB(new CostCalcSplineProfileMTB.Context(sUp, sDn));
+                for ( int power = 48 + sUp/100*25; power <= 150f; power = power + 25 ) {
+                    new CostCalcSplineProfileMTB(new CostCalcSplineProfileMTB.Context(power,sUp, sDn));
+                };
             }
         }
+ */
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {

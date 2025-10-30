@@ -6,6 +6,8 @@ import java.util.ArrayList;
  * computes natural cubic spline. Algorithm: <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">...</a>
  */
 public class CubicSpline {
+
+    public enum linsec {left,right}
     private final float[][] polynominals;
     private final float[] x;
 
@@ -59,6 +61,12 @@ public class CubicSpline {
         float x1 = this.x[n] - this.x[n-1];
         float x2 = x1*x1;
         polynominals[n+1] = new float[] {y[n],polynominals[n][1] + 2* polynominals[n][2]*x1 + 3*polynominals[n][3]*x2}; // final linear section
+    }
+
+    public float yintercept_linsec(linsec linsec){
+        int in = (linsec == linsec.left)? 0 : x.length;
+        float x1 = - this.x[(in == 0)?0:in-1];
+        return polynominals[in][0] + polynominals[in][1]*x1;
     }
 
     public float calc(float x){

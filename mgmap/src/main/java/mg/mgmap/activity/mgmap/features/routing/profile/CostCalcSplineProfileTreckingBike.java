@@ -1,19 +1,14 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
-import java.lang.invoke.MethodHandles;
-import java.util.Locale;
 
-import mg.mgmap.generic.util.basic.MGLog;
+import java.util.Locale;
 
 public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
 
     private static final int maxSurfaceCat = 7;
     private static final float[] slopesAll = new float[]{ -0.6f,-0.4f,-0.2f, -0.02f, 0.0f, 0.08f, 0.2f, 0.4f};
-    private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
-//    private final CubicSpline[] SurfaceCatSpline = new CubicSpline[maxSurfaceCat];
     protected CostCalcSplineProfileTreckingBike() {
         super(new Object());
-//        SurfaceCatSpline[1] = super.getProfileSpline();
     }
 
     protected int getMaxSurfaceCat(){
@@ -31,6 +26,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
     protected CubicSpline getHeuristicRefSpline(Object context) {
         try {
             int[] refSurfaceCats = {1};
+            float mfd = 1f; //  float mfd = refSurfaceCats[i]==0 ? getMinDistFactSC0():1f;
             CubicSpline[] refCubicSplines = new CubicSpline[refSurfaceCats.length];
             for ( int i=0;i<refSurfaceCats.length;i++){
                 int surfaceCat = refSurfaceCats[i];
@@ -40,8 +36,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
             for ( int s=0;s<slopesAll.length;s++){
                 minDurations[s] = 1e6f;
                 for ( int i=0;i<refSurfaceCats.length;i++){
-                    float mfd = refSurfaceCats[i]==0 ? getMinDistFactSC0():1f;
-                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.0001f );// * 0.9999f;
+                    float duration = ( mfd*refCubicSplines[i].calc(slopesAll[s]) - 0.0001f );
                     if (duration < minDurations[s])
                         minDurations[s] = duration;
                 }
@@ -52,12 +47,11 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         }
     }
 
-
     protected float getMinDistFactSC0(){
         return (float) TagEval.minDistfSc0;
     }
 
-    protected CubicSpline calcSpline(int surfaceLevel, Object context) throws Exception {
+    protected CubicSpline calcSpline(int surfaceLevel, Object context)  {
         float watt0 = 90.0f ;
         float watt = 130.0f;
         float ACw = 0.45f;

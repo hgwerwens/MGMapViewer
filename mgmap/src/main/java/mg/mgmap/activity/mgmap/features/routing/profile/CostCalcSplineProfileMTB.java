@@ -40,11 +40,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     protected static final int maxSL = 6; // SurfaceLevels without MTB scale
-//    private static final int deltaUptoDn = 1; // mtbUp = mtbDn + 1 in case only mtbDn is specified
     private static final int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
     private static final int maxDn = 6;
     private static final int maxScDn = maxSL+1+maxDn+1;
-    private static final int maxScUp = maxScDn;//+maxUptoDn;
+    private static final int maxScUp = maxScDn;
 
     private static final int[] HeuristicRefSurfaceCats = {7};
 
@@ -134,8 +133,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
                     crUp[sc] = (float) (0.0047 + 0.029*sig((3.5-sc)*1.3));
                     crDn[sc] = crUp[sc];
-                    srelSlope[sc]  = ssrelSlope[sc] + (float) ( 0.5 *( 0.5 - sig(sDn/100-2)));
-
+                    srelSlope[sc]  = ssrelSlope[sc] + (float) ( 0.5 *( 0.5 - sig(sDn/100f-2)));
                     deltaSM20Dn[sc] = deltaSM20DnMinscLow - dSM20scDnLow(sc);
                     factorDown[sc] = deltaSM20Dn[sc]*10f;
                     distFactforCostFunct[sc] = sdistFactforCostFunct[sc];
@@ -330,14 +328,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     else durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
                 }
                 distFactCostFunct = 1.2f;
-                durations[durations.length - 1] = 1.10f * distFactCostFunct * durations[durations.length - 1];
-                durations[durations.length - 2] = 1.05f * distFactCostFunct * durations[durations.length - 2];
-                durations[durations.length - 3] = distFactCostFunct * durations[durations.length - 3];
-            } else {
-                durations[durations.length - 1] = 1.10f * distFactCostFunct * durations[durations.length - 1];
-                durations[durations.length - 2] = 1.05f * distFactCostFunct * durations[durations.length - 2];
-                durations[durations.length - 3] = distFactCostFunct * durations[durations.length - 3];
             }
+            durations[durations.length - 1] = 1.10f * distFactCostFunct * durations[durations.length - 1];
+            durations[durations.length - 2] = 1.05f * distFactCostFunct * durations[durations.length - 2];
+            durations[durations.length - 3] = distFactCostFunct * durations[durations.length - 3];
         }
 
         String OptSpline = contxt.withRef ? "with ref" : allSlopes ? "Optimized ref" :"ref";
@@ -357,36 +351,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             }
             slopeTarget = cubicSplineTmp.getSlope(indRefDnSlope); //*factor;
             cubicSplineTmp = getSlopeOptSpline(slopes, durations, indRefDnSlope, slopeTarget, indRefDnSlopeOpt);
-
-/*            if ( cubicSplineTmp.getVal(indRefDnSlopeOpt)>cubicSplineTmp.getVal(indRefDnSlopeOpt+1)&&cubicSplineTmp.getVal(indRefDnSlopeOpt)>cubicSplineTmp.getVal(indRefDnSlope)){
-                mgLog.w(String.format(Locale.ENGLISH,"Correct decreasing downhill speed for %s. Set duration at slope=%.2f to duration at slope=%.2f",contextString,slopes[indRefDnSlopeOpt]*100f,slopes[indRefDnSlopeOpt+1]*100f));
-                durations[indRefDnSlopeOpt] = durations[indRefDnSlopeOpt+1];
-                cubicSplineTmp = getSpline(slopes,durations);
-            } */
         }
         else {
             cubicSplineTmp = getSpline(slopes, durations);
-/*            float curveTarget = 0.5f;
-            if (allSlopes&&isHeuristicRefSpline&&cubicSplineTmp.getCurveCoeff(indRefDnSlopeOpt+1)<curveTarget){ //no negative curvature at 0 slope
-                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",contextString,slopes[indRefDnSlopeOpt+1]*100f,slopes[indRefDnSlopeOpt]*100f));
-                cubicSplineTmp = getCurveOptSpline(slopes,durations,indRefDnSlopeOpt+1,curveTarget,indRefDnSlopeOpt);
-            }
-            curveTarget = 0.01f;
-            if (isHeuristicRefSpline&&allSlopes && cubicSplineTmp.getCurveCoeff(3)<0.01f){
-                mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",contextString,slopes[3]*100f,slopes[3]*100f));
-                cubicSplineTmp = getCurveOptSpline(slopes,durations,3,curveTarget,3);
-            } */
         }
-/*        float curveTarget = 0.2f;
-        if (cubicSplineTmp.getCurveCoeff(slopes.length-3)<curveTarget){
-            mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f",contextString,slopes[slopes.length-3]*100f,slopes[slopes.length-2]*100f));
-            cubicSplineTmp = getCurveOptSpline(slopes,durations,slopes.length-3,curveTarget,slopes.length-2);
-        }
-        if (cubicSplineTmp.getCurveCoeff(2)<curveTarget){
-            mgLog.w(String.format(Locale.ENGLISH,"Autocorrect negative curvature for %s at slope=%.2f, correct at slope=%.2f", contextString,slopes[2]*100f,slopes[1]*100f));
-            cubicSplineTmp = getCurveOptSpline(slopes,durations,2,curveTarget,1);
-        } */
-
         if (contxt.withRef ) {
             float slope2slopeTarget = cubicSplineTmp.getSlope(indRefDnSlope) / slopeTarget;
             if (Math.abs(slope2slopeTarget - 1f) > 0.01f) {
@@ -402,7 +370,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
         CubicSpline cubicSpline = cubicSplineTmp;
         long t = System.nanoTime() - t1;
-        mgLog.i( ()-> {
+        mgLog.v( ()-> {
             try {
                 float slopeMin = cubicSpline.calcMin(-0.13f);
                 float smMinOpt = cubicSpline.calc(slopeMin);
@@ -457,6 +425,15 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                ( scUp < distFactforCostFunct.length  );
     }
 
+    /*
+       SurfaceCat is devided in 3 ranges:
+       -the first few ones (SurfaceCat < maxSL ) where there is no mtb classification neither up nor down available
+       -than all values for those where both a down and up classification is available ( maxSL <= SurfaceCat <= maxCatUpDn ).
+        SurfaceCat is calculated by the difference of up minus down up to 3 degrees, but up classification is considered
+        always lager as down and if this not the case difference is set to 0.
+        -last but not least all values where only down classification is given ( maxCatUpDn < SurfaceCat <= maxSurfaceCat )
+     */
+
     protected int getSurfaceCat(int surfaceLevel, int mtbDn, int mtbUp) {
         if (surfaceLevel < 0 || surfaceLevel > maxSL) throw new RuntimeException("invalid Surface Level");
         if (surfaceLevel >= maxSL ) {
@@ -467,15 +444,12 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     scUp = mtbDn-mtbUp>=0 ? 0 : (Math.min(mtbUp - mtbDn, maxUptoDn));
                     scDn = mtbDn;
                 } else {
-//                    scUp = deltaUptoDn;
-//                    scDn = mtbDn;
                     return maxCatUpDn+mtbDn;
                 }
             else if (mtbUp > -1) {
                 scUp = mtbUp == 0?0:1;
                 scDn = mtbUp == 0?0:mtbUp-1;
-            }
-            else {
+            } else {
                 scUp = -1;
                 scDn =  0;
             }

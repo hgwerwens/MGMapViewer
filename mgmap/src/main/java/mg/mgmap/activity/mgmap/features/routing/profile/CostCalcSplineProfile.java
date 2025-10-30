@@ -109,6 +109,13 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
         if (negativeCurvature||heuristicViolation)
             throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
+
+        float yintercept_right = cubicHeuristicSpline.yintercept_linsec(CubicSpline.linsec.right);
+        if (yintercept_right <= 0.00003)
+            throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_right ));
+        float yintercept_left = cubicHeuristicSpline.yintercept_linsec(CubicSpline.linsec.left);
+        if (yintercept_left <= 0.00003)
+            throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_left ));
     }
 
     protected CubicSpline getCostSpline(int surfaceCat) throws Exception{
@@ -119,70 +126,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
         return cubicSpline;
     }
-/*
-    protected CubicSpline getsmMinSpline(float[] slopes, float[] durations, float smMinTarget, int varyat) {
- //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        function smMin = smvary -> {
-            try {
-                durations[varyat] = smvary;
-                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
-                float minSlope = cubicSpline.calcMin(-0.06f);
-                float smMinVal = cubicSpline.calc(minSlope);
-                return smMinVal - smMinTarget;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
-//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
-        durations[varyat] = newtonNumeric(durations[varyat],0.00001f,smMin,0.0001f);
-        try {
-            return new CubicSpline(slopes, durations);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage() + " in getsmMinSpline");
-        }
-    }
 
-    protected CubicSpline getMinSlope0Spline(float[] slopes, float[] durations, float slopeTarget, int varyat) {
-        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        function slopeMin = smvary -> {
-            try {
-                durations[varyat] = smvary;
-                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
-                float minSlope = cubicSpline.calcMin(-0.06f);
-                return minSlope - slopeTarget;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
-//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
-        durations[varyat] = newtonNumeric(durations[varyat],0.00001f,slopeMin,0.0001f);
-        try {
-            return new CubicSpline(slopes, durations);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage() + " in getsmMinSpline");
-        }
-    }
-
-    protected CubicSpline getCurveOptSpline(float[] slopes, float[] durations,  int targetat, float curveTarget, int varyat) {
-        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        function curve = durationvary -> {
-            try {
-                durations[varyat] = durationvary;
-                CubicSpline cubicSpline = new CubicSpline(slopes,durations);
-                return cubicSpline.getCurveCoeff(targetat) - curveTarget;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        };
-//      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that curvature at targetat is bigger than curveTarget
-        durations[varyat] = newtonNumeric(durations[varyat],curveTarget/10f, curve,0.0001f);
-        try {
-            return new CubicSpline(slopes, durations);
-        } catch (Exception e) {
-            throw new RuntimeException(e.getMessage() + " in getCurveOptSpline" + " for context " + getContext().toString());
-        }
-    }
-    */
     protected CubicSpline getSlopeOptSpline(float[] slopes, float[] durations, int targetat, float slopeTarget, int varyat) {
         //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
         function slope = smvary -> {
@@ -224,7 +168,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
                 float heuristic = cubicHeuristicSpline.calc(xs);
                 float spline    = cubicSpline.calc(xs);
                 float delta = minmfd * spline - heuristic;
-                if (delta <= 0)
+                if (delta <= 0.00005)
                     violations.add(new CubicSpline.Value(xs,delta));
             }
         } while (xs < highstart + 0.3f);
@@ -260,10 +204,10 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 
     private CubicSpline calcHeuristicSpline(CubicSpline refCubicSpline ){
         // cut out a new cubic spline out of the existing one using the to touch points of the tangents
-        function tangent = x -> refCubicSpline.calc(x) - refCubicSpline.calcSlope(x) * x + 0.0001f;
+        function tangent = x -> refCubicSpline.calc(x) - refCubicSpline.calcSlope(x) * x - 0.0001f;
         function tangDeriv = x -> -refCubicSpline.calcCurve(x) * x;
-        float tDnSlope = newton(lowstart,0.0001f,10,tangent,tangDeriv);
-        float tUpSlope = newton(highstart,0.0001f,10,tangent,tangDeriv);
+        float tDnSlope = newton(lowstart,0.00005f,10,tangent,tangDeriv);
+        float tUpSlope = newton(highstart,0.00005f,10,tangent,tangDeriv);
         mgLog.i(()-> String.format(Locale.ENGLISH, "Heuristic for %s: DnSlopeLim=%.2f UpSlopeLim=%.2f",getContext().toString(),tDnSlope*100,tUpSlope*100));
         return refCubicSpline.getCutCubicSpline(tDnSlope,tUpSlope);
     }
