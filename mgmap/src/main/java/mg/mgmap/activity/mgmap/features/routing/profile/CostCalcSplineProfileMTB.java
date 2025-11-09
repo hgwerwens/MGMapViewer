@@ -39,23 +39,23 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     }
 
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
-    protected static final int maxSL = 6; // SurfaceLevels without MTB scale
+    protected static final int maxSL = 6; // Surface categories without MTB scale
     private static final int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
-    private static final int maxDn = 6;
-    private static final int maxScDn = maxSL+1+maxDn+1;
-    private static final int maxScUp = maxScDn;
-
+    private static final int maxDn = 6;     // maximum downhill category
+    private static final int maxScDn = maxSL+1+maxDn +1; // maximum number of factors depending on the surfaced category for downhill calculation
+    private static final int maxScUp = maxScDn;         // maximum number of factors depending on the surfaced category for uphill calculation
+    private static final int maxScUpExt = maxScUp + maxDn+1;
+    // Heuristic is derived from a path with mtbDn = 0 and mtbUp = 0. All other surface categories have higher costs, either because they are disfavored like for anything without mtb classification or because they more difficult
     private static final int[] HeuristicRefSurfaceCats = {7};
+    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f, 1.6f }; //factors to increase costs compared to durations to get better routing results
+    private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
-    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f, 1.6f };
-    private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f };
-
-    private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1);
-    private static final int maxSurfaceCat = maxCatUpDn + maxDn + 1 ;
-    private static final float refDnSlopeOpt = -0.04f;
-    private static final float refDnSlope = -0.2f;
-    private static final float ACw = 0.45f;
-    private static final float m = 90f;
+    private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
+    private static final int maxSurfaceCat = maxCatUpDn + maxDn + 1 ; // includes on top those ones, which have only downhill classification
+    private static final float refDnSlopeOpt = -0.04f; // slope at which cost function is optimized against slope of reference function
+    private static final float refDnSlope = -0.2f; // slope which all profiles use
+    private static final float ACw = 0.45f;   // air friction of a typical bicycle rider
+    private static final float m = 90f; // system weigth of a typical bicycle with rider
 
     protected final CubicSpline[] SurfaceCatDurationSpline = new CubicSpline[maxSurfaceCat];
     private float[] slopesAll;
@@ -101,15 +101,15 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             double off;
             double sig;
 
-            f1u = new float[maxScUp];
-            f2u = new float[maxScUp];
-            f3u = new float[maxScUp];
-            crUp = new float[maxScUp];
-            crDn = new float[maxScDn];
-            srelSlope = new float[maxScDn];
-            deltaSM20Dn = new float[maxScDn];
-            factorDown  = new float[maxScDn];
-            distFactforCostFunct = new float[maxScUp];
+            f1u = new float[maxScUpExt];  // factor on top of friction based duration calculation
+            f2u = new float[maxScUpExt];  // factor on top of friction based duration calculation
+            f3u = new float[maxScUpExt];  // factor on top of friction based duration calculation
+            crUp = new float[maxScUpExt]; // uphill friction
+            crDn = new float[maxScDn]; // downhill friction
+            srelSlope = new float[maxScDn]; // slope of auxiliary function for duration function at 0% slope to get to -4% slope
+            deltaSM20Dn = new float[maxScDn]; // duration (sec/m) at -20% slope
+            factorDown  = new float[maxScDn]; // slope of the duration function lower -20%
+            distFactforCostFunct = new float[maxScUp]; // factor on top of duration function for certain slopes to get a better cost function
 
             float deltaSM20DnMin = 0.05f + dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d);
             for (int scDn = maxSL+1; scDn<maxScDn;scDn++){
@@ -123,7 +123,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             }
             float deltaSM20DnMinscLow = deltaSM20Dn[maxSL+1];
 
-            for (sc = 0; sc<maxScUp;sc++){
+            for (sc = 0; sc<maxScUpExt;sc++){
                 if (sc < maxSL) {
 
                     sig = sig((3.5-sc)*2.);
@@ -138,17 +138,26 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     factorDown[sc] = deltaSM20Dn[sc]*10f;
                     distFactforCostFunct[sc] = sdistFactforCostFunct[sc];
                 }
-                else if(sc>maxSL){
+                else if(sc>maxSL && sc <maxScUp){
                     int scUp = sc - ( maxSL + 1 );
                     off = scUp - sUp/100d;
                     sig = sig((1.5-off)*2.);
 
                     f1u[sc] = (float) (1.15+0.3*sig);
                     f2u[sc] = (float) ( 1.08 + 0.03*sig )*f1u[sc] ;
-                    f3u[sc] = 2.2f; // + 0.2f*(float) sig;
+                    f3u[sc] = 2.2f;
 
-                    crUp[sc] = (float) (0.02 + 0.005*(sc-(maxSL+1)) + 0.05*sig(2d*(2d-off)));
+                    crUp[sc] = (float) (0.02 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
                     distFactforCostFunct[sc] = 1f + 0.5f*(float) sig(-off*2.);
+                } else if (sc!=maxSL) {
+                    int scUp = sc -  maxScUp;
+                    off = scUp - sUp/100d;
+                    sig = sig((1.5-off)*2.);
+
+                    f1u[sc] = (float) (1.2+0.3*sig);
+                    f2u[sc] = (float) ( 1.13 + 0.013*sig )*f1u[sc] ;
+                    f3u[sc] = 2.45f;
+                    crUp[sc] = (float) (0.0285 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
                 }
 
             }
@@ -163,7 +172,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             crDn[maxSL] = 0.02f;
             srelSlope[maxSL] = srelSlope[maxSL+1];
 
-            deltaSM20Dn[maxSL] = deltaSM20Dn[maxSL+1+2]; // + 0.04f * (float) Math.exp(-(sDn/100 - 2.5)*(sDn/100 - 2.5));
+            deltaSM20Dn[maxSL] = deltaSM20Dn[maxSL+1+2];
             factorDown[maxSL]  = deltaSM20Dn[maxSL+1+3]*(7.5f + 5f*(float)sig(2.*(sDn/100.-1.)));
 
             distFactforCostFunct[maxSL] = sdistFactforCostFunct[maxSL];
@@ -179,7 +188,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             slopesAll[slopesAll.length-1] = slopesAll[slopesAll.length-2] + 0.1f;
 
             watt0 =   contxt.power;
-            watt = 1.7f*watt0; //(1.6f+sUp/100f*0.08f)*watt0;
+            watt = 1.7f*watt0; // once one rides uphill the power used typically goes up quite substantially and reduces the effective duration
         }
 
     }
@@ -259,20 +268,21 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         setFromContext(context);
 
         int scUp = getCatUp(surfaceCat);
-        if (scUp >= maxScUp) return null;
-
+        if (scUp >= maxScUp)
+            return null;
+        int scUpExt = getCatUpExt(surfaceCat);
         int scDn = getCatDn(surfaceCat);
 
         Context contxt = (Context) context;
 
-        float cr = crUp[scUp] ;
+        float cr = crUp[scUpExt];
         float crD = crDn[scDn];
-        float f1Up = f1u[scUp];
-        float f2Up = f2u[scUp];
-        float f3Up = f3u[scUp];
-        float cr0 = (crD+cr)/2f;
-        float cr1 = (0.1f*crD + 0.9f*cr);
-        float sm20Dn = deltaSM20Dn[scDn];
+        float f1Up = f1u[scUpExt];
+        float f2Up = f2u[scUpExt];
+        float f3Up = f3u[scUpExt];
+        float cr0 = (crD+cr)/2f;          // friction at 0% slope
+        float cr1 = (0.1f*crD + 0.9f*cr); // friction at first slope after 0%
+        float sm20Dn = deltaSM20Dn[scDn]; // duration (sec/m) at -20% slope
         float factorDn = factorDown[scDn];
 
         float distFactCostFunct = scUp < distFactforCostFunct.length ? distFactforCostFunct[scUp] : 0f;
@@ -304,17 +314,19 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
         float[] durations = new float[slopes.length];
         boolean allSlopes = slopes.length == slopesAll.length;
-
+        //      for slopes <=20% pure heuristic formulas apply that derivative of the duration function is equal to factorDn. For smaller slopes additional factors apply (f2d,f3d) to enforce positive
+        //      curvature of the duration function
         durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) * f3d;
         durations[1] = ( sm20Dn -(slopes[1]-refDnSlope)*factorDn) * f2d;
         durations[2] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
         durations[3] =   sm20Dn ;
+        //      for everything with slope >=0% durations (sec/m) is calculated based on the speed derived from friction and input power (Watt)
         durations[slopes.length-5] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-5], watt0, cr0, ACw, m) ;
         durations[slopes.length-4] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-4], watt, cr1, ACw, m) ;
         durations[slopes.length-3] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, cr, ACw, m)  ;
         durations[slopes.length-2] = f2Up /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, cr, ACw, m)  ;
         durations[slopes.length-1] = f3Up /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, cr, ACw, m)  ;
-
+        //      duration at -4% only used for the reference profiles.
         if (allSlopes && !contxt.withRef) {
             durations[indRefDnSlopeOpt] = durations[slopes.length-5]+srelSlope[scDn]*slopes[indRefDnSlopeOpt];
         }
@@ -341,6 +353,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float slopeTarget = 0f;
         CubicSpline cubicSplineTmp;
         if (contxt.withRef) {
+            /* to achieve an almost constant downhill profile for a given mtbDn scale and downhill level of the profile (sDn) independent of the mtbUp scale an the uphill level of the profile (sUp)
+            a reference profile for a given combination of sDn and mtbDn with a constant uphill profile (power = 100 Watt, sUp = 2 ) and mtbUp = mtbDn is calculated. All other uphill combinations are
+            calculated in such a way that the slope at -20% is taken from the reference profile und the duration is varied at -4% slope, so that the slope matches the target slope
+             */
             int mtbDn = getMtbDn(surfaceCat);
             if (costSpline)
                 cubicSplineTmp = contxt.refProfile.getCostSpline(getSurfaceCat(getSurfaceLevel(surfaceCat),mtbDn,mtbDn));
@@ -427,11 +443,12 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     /*
        SurfaceCat is devided in 3 ranges:
-       -the first few ones (SurfaceCat < maxSL ) where there is no mtb classification neither up nor down available
+       -the first few ones (SurfaceCat < maxSL ) where there is no mtb classification neither up nor down available.
+        In this range the surfaceCat is equal to the surfaceLevel, which starts with very smooth big asphalt streets and ends with trails(path) without any mtb classification.
        -than all values for those where both a down and up classification is available ( maxSL <= SurfaceCat <= maxCatUpDn ).
-        SurfaceCat is calculated by the difference of up minus down up to 3 degrees, but up classification is considered
-        always lager as down and if this not the case difference is set to 0.
-        -last but not least all values where only down classification is given ( maxCatUpDn < SurfaceCat <= maxSurfaceCat )
+        SurfaceCat is calculated by the difference of up minus down. However the difference is limited to 3 levels ( E.g. for MtbDn = 1 1<=MtbUp<=4 ) and each combination is represented
+        by one SurfaceCat
+        -last but not least all values where only down classification is given ( maxCatUpDn < SurfaceCat <= maxSurfaceCat ). Here one surfaceCat is reserved for each MtbDn
      */
 
     protected int getSurfaceCat(int surfaceLevel, int mtbDn, int mtbUp) {
@@ -469,12 +486,21 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         else                                 return -1;
     }
 
+    // calculates uphill category based on surface category. Its either between 0 and 6 for anything without MTB classification or 6 + 1 + uphill classification (mtbUp)
     private int getCatUp(int surfaceCat){
         if (surfaceCat <= maxSL)           return surfaceCat;
         else if (surfaceCat < maxCatUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else                               return maxSL;
     }
 
+    private int getCatUpExt(int surfaceCat){
+        if (surfaceCat <= maxSL)           return surfaceCat;
+        else if (surfaceCat < maxCatUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else                               return surfaceCat - maxCatUpDn + maxScUp;
+    }
+
+
+    // calculates uphill category based on surface category. Its either between 0 and 6 for anything without MTB classification or 6 + 1 + downhill classification (mtbDn)
     protected int getMtbDn(int surfaceCat){
         if (surfaceCat <= maxSL)          return -1;
         else if (surfaceCat < maxCatUpDn) return (surfaceCat-maxSL-1)/(maxUptoDn+1);
