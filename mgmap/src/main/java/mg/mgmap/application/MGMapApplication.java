@@ -175,7 +175,7 @@ public class MGMapApplication extends Application {
         initVersionCode();
         BackupUtil.restore(this, persistenceManager);
         hgtProvider = new HgtProvider(this, persistenceManager, getAssets()); // for hgt file handling
-        elevationProvider = new ElevationProviderImpl(hgtProvider); // for height data handling
+        elevationProvider = new ElevationProviderImpl(this, hgtProvider); // for height data handling
         geoidProvider = new GeoidProvider(this); // for difference between wgs84 and nmea elevation
         metaDataUtil = new MetaDataUtil(this, persistenceManager);
         notificationUtil = new NotificationUtil(this);
@@ -644,18 +644,22 @@ public class MGMapApplication extends Application {
 
 
     public static void loadPropertiesToPreferences(SharedPreferences sharedPreferences, Properties properties){
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        for (Object oPrefName  : properties.keySet()){
-            String prefValue = properties.getProperty(oPrefName.toString());
-            if (prefValue.isEmpty()){
-                editor.remove(oPrefName.toString());
-            } else if (prefValue.startsWith("Boolean:")){
-                editor.putBoolean( oPrefName.toString(), prefValue.equals("Boolean:true"));
-            } else {
-                editor.putString( oPrefName.toString(), prefValue);
+        try {
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            for (Object oPrefName  : properties.keySet()){
+                String prefValue = properties.getProperty(oPrefName.toString());
+                if (prefValue.isEmpty()){
+                    editor.remove(oPrefName.toString());
+                } else if (prefValue.startsWith("Boolean:")){
+                    editor.putBoolean( oPrefName.toString(), prefValue.equals("Boolean:true"));
+                } else {
+                    editor.putString( oPrefName.toString(), prefValue);
+                }
             }
+            editor.apply();
+        } catch (Exception e) {
+            mgLog.e(e);
         }
-        editor.apply();
     }
 
 }
