@@ -16,6 +16,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     private final CubicSpline cubicHeuristicSpline;
     protected final CubicSpline[] SurfaceCatCostSpline = new CubicSpline[getMaxSurfaceCat()+1];
     private final Object context;
+    public final float refCosts;
 
     //   private final CubicSpline cubicHeuristicRefSpline;
 
@@ -28,10 +29,13 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             cubicHeuristicSpline = calcHeuristicSpline(cubicHeuristicRefSpline);
             cubicProfileSpline = getProfileSpline(context);
             checkAll();
+            refCosts = cubicProfileSpline.calc(0f);
         } else {
             cubicHeuristicSpline = null;
             cubicProfileSpline = null;
+            refCosts = 0f;
         }
+
     }
 
     protected abstract int getMaxSurfaceCat();

@@ -32,10 +32,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import mg.mgmap.activity.mgmap.MGMapActivity;
 import mg.mgmap.activity.mgmap.features.routing.profile.Hiking;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
+import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S2;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S3;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
+import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S3;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S2;
@@ -209,6 +211,8 @@ public class FSRouting extends FeatureService {
         addDefinedRoutingProfile(prefCache, new MTB_K3S2(), false);
         addDefinedRoutingProfile(prefCache, new MTB_K3S3(), true);
         addDefinedRoutingProfile(prefCache, new TrekkingBike(), true);
+        addDefinedRoutingProfile(prefCache, new MTB_K1S1_2F(), true);
+        addDefinedRoutingProfile(prefCache, new MTB_K2S2_2F(), true);
 
         prefRoutingProfileId.addObserver(evt -> {
             String id = prefRoutingProfileId.getValue();

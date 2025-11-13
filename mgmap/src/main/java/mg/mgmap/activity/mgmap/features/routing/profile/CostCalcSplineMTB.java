@@ -136,7 +136,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            float costf = surfaceCatSpline.calc(slope);
+            float costf = surfaceCatSpline.calc(slope)/mProfileCalculator.refCosts;
             float v = 3.6f/spm;
             float finalSpm = spm;
             mgLog.v(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f cost=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f costf=%.2f",
