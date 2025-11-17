@@ -109,7 +109,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             srelSlope = new float[maxScDn]; // slope of auxiliary function for duration function at 0% slope to get to -4% slope
             deltaSM20Dn = new float[maxScDn]; // duration (sec/m) at -20% slope
             factorDown  = new float[maxScDn]; // slope of the duration function lower -20%
-            distFactforCostFunct = new float[maxScUp]; // factor on top of duration function for certain slopes to get a better cost function
+            distFactforCostFunct = new float[maxScUpExt]; // factor on top of duration function for certain slopes to get a better cost function
 
             float deltaSM20DnMin = 0.05f + dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d);
             for (int scDn = maxSL+1; scDn<maxScDn;scDn++){
@@ -158,6 +158,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     f2u[sc] = (float) ( 1.13 + 0.013*sig )*f1u[sc] ;
                     f3u[sc] = 2.45f;
                     crUp[sc] = (float) (0.0285 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
+                    distFactforCostFunct[sc] = 1.3f + 0.5f*(float) sig(-off*2.);
                 }
 
             }
@@ -285,7 +286,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float sm20Dn = deltaSM20Dn[scDn]; // duration (sec/m) at -20% slope
         float factorDn = factorDown[scDn];
 
-        float distFactCostFunct = scUp < distFactforCostFunct.length ? distFactforCostFunct[scUp] : 0f;
+        float distFactCostFunct = scUp < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : 0f;
 //        boolean isHeuristicRefSpline = isHeuristicRefSpline(surfaceCat);
 
         float f0 = (float) sig((0.05d-cr0)*100d);
@@ -462,6 +463,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     scDn = mtbDn;
                 } else {
                     return maxCatUpDn+mtbDn;
+//                    scUp = 1; scDn = mtbDn;
                 }
             else if (mtbUp > -1) {
                 scUp = mtbUp == 0?0:1;
