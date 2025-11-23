@@ -152,13 +152,13 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                 } else if (sc!=maxSL) {
                     int scUp = sc -  maxScUp;
                     off = scUp - sUp/100d;
-                    sig = sig((1.5-off)*2.);
+                    sig = sig((-off)*2.);
 
-                    f1u[sc] = (float) (1.2+0.3*sig);
-                    f2u[sc] = (float) ( 1.13 + 0.013*sig )*f1u[sc] ;
+                    f1u[sc] = (float) (1.16+0.3*sig);
+                    f2u[sc] = (float) ( 1.1 + 0.03*sig )*f1u[sc] ;
                     f3u[sc] = 2.45f;
                     crUp[sc] = (float) (0.0285 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
-                    distFactforCostFunct[sc] = 1.3f + 0.5f*(float) sig(-off*2.);
+                    distFactforCostFunct[sc] = 1.2f + 0.7f*(float) sig(-off*2.);
                 }
 
             }
@@ -168,7 +168,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
-            f3u[maxSL]=2.4f;
+            f3u[maxSL]=2.5f;
             crUp[maxSL] = 0.03f;
             crDn[maxSL] = 0.02f;
             srelSlope[maxSL] = srelSlope[maxSL+1];
