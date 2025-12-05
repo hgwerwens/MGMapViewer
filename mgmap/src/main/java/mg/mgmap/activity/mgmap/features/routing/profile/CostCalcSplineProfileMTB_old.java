@@ -9,10 +9,10 @@ import java.util.Locale;
 
 import mg.mgmap.generic.util.basic.MGLog;
 
-public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
+public class CostCalcSplineProfileMTB_old extends CostCalcSplineProfile {
 
     public static class Context {
-        private CostCalcSplineProfileMTB refProfile;
+        private CostCalcSplineProfileMTB_old refProfile;
         public final int power;
         public final int sUp;
         public final int sDn;
@@ -46,7 +46,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private static final int maxScUp = maxScDn;         // maximum number of factors depending on the surfaced category for uphill calculation
     private static final int maxScUpExt = maxScUp + maxDn+1;
     // Heuristic is derived from a path with mtbDn = 0 and mtbUp = 0. All other surface categories have higher costs, either because they are disfavored like for anything without mtb classification or because they more difficult
-    private static final int HeuristicRefSurfaceCat = 7;
+    private static final int[] HeuristicRefSurfaceCats = {7};
     private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f, 1.6f }; //factors to increase costs compared to durations to get better routing results
     private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
@@ -63,8 +63,6 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private int indRefDnSlopeOpt;
     private int indRefDnSlope;
 
-    float[] ulstrechDuration;
-    float[] ulstrechCost;
     private float[] f1u;
     private float[] f2u;
     private float[] f3u;
@@ -80,7 +78,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private float watt0;
 
 
-    protected CostCalcSplineProfileMTB(Object context) {
+    protected CostCalcSplineProfileMTB_old(Object context) {
         super(context);
         if (fullCalc(context))
             checkAll();
@@ -94,8 +92,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             int sUp = contxt.sUp;
             int sDn = contxt.sDn;
             if (contxt.withRef)
-                contxt.refProfile = new CostCalcSplineProfileMTB(new Context(100,200,contxt.sDn,false));
-            slopesAll = new float[]{-0.76f, -0.36f, -0.32f, refDnSlope, refDnSlopeOpt, 0.0f, 0.065f,0.17f,0.195f, 0.275f};
+                contxt.refProfile = new CostCalcSplineProfileMTB_old(new Context(100,200,contxt.sDn,false));
+            slopesAll = new float[]{-0.76f, -0.36f, -0.32f, refDnSlope, refDnSlopeOpt, 0.0f, 0.1f,0.2f,0.24f, 0.34f};
             indRefDnSlope = 3;
             indRefDnSlopeOpt = indRefDnSlope + 1;
             int sc;
@@ -103,8 +101,6 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             double off;
             double sig;
 
-            ulstrechDuration = new float[maxScUpExt];
-            ulstrechCost     = new float[maxScUpExt];
             f1u = new float[maxScUpExt];  // factor on top of friction based duration calculation
             f2u = new float[maxScUpExt];  // factor on top of friction based duration calculation
             f3u = new float[maxScUpExt];  // factor on top of friction based duration calculation
@@ -113,7 +109,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             srelSlope = new float[maxScDn]; // slope of auxiliary function for duration function at 0% slope to get to -4% slope
             deltaSM20Dn = new float[maxScDn]; // duration (sec/m) at -20% slope
             factorDown  = new float[maxScDn]; // slope of the duration function lower -20%
-            distFactforCostFunct = sdistFactforCostFunct;// factor on top of duration function for certain slopes to get a better cost function
+            distFactforCostFunct = new float[maxScUpExt]; // factor on top of duration function for certain slopes to get a better cost function
 
             float deltaSM20DnMin = 0.05f + dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d);
             for (int scDn = maxSL+1; scDn<maxScDn;scDn++){
@@ -130,10 +126,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             for (sc = 0; sc<maxScUpExt;sc++){
                 if (sc < maxSL) {
 
-                    ulstrechDuration[sc] = 1f+0.18f*sUp/100;
-                    ulstrechCost[sc] = 0.9f+0.18f*sUp/100;
-
-                    f1u[sc] =  1.1f;
+                    sig = sig((3.5-sc)*2.);
+                    f1u[sc] = (float) (1.1+0.15*sig);
                     f2u[sc] = ( 1.1f )*f1u[sc] ;
                     f3u[sc] = 2.2f;
 
@@ -142,42 +136,39 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     srelSlope[sc]  = ssrelSlope[sc] + (float) ( 0.5 *( 0.5 - sig(sDn/100f-2)));
                     deltaSM20Dn[sc] = deltaSM20DnMinscLow - dSM20scDnLow(sc);
                     factorDown[sc] = deltaSM20Dn[sc]*10f;
+                    distFactforCostFunct[sc] = sdistFactforCostFunct[sc];
                 }
                 else if(sc>maxSL && sc <maxScUp){
                     int scUp = sc - ( maxSL + 1 );
                     off = scUp - sUp/100d;
-                    sig = sig((0.5-off)*2.);
-                    ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
-                    ulstrechCost[sc] =     (float) (0.9f+0.18f*sUp/100 - 0.4f*sig);
+                    sig = sig((1.5-off)*2.);
 
-                    f1u[sc] = (float) (1.15+0.15*sig((1.5-off)*2.));
-                    f2u[sc] =  1.07f*f1u[sc] ;
+                    f1u[sc] = (float) (1.15+0.3*sig);
+                    f2u[sc] = (float) ( 1.07 + 0.03*sig )*f1u[sc] ;
                     f3u[sc] = 2.2f;
 
                     crUp[sc] = (float) (0.02 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
+                    distFactforCostFunct[sc] = 1f + 0.5f*(float) sig(-off*2.);
                 } else if (sc!=maxSL) {
                     int scUp = sc -  maxScUp;
                     off = scUp - sUp/100d;
-                    sig = sig((-0.5-off)*2.);
-                    ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
-                    ulstrechCost[sc] =     (float) (0.9f+0.18f*sUp/100 - 0.4f*sig);
+                    sig = sig((-off)*2.);
 
-                    f1u[sc] = (float) (1.15+0.15*sig((0.5d-off)*2.));
-                    f2u[sc] = 1.07f * f1u[sc]; //(float) ( 1.1 + 0.03*sig )*f1u[sc] ;
+                    f1u[sc] = (float) (1.16+0.3*sig);
+                    f2u[sc] = (float) ( 1.1 + 0.03*sig )*f1u[sc] ;
                     f3u[sc] = 2.45f;
-                    crUp[sc] = (float) (0.02 + 0.005*(scUp+1d) + 0.05*sig(2d*(1d-off)));
+                    crUp[sc] = (float) (0.023 + 0.01*scUp + 0.05*sig(2d*(1d-off)));
+                    distFactforCostFunct[sc] = 1.2f + 0.7f*(float) sig(-off*2.);
                 }
+
             }
 
             f2d = 1.07f;
             f3d = 3.0f;
 
-            ulstrechDuration[maxSL] = 1f+0.18f*sUp/100;
-            ulstrechCost[maxSL]     = 1f+0.18f*sUp/100;
-
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
-            f3u[maxSL]=2.4f;
+            f3u[maxSL]=2.5f;
             crUp[maxSL] = 0.03f;
             crDn[maxSL] = 0.02f;
             srelSlope[maxSL] = srelSlope[maxSL+1];
@@ -185,9 +176,17 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             deltaSM20Dn[maxSL] = deltaSM20Dn[maxSL+1+2];
             factorDown[maxSL]  = deltaSM20Dn[maxSL+1+3]*(7.5f + 5f*(float)sig(2.*(sDn/100.-1.)));
 
+            distFactforCostFunct[maxSL] = sdistFactforCostFunct[maxSL];
+
             slopesAll[2] = -0.26f - (float) (0.05*sDn/100.);
             slopesAll[1] = slopesAll[2]-0.04f;
             slopesAll[0] = slopesAll[1]-0.4f;
+
+            float ulStretch = ( 1f + 0.18f * sUp/100);
+            slopesAll[slopesAll.length-4] = 0.065f * ulStretch;  //basis for heuristic spline
+            slopesAll[slopesAll.length-3] = 0.17f * ulStretch;
+            slopesAll[slopesAll.length-2] = slopesAll[slopesAll.length-3] + 0.025f*ulStretch;
+            slopesAll[slopesAll.length-1] = slopesAll[slopesAll.length-2] + 0.08f*ulStretch;
 
             watt0 =   contxt.power;
             watt = 1.7f*watt0; // once one rides uphill the power used typically goes up quite substantially and reduces the effective duration
@@ -229,8 +228,22 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     protected CubicSpline getHeuristicRefSpline(Object context) {
         try {
-            CubicSpline cubicSplineTmp = getCostSpline(HeuristicRefSurfaceCat);
-            CubicSpline cubicSpline = cubicSplineTmp.getTransYCubicSpline(-0.0001f);
+            CubicSpline[] refCubicSplines = new CubicSpline[HeuristicRefSurfaceCats.length];
+            for ( int i=0;i<HeuristicRefSurfaceCats.length;i++){
+                int surfaceCat = HeuristicRefSurfaceCats[i];
+                refCubicSplines[i] = getCostSpline(surfaceCat);
+            }
+            float[] minDurations = new  float[slopesAll.length];
+            for ( int s=0;s<slopesAll.length;s++){
+                minDurations[s] = Float.MAX_VALUE;
+                for ( int i=0;i<HeuristicRefSurfaceCats.length;i++){
+                    float duration =  ( refCubicSplines[i].calc(slopesAll[s]) - 0.0001f );// * 0.9999f;
+                    if (duration < minDurations[s])
+                        minDurations[s] = duration;
+                }
+            }
+            CubicSpline cubicSpline = getSpline(slopesAll,minDurations);
+
             checkNegCurvature(cubicSpline,String.format(Locale.ENGLISH,"heuristic spline for %s ",context.toString()),1e7f);
             return cubicSpline;
         } catch (Exception e) {
@@ -255,8 +268,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private CubicSpline calcSpline(boolean costSpline, int surfaceCat, Object context) throws Exception {
         setFromContext(context);
 
-        if (getCatUp(surfaceCat) >= maxScUp) return null;
-
+        int scUp = getCatUp(surfaceCat);
+        if (scUp >= maxScUp)
+            return null;
         int scUpExt = getCatUpExt(surfaceCat);
         int scDn = getCatDn(surfaceCat);
 
@@ -272,7 +286,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float sm20Dn = deltaSM20Dn[scDn]; // duration (sec/m) at -20% slope
         float factorDn = factorDown[scDn];
 
-        float distFactCostFunct = scUpExt < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : 0f;
+        float distFactCostFunct = scUp < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : 0f;
 //        boolean isHeuristicRefSpline = isHeuristicRefSpline(surfaceCat);
 
         float f0 = (float) sig((0.05d-cr0)*100d);
@@ -287,18 +301,19 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
         float[] slopes ;
         int sc = 0;
-        slopes = new float[slopesAll.length];
-
-        float ulstrech = costSpline ? ulstrechCost[scUpExt] : ulstrechDuration[scUpExt];
-
+        if (cr0<=0.1 || contxt.withRef) {
+            slopes = new float[slopesAll.length];
+        } else {
+            slopes = new float[slopesAll.length-1];
+        }
         for (float slope : slopesAll) {
-            if (slope <= 0)
-              slopes[sc++] = slope;
-            else
-              slopes[sc++] = slope * ulstrech;
+            if ( slopes.length == slopesAll.length || slope != refDnSlopeOpt){
+                slopes[sc++] = slope;
+            }
         }
 
-                float[] durations = new float[slopes.length];
+
+        float[] durations = new float[slopes.length];
         boolean allSlopes = slopes.length == slopesAll.length;
         //      for slopes <=20% pure heuristic formulas apply that derivative of the duration function is equal to factorDn. For smaller slopes additional factors apply (f2d,f3d) to enforce positive
         //      curvature of the duration function
@@ -390,23 +405,18 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         ArrayList<CubicSpline.Value> curveRadiusForNegCurvaturePoint = cubicSpline.getCurveRadiusForNegCurvaturePoints();
         if (curveRadiusForNegCurvaturePoint != null) {
             StringBuilder msg = new StringBuilder(String.format(Locale.ENGLISH,"Negative curvature for %s",context));
-            boolean criticalthresholdReached = false;
             boolean thresholdReached = false;
             for (CubicSpline.Value negCurvature : curveRadiusForNegCurvaturePoint) {
-                float curvature = -negCurvature.y();
-                if (curvature < threshold)
-                    criticalthresholdReached = true;
-                if ( curvature < 50f ) {
+                if (-negCurvature.y() < threshold)
                     thresholdReached = true;
-                    msg.append(": ");
-                    msg.append(String.format(Locale.ENGLISH, " slope=%.2f", 100 * negCurvature.x()));
-                    msg.append(String.format(Locale.ENGLISH, " curve Radius=%.2f", -negCurvature.y()));
-                }
+                msg.append(": ");
+                msg.append(String.format(Locale.ENGLISH," slope=%.2f",100*negCurvature.x()));
+                msg.append(String.format(Locale.ENGLISH," curve Radius=%.2f",-negCurvature.y()));
             }
-            if(criticalthresholdReached)
+            if(thresholdReached)
                 throw new Exception( msg.toString());
             else
-                if (thresholdReached) mgLog.w(msg.toString());
+                mgLog.w(msg.toString());
         }
     }
 
