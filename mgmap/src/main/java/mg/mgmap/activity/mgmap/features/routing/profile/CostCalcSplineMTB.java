@@ -67,8 +67,8 @@ public class CostCalcSplineMTB implements CostCalculator {
             } else if ("steps".equals(wayTagEval.highway)) {
                 surfaceLevel = 6; // treat steps as mtb scale 3.
                 mtbDn = 3;
-                mtbUp = 6;
-                distFactor = 3f;
+                mtbUp = 3;
+                distFactor = 10f;
                 if ("up".equals(wayTagEval.incline_dir))
                     direction = dir.up;
                 else if ("down".equals(wayTagEval.incline_dir))
@@ -108,7 +108,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
                 cost = mfd*dist*costf + 0.00001;
             else if (direction==dir.none)
-                cost = mfd/2*dist*costf + 0.00001;
+                cost = mfd/2d*dist*costf + 0.00001;
             else if (direction!=dir.oneway) {
                 cost = (1d + mfd / 2d * mProfileCalculator.sig(2d*(((CostCalcSplineProfileMTB.Context) mProfileCalculator.getContext()).sDn / 100d - 1d))) * dist * costf + 0.00001;
             }
@@ -139,7 +139,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             float costf = surfaceCatSpline.calc(slope)/mProfileCalculator.refCosts;
             float v = 3.6f/spm;
             float finalSpm = spm;
-            mgLog.v(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f cost=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f costf=%.2f",
+            mgLog.v(()-> String.format(Locale.ENGLISH, "Slope=%.2f v=%.2f time=%.2f dist=%.2f cost=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f costf=%.2f",
                     100f*slope,v, finalSpm *dist,dist, calcCosts(dist,vertDist,true),surfaceCat,mProfileCalculator.getSurfaceLevel(surfaceCat),mProfileCalculator.getMtbUp(surfaceCat),mProfileCalculator.getMtbDn(surfaceCat),mfd,costf));
             return (long) (1000*dist*spm);
         } else return 0;

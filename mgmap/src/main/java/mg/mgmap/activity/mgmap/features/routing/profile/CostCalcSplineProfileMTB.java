@@ -148,9 +148,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     off = scUp - sUp/100d;
                     sig = sig((0.5-off)*2.);
                     ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
-                    ulstrechCost[sc] =     (float) (0.9f+0.18f*sUp/100 - 0.4f*sig);
+                    ulstrechCost[sc] =     (float) (0.7f+0.18f*sUp/100 - 0.4f*sig);
 
-                    f1u[sc] = (float) (1.15+0.15*sig((1.5-off)*2.));
+                    f1u[sc] = (float) (1.1+0.15*sig((1.5-off)*2.));
                     f2u[sc] =  1.07f*f1u[sc] ;
                     f3u[sc] = 2.2f;
 
@@ -160,10 +160,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     off = scUp - sUp/100d;
                     sig = sig((-0.5-off)*2.);
                     ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
-                    ulstrechCost[sc] =     (float) (0.9f+0.18f*sUp/100 - 0.4f*sig);
+                    ulstrechCost[sc] =     (float) (0.7f+0.18f*sUp/100 - 0.4f*sig);
 
-                    f1u[sc] = (float) (1.15+0.15*sig((0.5d-off)*2.));
-                    f2u[sc] = 1.07f * f1u[sc]; //(float) ( 1.1 + 0.03*sig )*f1u[sc] ;
+                    f1u[sc] = (float) (1.1+0.15*sig((0.5d-off)*2.));
+                    f2u[sc] = 1.08f * f1u[sc]; //(float) ( 1.1 + 0.03*sig )*f1u[sc] ;
                     f3u[sc] = 2.45f;
                     crUp[sc] = (float) (0.02 + 0.005*(scUp+1d) + 0.05*sig(2d*(1d-off)));
                 }
@@ -173,7 +173,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             f3d = 3.0f;
 
             ulstrechDuration[maxSL] = 1f+0.18f*sUp/100;
-            ulstrechCost[maxSL]     = 1f+0.18f*sUp/100;
+            ulstrechCost[maxSL]     = 0.7f+0.18f*sUp/100;
 
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;

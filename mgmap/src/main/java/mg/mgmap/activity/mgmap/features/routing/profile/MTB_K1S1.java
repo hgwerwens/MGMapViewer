@@ -17,7 +17,7 @@ public class MTB_K1S1 extends RoutingProfile {
                 };
             }
         }
- */
+*/
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
