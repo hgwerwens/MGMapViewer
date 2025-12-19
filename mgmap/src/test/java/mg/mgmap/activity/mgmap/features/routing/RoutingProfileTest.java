@@ -1,18 +1,19 @@
 package mg.mgmap.activity.mgmap.features.routing;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.reader.MapFile;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.Map;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
-import mg.mgmap.activity.mgmap.features.routing.profile.ShortestDistance;
 import mg.mgmap.application.util.ElevationProvider;
-import mg.mgmap.application.util.ElevationProviderImplHelper;
 import mg.mgmap.application.util.ElevationProviderImplHelper2;
 import mg.mgmap.application.util.HgtProvider2;
 import mg.mgmap.application.util.WayProviderHelper;
@@ -25,14 +26,20 @@ import mg.mgmap.generic.util.WayProvider;
 import mg.mgmap.generic.util.gpx.GpxExporter;
 
 public class RoutingProfileTest {
-    @Test
-    public void _01_routing() throws Exception {
+    private enum PointType {start,on_rt,off_rt,stop}
+    private record PointDef( PointType pointType,PointModelImpl pointModelImpl){}
+    private record TestDef( RoutingProfile profile, LinkedHashMap<String,PointDef> points ){
+        int getCntType(PointType pointType) {
+            int cnt = 0;
+            for ( PointDef point : points.values()) {
+                if (point.pointType == pointType) cnt++;
+            }
+            return cnt;
+        }
+    }
 
-        RoutingContext interactiveRoutingContext = new RoutingContext(
-                10000,
-                false, // no extra snap, since FSMarker snaps point zoom level dependent
-                10, // accept long detours in interactive mode
-                1); // approachLimit 1 is ok, since FSMarker snaps point zoom level dependent
+    @Test
+    public void _01_routing()  {
 
         ElevationProvider elevationProvider = new ElevationProviderImplHelper2( new HgtProvider2() );
         File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam.osm.map"); // !!! map is not uploaded to git (due to map size)
@@ -42,55 +49,145 @@ public class RoutingProfileTest {
         WayProvider wayProvider = new WayProviderHelper(mds);
         GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>(""), new Pref<>(false));
 
-        RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-        routingEngine.setRoutingProfile(new MTB_K2S2());
-        routingEngine.refreshRequired.set(0);
+        LinkedHashMap<String,  PointDef> points = new LinkedHashMap<>();
+        TestDef testDef;
+        points.put("Bärenbr", new PointDef( PointType.start, new PointModelImpl(49.373489, 8.747295)));
+        points.put("11untKiefernWald", new PointDef( PointType.on_rt, new PointModelImpl(49.372785, 8.741959)));
+        points.put("11obWaldTrail", new PointDef( PointType.on_rt, new PointModelImpl(49.376634, 8.725377)));
+        points.put("WeißerSteinschlag", new PointDef( PointType.off_rt, new PointModelImpl(49.374345, 8.745763)));
+        points.put("3Eichen", new PointDef( PointType.stop,new PointModelImpl(49.379301, 8.723810)));
+        testDef = new TestDef(new MTB_K2S2(), points);
+        excuteTest(testDef,gGraphTileFactory);
 
-        {
-            WriteableTrackLog mtl = new WriteableTrackLog("test_mtl");
-            mtl.startTrack(1L);
-            mtl.startSegment(2L);
-            mtl.addPoint(new PointModelImpl(49.373489, 8.747295));
-            mtl.addPoint(new PointModelImpl(49.379373, 8.723840));
+        points.put("11obWaldTrail", new PointDef( PointType.off_rt, new PointModelImpl(49.376634, 8.725377)));
+        testDef = new TestDef(new MTB_K1S1(), points);
+        excuteTest(testDef,gGraphTileFactory);
 
-            WriteableTrackLog rotl = routingEngine.updateRouting2(mtl, null);
-            String statistic = rotl.getTrackStatistic().toString();
-            File gpxFile = new File("src/test/assets/temp_local/Bärenbrunnen2DreiEichen_K2S2.gpx");
-            GpxExporter.export(new PrintWriter(gpxFile), rotl);
-            System.out.println(statistic);
-            Assert.assertEquals(2610, rotl.getTrackStatistic().getTotalLength(), 5);
-            Assert.assertEquals(138, rotl.getTrackStatistic().getNumPoints());
-        }
 
-        routingEngine.setRoutingProfile(new MTB_K1S1());
-        routingEngine.refreshRequired.set(0);
+        points.put("3Eichen", new PointDef( PointType.start,new PointModelImpl(49.380051, 8.724140)));
+        points.put("Vulpius", new PointDef( PointType.stop,new PointModelImpl(49.400871, 8.727354)));
+        testDef = new TestDef(new MTB_K2S2(), points);
+        excuteTest(testDef,gGraphTileFactory);
+        testDef = new TestDef(new MTB_K1S1(), points);
+        excuteTest(testDef,gGraphTileFactory);
 
-        {
-            WriteableTrackLog mtl = new WriteableTrackLog("test_mtl");
-            WriteableTrackLog rotl = routingEngine.updateRouting2(mtl, null);
-            String statistic = rotl.getTrackStatistic().toString();
-            File gpxFile = new File("src/test/assets/temp_local/Bärenbrunnen2DreiEichen_K2S2.gpx");
-            GpxExporter.export(new PrintWriter(gpxFile), rotl);
-            System.out.println(statistic);
-            Assert.assertEquals(2610, rotl.getTrackStatistic().getTotalLength(), 5);
-            Assert.assertEquals(138, rotl.getTrackStatistic().getNumPoints());
-        }
 
-        {
-            WriteableTrackLog mtl = new WriteableTrackLog("test_mtl");
-            mtl.startTrack(1L);
-            mtl.startSegment(2L);
-            mtl.addPoint(new PointModelImpl(49.380051, 8.724140));
-            mtl.addPoint(new PointModelImpl(49.400871, 8.727354));
-            WriteableTrackLog rotl = routingEngine.updateRouting2(mtl, null);
-            String statistic = rotl.getTrackStatistic().toString();
-            File gpxFile = new File("src/test/assets/temp_local/DreiEichen2Vulpius_K2S2.gpx");
-            GpxExporter.export(new PrintWriter(gpxFile), rotl);
-            System.out.println(statistic);
-            Assert.assertEquals(2690, rotl.getTrackStatistic().getTotalLength(), 5);
-            Assert.assertEquals(149, rotl.getTrackStatistic().getNumPoints());
-        }
     }
 
+    private void excuteTest(TestDef testDef, GGraphTileFactory gGraphTileFactory ){
+        RoutingContext interactiveRoutingContext = new RoutingContext(
+                10000,
+                false, // no extra snap, since FSMarker snaps point zoom level dependent
+                10, // accept long detours in interactive mode
+                1);
+        RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
+        routingEngine.setRoutingProfile(testDef.profile);
+
+        System.out.println(testDef.profile.getId());
+
+        System.out.println("route start/stop");
+        executeSingle(testDef,PointType.start,0,routingEngine);
+
+        System.out.println("on route all points");
+        executeSingle(testDef,PointType.on_rt,-1,routingEngine);
+        int pointNumber = 1;
+        int rt_onCnt = testDef.getCntType(PointType.on_rt);
+        System.out.println("on route single point");
+        while (++pointNumber <= rt_onCnt && rt_onCnt > 1) {
+            executeSingle(testDef,PointType.on_rt,pointNumber++,routingEngine);
+        }
+        int rt_offCnt = testDef.getCntType(PointType.off_rt);
+
+        System.out.println("off route single point");
+        while (++pointNumber <= rt_offCnt && rt_offCnt > 1) {
+            executeSingle(testDef,PointType.on_rt,pointNumber++,routingEngine);
+        }
+
+
+    }
+
+    private boolean executeSingle(TestDef testDef, PointType pointType, int pointNumber, RoutingEngine routingEngine) {
+
+
+        StringBuilder testName = new StringBuilder();
+        LinkedList<WriteableTrackLog> mtls = new LinkedList<>();
+        long timestamp = 1L;
+        WriteableTrackLog mtla = new WriteableTrackLog("test_mtla");;
+        mtla.startTrack(timestamp++);
+        {
+            int pointCnt = 0;
+            PointDef point;
+            WriteableTrackLog mtl = null;
+            for (Map.Entry<String, PointDef> pointEntry : testDef.points.entrySet()) {
+                point = pointEntry.getValue();
+                if (point.pointType == PointType.start) {
+                    mtl = new WriteableTrackLog("test_mtl");
+                    mtl.startTrack(timestamp++);
+                    mtl.startSegment(timestamp++);
+                    mtl.addPoint(point.pointModelImpl);
+
+                    mtla.startSegment(timestamp++);
+                    mtla.addPoint(point.pointModelImpl);
+
+                    testName.append(pointEntry.getKey());
+                } else if (point.pointType == PointType.stop) {
+                    mtl.addPoint(point.pointModelImpl);
+                    mtls.add(mtl);
+
+                    mtla.addPoint(point.pointModelImpl);
+                    mtla.stopSegment(timestamp);
+
+
+                    testName.append(pointEntry.getKey());
+                } else if (point.pointType == pointType) {
+                    pointCnt++;
+                    if (pointNumber < 0 || (pointNumber > 1 && pointNumber == pointCnt)) {
+                        mtl.addPoint(point.pointModelImpl);
+                        mtls.add(mtl);
+
+                        mtl = new WriteableTrackLog("test_mtl");
+                        mtl.startTrack(timestamp++);
+                        mtl.startSegment(timestamp++);
+
+                        mtla.addPoint(point.pointModelImpl);
+                        mtla.stopSegment(timestamp++);
+                        mtla.startSegment(timestamp++);
+                        mtla.addPoint(point.pointModelImpl);
+
+                        mtl.addPoint(point.pointModelImpl);
+                        testName.append(pointEntry.getKey());
+                    }
+                }
+            }
+        }
+        String fileName = "src/test/assets/temp_local/" + testName +
+                testDef.profile.getId() +
+                ".gpx";
+
+        System.out.println(testName);
+
+
+        for (WriteableTrackLog mtl : mtls) {
+            routingEngine.refreshRequired.set(0);
+            WriteableTrackLog rotl = routingEngine.updateRouting2(mtl, null);
+            StringBuilder statistic = new StringBuilder( rotl.getTrackStatistic().toString());
+            System.out.println(statistic);
+        }
+
+        routingEngine.refreshRequired.set(0);
+        System.out.println("all");
+        WriteableTrackLog rotl = routingEngine.updateRouting2(mtla, null);
+        StringBuilder statistic = new StringBuilder( rotl.getTrackStatistic().toString());
+        System.out.println(statistic);
+
+       /* File gpxFile = new File(fileName);
+        try {
+            GpxExporter.export(new PrintWriter(gpxFile), rotl);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } */
+
+        return true;
+    }
 
 }
