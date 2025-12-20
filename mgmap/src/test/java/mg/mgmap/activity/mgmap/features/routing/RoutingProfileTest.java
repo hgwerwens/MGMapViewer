@@ -215,6 +215,7 @@ public class RoutingProfileTest {
             System.out.println(routingSummary);
         }
 
+        RoutingSummary.routingSummaries.clear();
 //        index = RoutingSummary.routingSummaries.size();
 
 
