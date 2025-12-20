@@ -11,14 +11,13 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
-import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
 import mg.mgmap.application.util.ElevationProvider;
-import mg.mgmap.application.util.ElevationProviderImplHelper;
 import mg.mgmap.application.util.ElevationProviderImplHelper2;
 import mg.mgmap.application.util.HgtProvider2;
 import mg.mgmap.application.util.WayProviderHelper;
 import mg.mgmap.generic.graph.impl2.GGraphTileFactory;
+import mg.mgmap.generic.graph.impl2.RoutingSummary;
 import mg.mgmap.generic.model.PointModelImpl;
 import mg.mgmap.generic.model.PointModelUtil;
 import mg.mgmap.generic.model.WriteableTrackLog;
@@ -40,15 +39,12 @@ public class RoutingProfileTest {
         }
     }
 
+    private int index = 0;
+
     @Test
     public void _01_routing()  {
         PointModelUtil.init(32);
 
-        RoutingContext interactiveRoutingContext = new RoutingContext(
-                1000000,
-                true, // no extra snap, since FSMarker snaps point zoom level dependent
-                10, // accept long detours in interactive mode
-                32); // approachLimit 1 is ok, since FSMarker snaps point zoom level dependent
 
         ElevationProvider elevationProvider = new ElevationProviderImplHelper2( new HgtProvider2() );
         File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam.osm.map"); // !!! map is not uploaded to git (due to map size)
@@ -95,34 +91,36 @@ public class RoutingProfileTest {
 
         System.out.println(testDef.profile.getId());
 
-    /*    System.out.println("route start/stop");
-        executeSingle(testDef,PointType.start,0,routingEngine); */
+        System.out.println("route start/stop");
+        executeSingle(testDef,PointType.start,0,routingEngine);
 
         System.out.println("on route all points");
         executeSingle(testDef,PointType.on_rt,-1,routingEngine);
-    /*    int pointNumber = 1;
+        int pointNumber = 0;
         int rt_onCnt = testDef.getCntType(PointType.on_rt);
         System.out.println("on route single point");
         while (++pointNumber <= rt_onCnt && rt_onCnt > 1) {
-            executeSingle(testDef,PointType.on_rt,pointNumber++,routingEngine);
+            executeSingle(testDef,PointType.on_rt,pointNumber,routingEngine);
         }
         int rt_offCnt = testDef.getCntType(PointType.off_rt);
 
         System.out.println("off route single point");
+        pointNumber = 0;
         while (++pointNumber <= rt_offCnt && rt_offCnt > 1) {
-            executeSingle(testDef,PointType.on_rt,pointNumber++,routingEngine);
-        } */
+            executeSingle(testDef,PointType.on_rt,pointNumber,routingEngine);
+        }
 
 
     }
 
-    private boolean executeSingle(TestDef testDef, PointType pointType, int pointNumber, RoutingEngine routingEngine) {
+    private void executeSingle(TestDef testDef, PointType pointType, int pointNumber, RoutingEngine routingEngine) {
 
 
         StringBuilder testName = new StringBuilder();
-        LinkedList<WriteableTrackLog> mtls = new LinkedList<>();
+//        LinkedList<WriteableTrackLog> mtls = new LinkedList<>();
         long timestamp = 1L;
-        WriteableTrackLog mtla = new WriteableTrackLog("test_mtla");;
+//        WriteableTrackLog mtla = new WriteableTrackLog("test_mtla");
+        WriteableTrackLog mtlb = new WriteableTrackLog("test_mtlb");
         {
             int pointCnt = 0;
             PointDef point;
@@ -130,30 +128,38 @@ public class RoutingProfileTest {
             for (Map.Entry<String, PointDef> pointEntry : testDef.points.entrySet()) {
                 point = pointEntry.getValue();
                 if (point.pointType == PointType.start) {
-                    mtl = new WriteableTrackLog("test_mtl");
+/*                    mtl = new WriteableTrackLog("test_mtl");
                     mtl.startTrack(timestamp+=10);
                     mtl.startSegment(timestamp+=10);
                     mtl.addPoint(point.pointModelImpl);
 
                     mtla.startTrack(timestamp+=10);
                     mtla.startSegment(timestamp+=10);
-                    mtla.addPoint(point.pointModelImpl);
+                    mtla.addPoint(point.pointModelImpl); */
+
+                    mtlb.startTrack(timestamp+=10);
+                    mtlb.startSegment(timestamp+=10);
+                    mtlb.addPoint(point.pointModelImpl);
 
                     testName.append(pointEntry.getKey());
                 } else if (point.pointType == PointType.stop) {
-                    mtl.addPoint(point.pointModelImpl);
+/*                    mtl.addPoint(point.pointModelImpl);
                     mtls.add(mtl);
 
                     mtla.addPoint(point.pointModelImpl);
                     mtla.stopSegment(timestamp+=10);
-                    mtla.stopTrack(timestamp+=10);
+                    mtla.stopTrack(timestamp+=10); */
+
+                    mtlb.addPoint(point.pointModelImpl);
+                    mtlb.stopSegment(timestamp+=10);
+                    mtlb.stopTrack(timestamp+=10);
 
                     testName.append(pointEntry.getKey());
                 } else if (point.pointType == pointType) {
                     pointCnt++;
-                    if (pointNumber < 0 || (pointNumber > 1 && pointNumber == pointCnt)) {
+                    if (pointNumber < 0 || (pointNumber > 0 && pointNumber == pointCnt)) {
 
-                        mtl.addPoint(point.pointModelImpl);
+/*                        mtl.addPoint(point.pointModelImpl);
                         mtls.add(mtl);
                         mtl = new WriteableTrackLog("test_mtl");
                         mtl.startTrack(timestamp+=10);
@@ -163,7 +169,9 @@ public class RoutingProfileTest {
                         mtla.addPoint(point.pointModelImpl);
                         mtla.stopSegment(timestamp+=10);
                         mtla.startSegment(timestamp+=10);
-                        mtla.addPoint(point.pointModelImpl);
+                        mtla.addPoint(new PointModelImpl(point.pointModelImpl.getLat()+0.0000001,point.pointModelImpl.getLon())); */
+
+                        mtlb.addPoint(point.pointModelImpl);
 
                         testName.append(pointEntry.getKey());
                     }
@@ -172,14 +180,20 @@ public class RoutingProfileTest {
         }
 
         
-        String fileName = "src/test/assets/temp_local/" + testName +
-                testDef.profile.getId() +
-                ".gpx";
 
-        System.out.println(testName);
+        routingEngine.refreshRequired.set(0);
+        WriteableTrackLog rotl = routingEngine.updateRouting2(mtlb, null);
+
+        double cost = 0.0;
+        for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
+//        for (int k = index; k < RoutingSummary.routingSummaries.size(); k++){
+//            cost = cost + RoutingSummary.routingSummaries.get(k).getCost();
+            cost = cost + routingSummary.getCost();
+        }
+        System.out.println(testName.append(" :").append(cost));
 
 
-        for (WriteableTrackLog mtl : mtls) {
+/*        for (WriteableTrackLog mtl : mtls) {
             routingEngine.refreshRequired.set(0);
             WriteableTrackLog rotl = routingEngine.updateRouting2(mtl, null);
             StringBuilder statistic = new StringBuilder( rotl.getTrackStatistic().toString());
@@ -190,17 +204,30 @@ public class RoutingProfileTest {
         System.out.println("all");
         WriteableTrackLog rotl = routingEngine.updateRouting2(mtla, null);
         StringBuilder statistic = new StringBuilder( rotl.getTrackStatistic().toString());
+        System.out.println(statistic); */
+
+        StringBuilder statistic = new StringBuilder( rotl.getTrackStatistic().toString());
         System.out.println(statistic);
 
+        for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
+//        for (int k = index; k < RoutingSummary.routingSummaries.size(); k++){
+//            System.out.println(RoutingSummary.routingSummaries.get(k));
+            System.out.println(routingSummary);
+        }
 
-       /* File gpxFile = new File(fileName);
+//        index = RoutingSummary.routingSummaries.size();
+
+
+        String fileName = "src/test/assets/temp_local/" + testName +
+                testDef.profile.getId() +
+                ".gpx";
+        File gpxFile = new File(fileName);
         try {
             GpxExporter.export(new PrintWriter(gpxFile), rotl);
         } catch (FileNotFoundException e) {
             throw new RuntimeException(e);
-        } */
+        }
 
-        return true;
     }
 
 }

@@ -27,6 +27,10 @@ public class RoutingSummary {
         this.rc = rc;
     }
 
+    public double getCost(){
+        return cost;
+    }
+
     @NonNull
     @Override
     public String toString() {
