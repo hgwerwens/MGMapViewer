@@ -173,7 +173,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             f3d = 3.0f;
 
             ulstrechDuration[maxSL] = 1f+0.18f*sUp/100;
-            ulstrechCost[maxSL]     = 0.7f+0.18f*sUp/100;
+            ulstrechCost[maxSL]     = 0.8f+0.18f*sUp/100;
 
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
