@@ -148,7 +148,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     off = scUp - sUp/100d;
                     sig = sig((0.5-off)*2.);
                     ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
-                    ulstrechCost[sc] =     (float) (0.7f+0.18f*sUp/100 - 0.4f*sig);
+                    ulstrechCost[sc] =     (float) (0.8f+0.18f*sUp/100 - 0.4f*sig);
 
                     f1u[sc] = (float) (1.1+0.15*sig((1.5-off)*2.));
                     f2u[sc] =  1.07f*f1u[sc] ;
