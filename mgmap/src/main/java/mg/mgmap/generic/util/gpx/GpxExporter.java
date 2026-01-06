@@ -122,6 +122,7 @@ public class GpxExporter {
             }
             pw.println("\t</trk>");
             pw.println("</gpx>");
+            pw.close();
             trackLog.setModified(false);
         }
     }

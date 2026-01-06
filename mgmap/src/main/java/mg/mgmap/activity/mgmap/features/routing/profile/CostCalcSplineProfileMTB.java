@@ -47,7 +47,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private static final int maxScUpExt = maxScUp + maxDn+1;
     // Heuristic is derived from a path with mtbDn = 0 and mtbUp = 0. All other surface categories have higher costs, either because they are disfavored like for anything without mtb classification or because they more difficult
     private static final int HeuristicRefSurfaceCat = 7;
-    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f, 1.6f }; //factors to increase costs compared to durations to get better routing results
+    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.6f  ,1.5f, 1.6f }; //factors to increase costs compared to durations to get better routing results
     private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification

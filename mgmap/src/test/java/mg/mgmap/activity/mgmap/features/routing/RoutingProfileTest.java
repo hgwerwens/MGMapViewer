@@ -51,6 +51,7 @@ public class RoutingProfileTest {
                 this.points.put(entry.getKey(),entry.getValue() == null ? null : new PointDef(entry.getValue()));
             }
         }
+
         public TestDef(String name, RoutingProfile routingProfile){
             this(name, routingProfile,new Points());
         }
@@ -84,16 +85,26 @@ public class RoutingProfileTest {
         }
     }
 
-    private record OffRouteTestResult(double costRatio, boolean isOptRout){}
+    private record OffRouteTestResult(double costRatio, double lengthRatio){}
     private static class OffRouteTestResults extends LinkedHashMap<String,OffRouteTestResult>{  }
-    private record TestResult(double costRatio, boolean isOptRout,OffRouteTestResults offRouteCostRatios){
-        public TestResult(double costRatio,boolean isOptRout){
-            this(costRatio, isOptRout,new OffRouteTestResults());
+    private record TestResult(double costRatio, double lengthRatio,OffRouteTestResults offRouteCostRatios){
+        public TestResult(double costRatio,double lengthRatio){
+            this(costRatio, lengthRatio,new OffRouteTestResults());
         }
     }
 
 
-    private static class Tests extends LinkedHashMap<String,TestDef>{  }
+    private static class Tests extends LinkedHashMap<String,TestDef>{
+        public Tests(Tests ref, String filter){
+            for (String key : ref.keySet()){
+                if (key.contains(filter))
+                    this.put(key,ref.get(key));
+            }
+        }
+        public Tests() {
+            super();
+        }
+    }
     private static class TestResults extends LinkedHashMap<String,TestResult>{  }
 
 
@@ -116,6 +127,7 @@ public class RoutingProfileTest {
 
 
         Tests tests = defineTests();
+//        tests = new Tests(tests,"KühlerGrundBrückeRohrbach2PfadAmHangKurveHoch");
         TestResults testResults = new TestResults();
 
 //      Execute Tests
@@ -129,7 +141,8 @@ public class RoutingProfileTest {
         int cnt = 0;
         for ( Map.Entry<String,TestResult> entry : testResults.entrySet() ){
             TestResult testResult = entry.getValue();
-            System.out.println("Cost Ratio: " + testResult.costRatio + (testResult.isOptRout? " isOptRoute: ":" for: ") + entry.getKey());
+            int logLengthR = testResult.lengthRatio == 1.0 ? -16 : (int) Math.log10(testResult.lengthRatio - 1);
+            System.out.println("Cost Ratio: " + testResult.costRatio + (logLengthR<-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " + entry.getKey());
             totalCostRatio += testResult.costRatio;
             cnt++;
         }
@@ -144,7 +157,9 @@ public class RoutingProfileTest {
             TestResult testResult = entry.getValue();
             if (testResult.offRouteCostRatios != null)
                 for ( Map.Entry<String,OffRouteTestResult> lineEntry : testResult.offRouteCostRatios.entrySet() ) {
-                    System.out.println("Cost Ratio: " + lineEntry.getValue().costRatio + (lineEntry.getValue().isOptRout? " isOptRoute: ":" for: ") +  entry.getKey() + " " + lineEntry.getKey());
+                    OffRouteTestResult offRTR =lineEntry.getValue();
+                    int logLengthR = offRTR.lengthRatio == 1.0 ? -16 : (int) Math.log10(offRTR.lengthRatio - 1);
+                    System.out.println("Cost Ratio: " + offRTR.costRatio + (logLengthR<-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " +  entry.getKey() + " " + lineEntry.getKey());
                     totalOffCostRatio += lineEntry.getValue().costRatio;
                     cnt++;
                 }
@@ -152,6 +167,125 @@ public class RoutingProfileTest {
         totalOffCostRatio = totalOffCostRatio/cnt;
         System.out.println("Total Cost Ratio: " + totalOffCostRatio);
 
+    }
+
+
+    private TestResult excuteTest(TestDef testDef, GGraphTileFactory gGraphTileFactory ){
+        RoutingContext interactiveRoutingContext = new RoutingContext(
+                1000000,
+                true, // no extra snap, since FSMarker snaps point zoom level dependent
+                10, // accept long detours in interactive mode
+                32);
+        RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
+        routingEngine.setRoutingProfile(testDef.profile);
+
+        System.out.println(testDef.profile.getId());
+        System.out.println("on route all points");
+        TrackResult ref_cost = executeSingle(testDef,PointType.on_rt,-1,routingEngine);
+        System.out.println("route start/stop");
+        TrackResult opt_cost = executeSingle(testDef,PointType.start,0,routingEngine);
+
+        double ref2opt = ref_cost.cost / opt_cost.cost;
+        double lengthRatio =  ref_cost.length / opt_cost.length;
+        System.out.println("Ref2OptCosts: " + ref2opt);
+        TestResult testResult = new  TestResult(ref2opt,lengthRatio);
+
+
+/*        int pointNumber = 0;
+        int rt_onCnt = testDef.getCntType(PointType.on_rt);
+        System.out.println("on route single point");
+        while (++pointNumber <= rt_onCnt && rt_onCnt > 1) {
+            executeSingle(testDef,PointType.on_rt,pointNumber,routingEngine);
+        } */
+        int rt_offCnt = testDef.getCntType(PointType.off_rt);
+        System.out.println("off route single point");
+        int pointNumber = 0;
+
+
+        while (++pointNumber <= rt_offCnt ) {
+            TrackResult off_cost = executeSingle(testDef,PointType.off_rt,pointNumber,routingEngine);
+            double ref2off = ref_cost.cost / off_cost.cost;
+            lengthRatio = off_cost.length / opt_cost.length ;
+            testResult.offRouteCostRatios.put(testDef.getPointName(PointType.off_rt,pointNumber),new OffRouteTestResult(ref2off,lengthRatio));
+            System.out.println("Ref2OffCosts: " + ref2off);
+        }
+        return testResult;
+    }
+
+    private TrackResult executeSingle(TestDef testDef, PointType pointType, int pointNumber, RoutingEngine routingEngine) {
+        StringBuilder testName = new StringBuilder(testDef.name);
+        if (pointType == PointType.start )
+            testName.append("StartStop");
+        else if ( pointType == PointType.on_rt && pointNumber < 0 )
+            testName.append("AllPointsOnRoute");
+        else if ( pointType == PointType.off_rt && pointNumber < 0 )
+            testName.append("AllPointsOffRoute");
+        else if ( pointType == PointType.on_rt && pointNumber > 0 )
+            testName.append("OnRoute");
+        else if ( pointType == PointType.off_rt && pointNumber > 0 )
+            testName.append("OffRoute");
+
+        long timestamp = 1L;
+        WriteableTrackLog mtlb = new WriteableTrackLog("test_mtlb");
+
+        {
+            int pointCnt = 0;
+            PointDef point;
+            for (Map.Entry<String, PointDef> pointEntry : testDef.points.entrySet()) {
+                point = pointEntry.getValue();
+                if (point != null)
+                    if (point.pointType == PointType.start) {
+                        mtlb.startTrack(timestamp+=10);
+                        mtlb.startSegment(timestamp+=10);
+                        mtlb.addPoint(point.pointModelImpl);
+                    } else if (point.pointType == PointType.stop) {
+                        mtlb.addPoint(point.pointModelImpl);
+                        mtlb.stopSegment(timestamp+=10);
+                        mtlb.stopTrack(timestamp+=10);
+                    } else if (point.pointType == pointType) {
+                        pointCnt++;
+                        if (pointNumber < 0 || (pointNumber > 0 && pointNumber == pointCnt)) {
+                            mtlb.addPoint(point.pointModelImpl);
+                            if (pointNumber > 0 )
+                                testName.append(pointEntry.getKey());
+                        }
+                    }
+            }
+        }
+
+        
+
+        routingEngine.refreshRequired.set(0);
+        WriteableTrackLog rotl = routingEngine.updateRouting2(mtlb, null);
+
+        double cost = 0.0;
+        for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
+            cost = cost + routingSummary.getCost();
+        }
+
+        TrackLogStatistic trackStatisic = rotl.getTrackStatistic();
+        System.out.println(testName + ": " + cost);
+        System.out.println(trackStatisic.toString());
+
+        for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
+            System.out.println(routingSummary);
+        }
+
+        TrackResult trackResult = new TrackResult(cost, trackStatisic.getTotalLength(),RoutingSummary.routingSummaries);
+
+        RoutingSummary.routingSummaries.clear();
+
+        String fileName = "src/test/assets/temp_local/" + testName +
+                testDef.profile.getId() +
+                ".gpx";
+        File gpxFile = new File(fileName);
+        try {
+            GpxExporter.export(new PrintWriter(gpxFile), rotl);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        return trackResult;
     }
 
     private Tests defineTests(){
@@ -327,125 +461,30 @@ public class RoutingProfileTest {
         points.replace("Zollstockweg1", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef("BoxbergForstQuelle2MiErlensumpfweg",mtb_k1s1);
+        points = testDef.points;
+        points.put("startObererNeuerWeg", new PointDef( PointType.start,new PointModelImpl(49.381263, 8.706486)));
+        points.put("ObererNeuerWeg", new PointDef( PointType.on_rt,new PointModelImpl(49.380911, 8.706909)));
+        points.put("Rebmannspfad", new PointDef( PointType.off_rt, new PointModelImpl(49.381202, 8.708179)));
+        points.put("MiErlensumpfweg", new PointDef( PointType.stop,new PointModelImpl(49.380649, 8.707409)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("KühlerGrundBrückeRohrbach2PfadAmHangKurveHoch12",mtb_k1s1);
+        points = testDef.points;
+        points.put("AbzweigBrücke", new PointDef( PointType.start,new PointModelImpl(49.379375, 8.700524)));
+        points.put("Talweg01", new PointDef( PointType.off_rt,new PointModelImpl(49.382093, 8.701988)));
+        points.put("PfadAmHangNachBrücke", new PointDef( PointType.on_rt, new PointModelImpl(49.381549, 8.702624)));
+        points.put("PfadAmHangKurveHoch12", new PointDef( PointType.stop,new PointModelImpl(49.383134, 8.702513)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
 
         return tests;
-    }
-    private TestResult excuteTest(TestDef testDef, GGraphTileFactory gGraphTileFactory ){
-        RoutingContext interactiveRoutingContext = new RoutingContext(
-                1000000,
-                true, // no extra snap, since FSMarker snaps point zoom level dependent
-                10, // accept long detours in interactive mode
-                32);
-        RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-        routingEngine.setRoutingProfile(testDef.profile);
-
-        System.out.println(testDef.profile.getId());
-        System.out.println("on route all points");
-        TrackResult ref_cost = executeSingle(testDef,PointType.on_rt,-1,routingEngine);
-        System.out.println("route start/stop");
-        TrackResult opt_cost = executeSingle(testDef,PointType.start,0,routingEngine);
-
-        double ref2opt = ref_cost.cost / opt_cost.cost;
-        boolean isOptRoute = ref_cost.length == opt_cost.length;
-        System.out.println("Ref2OptCosts: " + ref2opt);
-        TestResult testResult = new  TestResult(ref2opt,isOptRoute);
-
-
-/*        int pointNumber = 0;
-        int rt_onCnt = testDef.getCntType(PointType.on_rt);
-        System.out.println("on route single point");
-        while (++pointNumber <= rt_onCnt && rt_onCnt > 1) {
-            executeSingle(testDef,PointType.on_rt,pointNumber,routingEngine);
-        } */
-        int rt_offCnt = testDef.getCntType(PointType.off_rt);
-        System.out.println("off route single point");
-        int pointNumber = 0;
-
-
-        while (++pointNumber <= rt_offCnt ) {
-            TrackResult off_cost = executeSingle(testDef,PointType.off_rt,pointNumber,routingEngine);
-            double ref2off = ref_cost.cost / off_cost.cost;
-            isOptRoute = off_cost.length == opt_cost.length;
-            testResult.offRouteCostRatios.put(testDef.getPointName(PointType.off_rt,pointNumber),new OffRouteTestResult(ref2off,isOptRoute));
-            System.out.println("Ref2OffCosts: " + ref2off);
-        }
-        return testResult;
-    }
-
-    private TrackResult executeSingle(TestDef testDef, PointType pointType, int pointNumber, RoutingEngine routingEngine) {
-        StringBuilder testName = new StringBuilder(testDef.name);
-        if (pointType == PointType.start )
-            testName.append("StartStop");
-        else if ( pointType == PointType.on_rt && pointNumber < 0 )
-            testName.append("AllPointsOnRoute");
-        else if ( pointType == PointType.off_rt && pointNumber < 0 )
-            testName.append("AllPointsOffRoute");
-        else if ( pointType == PointType.on_rt && pointNumber > 0 )
-            testName.append("OnRoute");
-        else if ( pointType == PointType.off_rt && pointNumber > 0 )
-            testName.append("OffRoute");
-
-        long timestamp = 1L;
-        WriteableTrackLog mtlb = new WriteableTrackLog("test_mtlb");
-
-        {
-            int pointCnt = 0;
-            PointDef point;
-            for (Map.Entry<String, PointDef> pointEntry : testDef.points.entrySet()) {
-                point = pointEntry.getValue();
-                if (point != null)
-                    if (point.pointType == PointType.start) {
-                        mtlb.startTrack(timestamp+=10);
-                        mtlb.startSegment(timestamp+=10);
-                        mtlb.addPoint(point.pointModelImpl);
-                    } else if (point.pointType == PointType.stop) {
-                        mtlb.addPoint(point.pointModelImpl);
-                        mtlb.stopSegment(timestamp+=10);
-                        mtlb.stopTrack(timestamp+=10);
-                    } else if (point.pointType == pointType) {
-                        pointCnt++;
-                        if (pointNumber < 0 || (pointNumber > 0 && pointNumber == pointCnt)) {
-                            mtlb.addPoint(point.pointModelImpl);
-                            if (pointNumber > 0 )
-                                testName.append(pointEntry.getKey());
-                        }
-                    }
-            }
-        }
-
-        
-
-        routingEngine.refreshRequired.set(0);
-        WriteableTrackLog rotl = routingEngine.updateRouting2(mtlb, null);
-
-        double cost = 0.0;
-        for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
-            cost = cost + routingSummary.getCost();
-        }
-
-        TrackLogStatistic trackStatisic = rotl.getTrackStatistic();
-        System.out.println(testName + ": " + cost);
-        System.out.println(trackStatisic.toString());
-
-        for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
-            System.out.println(routingSummary);
-        }
-
-        TrackResult trackResult = new TrackResult(cost, trackStatisic.getTotalLength(),RoutingSummary.routingSummaries);
-
-        RoutingSummary.routingSummaries.clear();
-
-        String fileName = "src/test/assets/temp_local/" + testName +
-                testDef.profile.getId() +
-                ".gpx";
-        File gpxFile = new File(fileName);
-        try {
-            GpxExporter.export(new PrintWriter(gpxFile), rotl);
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        }
-
-        return trackResult;
     }
 
 }
