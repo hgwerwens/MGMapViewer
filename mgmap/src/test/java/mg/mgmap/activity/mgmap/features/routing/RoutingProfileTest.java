@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -85,11 +86,22 @@ public class RoutingProfileTest {
         }
     }
 
-    private record OffRouteTestResult(double costRatio, double lengthRatio){}
-    private static class OffRouteTestResults extends LinkedHashMap<String,OffRouteTestResult>{  }
-    private record TestResult(double costRatio, double lengthRatio,OffRouteTestResults offRouteCostRatios){
-        public TestResult(double costRatio,double lengthRatio){
-            this(costRatio, lengthRatio,new OffRouteTestResults());
+    private record TestResult(double costRatio, double lengthRatio){}
+    private static class TestResults extends LinkedHashMap<String,TestResult>{
+        public TestResults() {}
+        public TestResults(TestResults ref, Comparator<TestResult> cmp) {
+            super(ref.size());
+
+            ref.entrySet().stream()
+                    .sorted(Map.Entry.comparingByValue(cmp))
+                    .forEach(e -> put(e.getKey(), e.getValue()));
+        }
+
+
+    }
+    private record TestResultDetails(TestResult testResult,TestResults offRouteTestResults ){
+        public TestResultDetails(TestResult testResult){
+            this(testResult,new TestResults());
         }
     }
 
@@ -105,7 +117,7 @@ public class RoutingProfileTest {
             super();
         }
     }
-    private static class TestResults extends LinkedHashMap<String,TestResult>{  }
+
 
 
     @Test
@@ -127,16 +139,22 @@ public class RoutingProfileTest {
 
 
         Tests tests = defineTests();
-//        tests = new Tests(tests,"KühlerGrundBrückeRohrbach2PfadAmHangKurveHoch");
+//        tests = new Tests(tests,"KurveUntSnktNikolausW2LeopoldSt");
         TestResults testResults = new TestResults();
+        TestResults offRouteTestResults = new TestResults();
 
 //      Execute Tests
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
             TestDef testDef = entry.getValue();
-            TestResult testResult = excuteTest(testDef,gGraphTileFactory);
-            testResults.put(entry.getKey(),testResult);
+            TestResultDetails testResult = excuteTest(testDef,gGraphTileFactory);
+            testResults.put(entry.getKey(),testResult.testResult);
+            offRouteTestResults.putAll(testResult.offRouteTestResults);
         }
 //      print Results for intended route to acutal route
+
+        testResults = new TestResults(testResults,Comparator.comparing(TestResult::costRatio));
+        offRouteTestResults = new TestResults(offRouteTestResults,Comparator.comparing(TestResult::costRatio));
+
         double totalCostRatio = 0.0;
         int cnt = 0;
         for ( Map.Entry<String,TestResult> entry : testResults.entrySet() ){
@@ -153,24 +171,21 @@ public class RoutingProfileTest {
 //      print Results for not intended route to acutal route
         cnt = 0;
         double totalOffCostRatio = 0;
-        for ( Map.Entry<String,TestResult> entry : testResults.entrySet() ){
-            TestResult testResult = entry.getValue();
-            if (testResult.offRouteCostRatios != null)
-                for ( Map.Entry<String,OffRouteTestResult> lineEntry : testResult.offRouteCostRatios.entrySet() ) {
-                    OffRouteTestResult offRTR =lineEntry.getValue();
-                    int logLengthR = offRTR.lengthRatio == 1.0 ? -16 : (int) Math.log10(offRTR.lengthRatio - 1);
-                    System.out.println("Cost Ratio: " + offRTR.costRatio + (logLengthR<-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " +  entry.getKey() + " " + lineEntry.getKey());
-                    totalOffCostRatio += lineEntry.getValue().costRatio;
-                    cnt++;
-                }
+        for ( Map.Entry<String,TestResult> entry : offRouteTestResults.entrySet() ){
+            TestResult offRTR = entry.getValue();
+            int logLengthR = offRTR.lengthRatio == 1.0 ? -16 : (int) Math.log10(offRTR.lengthRatio - 1);
+            System.out.println("Cost Ratio: " + offRTR.costRatio + (logLengthR<-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " +  entry.getKey() );
+            totalOffCostRatio += offRTR.costRatio;
+            cnt++;
         }
+
         totalOffCostRatio = totalOffCostRatio/cnt;
         System.out.println("Total Cost Ratio: " + totalOffCostRatio);
 
     }
 
 
-    private TestResult excuteTest(TestDef testDef, GGraphTileFactory gGraphTileFactory ){
+    private TestResultDetails excuteTest(TestDef testDef, GGraphTileFactory gGraphTileFactory ){
         RoutingContext interactiveRoutingContext = new RoutingContext(
                 1000000,
                 true, // no extra snap, since FSMarker snaps point zoom level dependent
@@ -188,7 +203,7 @@ public class RoutingProfileTest {
         double ref2opt = ref_cost.cost / opt_cost.cost;
         double lengthRatio =  ref_cost.length / opt_cost.length;
         System.out.println("Ref2OptCosts: " + ref2opt);
-        TestResult testResult = new  TestResult(ref2opt,lengthRatio);
+        TestResultDetails testResult = new  TestResultDetails(new TestResult(ref2opt,lengthRatio));
 
 
 /*        int pointNumber = 0;
@@ -206,7 +221,7 @@ public class RoutingProfileTest {
             TrackResult off_cost = executeSingle(testDef,PointType.off_rt,pointNumber,routingEngine);
             double ref2off = ref_cost.cost / off_cost.cost;
             lengthRatio = off_cost.length / opt_cost.length ;
-            testResult.offRouteCostRatios.put(testDef.getPointName(PointType.off_rt,pointNumber),new OffRouteTestResult(ref2off,lengthRatio));
+            testResult.offRouteTestResults.put(testDef.getId() + "_" + testDef.getPointName(PointType.off_rt,pointNumber),new TestResult(ref2off,lengthRatio));
             System.out.println("Ref2OffCosts: " + ref2off);
         }
         return testResult;
@@ -334,15 +349,20 @@ public class RoutingProfileTest {
         points.put("3Eichen", new PointDef( PointType.start,new PointModelImpl(49.380051, 8.724140)));
         points.put("1Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.384575, 8.722852)));
         points.put("2Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.387458, 8.722325)));
+        points.put("HöhenWegOben", new PointDef( PointType.off_rt, new PointModelImpl(49.390047, 8.721883)));
         points.put("3Seg0", new PointDef( PointType.on_rt, new PointModelImpl(49.389915, 8.721471)));
         points.put("4Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.393342, 8.724873)));
         points.put("6Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.398255, 8.726851)));
+        points.put("RoteSuhlWeg", new PointDef( PointType.off_rt, new PointModelImpl(49.398232, 8.728652)));
         points.put("Vulpius", new PointDef( PointType.stop,new PointModelImpl(49.400871, 8.727354)));
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
-        points.remove("3Seg0");points.remove("6Seg11");
+        points.replace("3Seg0",PointType.off_rt);
+        points.replace("6Seg11",PointType.off_rt);
+        points.replace("RoteSuhlWeg",PointType.on_rt);
+        points.replace("HöhenWegOben",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("FalkFlowUpSeg3",mtb_k2s2);
@@ -379,6 +399,7 @@ public class RoutingProfileTest {
         points.put("Sprunghöhe", new PointDef( PointType.start,new PointModelImpl(49.401376, 8.709106)));
         points.put("EndeNikolaustrail", new PointDef( PointType.on_rt, new PointModelImpl(49.381552, 8.721497)));
         points.put("KohlhöferSteige", new PointDef( PointType.off_rt, new PointModelImpl(49.399172, 8.716641)));
+        points.put("AnDerRodelBuche", new PointDef( PointType.off_rt, new PointModelImpl(49.395225, 8.716570)));
         points.put("Leopoldstein", new PointDef( PointType.stop,new PointModelImpl(49.391994, 8.722037)));
         tests.put(testDef.getId(),testDef);
 
@@ -464,7 +485,7 @@ public class RoutingProfileTest {
         testDef = new TestDef("BoxbergForstQuelle2MiErlensumpfweg",mtb_k1s1);
         points = testDef.points;
         points.put("startObererNeuerWeg", new PointDef( PointType.start,new PointModelImpl(49.381263, 8.706486)));
-        points.put("ObererNeuerWeg", new PointDef( PointType.on_rt,new PointModelImpl(49.380911, 8.706909)));
+        points.put("ObererNeuerWeg", new PointDef( PointType.on_rt,new PointModelImpl(49.380912, 8.706909)));
         points.put("Rebmannspfad", new PointDef( PointType.off_rt, new PointModelImpl(49.381202, 8.708179)));
         points.put("MiErlensumpfweg", new PointDef( PointType.stop,new PointModelImpl(49.380649, 8.707409)));
         tests.put(testDef.getId(),testDef);
@@ -481,6 +502,42 @@ public class RoutingProfileTest {
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef("KurveUntSnktNikolausW2LeopoldSt",mtb_k2s2);
+        points = testDef.points;
+        points.put("KurveUntSnktNikolaus", new PointDef( PointType.start,new PointModelImpl(49.390841, 8.712170)));
+        points.put("SchneiderScheere12", new PointDef( PointType.on_rt,new PointModelImpl(49.390408, 8.714062)));
+        points.put("SchneiderScheere23", new PointDef( PointType.on_rt, new PointModelImpl(49.386050, 8.718701)));
+        points.put("NikolausTrailVorn00", new PointDef( PointType.off_rt,new PointModelImpl(49.392596, 8.714945)));
+        points.put("NikolausTrailEnde00", new PointDef( PointType.off_rt, new PointModelImpl(49.381489, 8.721578)));
+        points.put("StraßeSnktNik", new PointDef( PointType.off_rt, new PointModelImpl(49.389170, 8.713084)));
+        points.put("LeopoldSt", new PointDef( PointType.stop,new PointModelImpl(49.391994, 8.722037)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k1s1);
+        points = testDef.points;
+        points.replace("SchneiderScheere12", PointType.off_rt);
+        points.replace("SchneiderScheere23", PointType.off_rt);
+        points.replace("NikolausTrailVorn00", PointType.on_rt);
+        points.replace("NikolausTrailEnde00", PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("Blockhütte2KSFalknerei",mtb_k1s1);
+        points = testDef.points;
+        points.put("Blockhütte", new PointDef( PointType.start,new PointModelImpl(49.401235, 8.713260)));
+        points.put("AbzweigRodelweg", new PointDef( PointType.on_rt,new PointModelImpl(49.407584, 8.728162)));
+        points.put("AbzweigKSweg", new PointDef( PointType.off_rt, new PointModelImpl(49.401889, 8.724593)));
+        points.put("VulpiusHütte", new PointDef( PointType.off_rt,new PointModelImpl(49.400834, 8.727354)));
+        points.put("Falknerei", new PointDef( PointType.stop,new PointModelImpl(49.403808, 8.728194)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("AbzweigRodelweg", PointType.off_rt);
+        points.replace("AbzweigKSweg", PointType.on_rt);
+        points.replace("VulpiusHütte", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
 

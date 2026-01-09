@@ -47,7 +47,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private static final int maxScUpExt = maxScUp + maxDn+1;
     // Heuristic is derived from a path with mtbDn = 0 and mtbUp = 0. All other surface categories have higher costs, either because they are disfavored like for anything without mtb classification or because they more difficult
     private static final int HeuristicRefSurfaceCat = 7;
-    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.6f  ,1.5f, 1.6f }; //factors to increase costs compared to durations to get better routing results
+    private static final float[] sdistFactforCostFunct = {  3.05f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
     private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
@@ -153,7 +153,6 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     f1u[sc] = (float) (1.1+0.15*sig((1.5-off)*2.));
                     f2u[sc] =  1.07f*f1u[sc] ;
                     f3u[sc] = 2.2f;
-
                     crUp[sc] = (float) (0.02 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
                 } else if (sc!=maxSL) {
                     int scUp = sc -  maxScUp;
@@ -173,7 +172,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             f3d = 3.0f;
 
             ulstrechDuration[maxSL] = 1f+0.18f*sUp/100;
-            ulstrechCost[maxSL]     = 0.8f+0.18f*sUp/100;
+            ulstrechCost[maxSL]     = 0.7f+0.18f*sUp/100;
 
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
@@ -325,11 +324,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                         durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.7f);
                     else durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
                 }
-                distFactCostFunct = 1.2f;
             }
-            durations[durations.length - 1] = 1.10f * distFactCostFunct * durations[durations.length - 1];
-            durations[durations.length - 2] = 1.05f * distFactCostFunct * durations[durations.length - 2];
-            durations[durations.length - 3] = distFactCostFunct * durations[durations.length - 3];
         }
 
         String OptSpline = contxt.withRef ? "with ref" : allSlopes ? "Optimized ref" :"ref";

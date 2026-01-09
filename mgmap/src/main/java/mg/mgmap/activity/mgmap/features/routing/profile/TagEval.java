@@ -27,49 +27,24 @@ public class TagEval {
     protected static short getSurfaceCat(WayAttributs wayTagEval){
         short surfaceCat = 0;
         if (wayTagEval.surface != null) {
-            switch (wayTagEval.surface) {
-                case "asphalt":
-                case "smooth_paved":
-                case "paved":
-                    surfaceCat = 1;
-                    break;
-                case "compacted":
-                case "fine_gravel":
-                case "paving_stones":
-                    surfaceCat = 2;
-                    break;
-                case "rough_paved":
-                case "gravel":
-                    surfaceCat = 3;
-                    break;
-                case "raw":
-                case "unpaved":
-                case "winter":
-                    surfaceCat = 4;
-                    break;
-                default:
-                    surfaceCat = 5;
-            }
+            surfaceCat = switch (wayTagEval.surface) {
+                case "asphalt", "smooth_paved", "paved" -> 1;
+                case "compacted", "fine_gravel", "paving_stones" -> 2;
+                case "rough_paved", "gravel" -> 3;
+                case "raw", "unpaved", "winter" -> 4;
+                default -> 5;
+            };
         }
         short type = 0;
         if ("track".equals(wayTagEval.highway) ) {
             if (wayTagEval.trackType != null) {
-                switch (wayTagEval.trackType) {
-                    case "grade1":
-                        type = 1;
-                        break;
-                    case "grade2":
-                        type = 2;
-                        break;
-                    case "grade3":
-                        type = 3;
-                        break;
-                    case "grade4":
-                        type = 4;
-                        break;
-                    default:
-                        type = 5;
-                }
+                type = switch (wayTagEval.trackType) {
+                    case "grade1" -> 1;
+                    case "grade2" -> 2;
+                    case "grade3" -> 3;
+                    case "grade4" -> 4;
+                    default -> 5;
+                };
             }
         } else if ("unclassified".equals(wayTagEval.highway))
             type = 1;
