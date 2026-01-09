@@ -20,13 +20,14 @@ import android.text.InputType;
 
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
+import androidx.preference.SwitchPreference;
 
 import mg.mgmap.BuildConfig;
 import mg.mgmap.R;
 import mg.mgmap.application.MGMapApplication;
-import mg.mgmap.generic.util.Observer;
 import mg.mgmap.generic.util.Pref;
 import mg.mgmap.generic.util.PrefCache;
+import mg.mgmap.generic.util.hints.HintShareLoc;
 
 public class MainPreferenceScreen extends MGPreferenceScreen {
 
@@ -45,6 +46,17 @@ public class MainPreferenceScreen extends MGPreferenceScreen {
         setEditTextPreferenceNumeric(R.string.preferences_pressure_smoothing_gl_key);
         setEditTextPreferenceNumeric(R.string.preferences_height_consistency_check_key);
         setEditTextPreferenceNumeric(R.string.FSControl_pref_menu_animation_timeout_key);
+
+        SwitchPreference prefShareLoc = findPreference(getResources().getString(R.string.FSShareLoc_shareLocOn_key));
+        prefShareLoc.setOnPreferenceChangeListener((preference, newValue) -> {
+            if (newValue.equals(Boolean.TRUE)){
+                application.getHintUtil().showHint(new HintShareLoc(getActivity())
+                        .addGotItAction(()->prefShareLoc.setChecked(true)));
+                return false;
+            }
+            return true;
+        });
+        prefShareLoc.setVisible(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q);
     }
 
     final EditTextPreference.OnBindEditTextListener etNumberFormatter = editText -> editText.setInputType(InputType.TYPE_CLASS_NUMBER);
@@ -95,7 +107,7 @@ public class MainPreferenceScreen extends MGPreferenceScreen {
 
         Pref<Boolean> prefUseRoutingProfiles = prefCache.get(R.string.preferences_routingProfile_key, true);
         Preference pRoutingProfiles = findPreference(getResources().getString(R.string.FSRouting_routing_profiles_menu_key));
-        prefUseRoutingProfiles.addObserver((Observer) evt -> pRoutingProfiles.setEnabled(prefUseRoutingProfiles.getValue()) );
+        prefUseRoutingProfiles.addObserver(evt -> pRoutingProfiles.setEnabled(prefUseRoutingProfiles.getValue()));
         prefUseRoutingProfiles.onChange();
     }
 
