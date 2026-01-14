@@ -47,7 +47,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private static final int maxScUpExt = maxScUp + maxDn+1;
     // Heuristic is derived from a path with mtbDn = 0 and mtbUp = 0. All other surface categories have higher costs, either because they are disfavored like for anything without mtb classification or because they more difficult
     private static final int HeuristicRefSurfaceCat = 7;
-    private static final float[] sdistFactforCostFunct = {  3.05f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
+    private static final float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.70f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
     private static final float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     private static final int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
@@ -65,6 +65,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     float[] ulstrechDuration;
     float[] ulstrechCost;
+    private float[] fpower;
     private float[] f1u;
     private float[] f2u;
     private float[] f3u;
@@ -80,7 +81,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private float watt0;
 
 
-    protected CostCalcSplineProfileMTB(Object context) {
+    public CostCalcSplineProfileMTB(Object context) {
         super(context);
         if (fullCalc(context))
             checkAll();
@@ -105,6 +106,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
             ulstrechDuration = new float[maxScUpExt];
             ulstrechCost     = new float[maxScUpExt];
+            fpower = new float[maxScUpExt];
             f1u = new float[maxScUpExt];  // factor on top of friction based duration calculation
             f2u = new float[maxScUpExt];  // factor on top of friction based duration calculation
             f3u = new float[maxScUpExt];  // factor on top of friction based duration calculation
@@ -126,13 +128,13 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                 factorDown[scDn] = deltaSM20Dn[scDn]*7.5f;
             }
             float deltaSM20DnMinscLow = deltaSM20Dn[maxSL+1];
-
             for (sc = 0; sc<maxScUpExt;sc++){
                 if (sc < maxSL) {
 
                     ulstrechDuration[sc] = 1f+0.18f*sUp/100;
-                    ulstrechCost[sc] = 0.9f+0.18f*sUp/100;
+                    ulstrechCost[sc]     = 1.3f+0.18f*sUp/100 - (float) sig((3.5-sc)*2.);
 
+                    fpower[sc] = 1.0f;
                     f1u[sc] =  1.1f;
                     f2u[sc] = ( 1.1f )*f1u[sc] ;
                     f3u[sc] = 2.2f;
@@ -150,8 +152,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
                     ulstrechCost[sc] =     (float) (0.8f+0.18f*sUp/100 - 0.4f*sig);
 
-                    f1u[sc] = (float) (1.1+0.15*sig((1.5-off)*2.));
-                    f2u[sc] =  1.07f*f1u[sc] ;
+                    fpower[sc] = (float) (1.0f-0.0*sig((1.5-off)*2.));
+                    f1u[sc] = (float) (1.2+0.15*sig((1.5-off)*2.));
+                    f2u[sc] =  1.1f*f1u[sc] ;
                     f3u[sc] = 2.2f;
                     crUp[sc] = (float) (0.02 + 0.005*scUp + 0.05*sig(2d*(2d-off)));
                 } else if (sc!=maxSL) {
@@ -161,8 +164,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     ulstrechDuration[sc] = (float) (1f  +0.18f*sUp/100 - 0.1f*sig);
                     ulstrechCost[sc] =     (float) (0.7f+0.18f*sUp/100 - 0.4f*sig);
 
-                    f1u[sc] = (float) (1.1+0.15*sig((0.5d-off)*2.));
-                    f2u[sc] = 1.08f * f1u[sc]; //(float) ( 1.1 + 0.03*sig )*f1u[sc] ;
+                    fpower[sc] = (float) (1.0f-0.0*sig((0.5d-off)*2.));
+                    f1u[sc] = (float) (1.25+0.15*sig((0.5d-off)*2.));
+                    f2u[sc] = 1.1f * f1u[sc]; //(float) ( 1.1 + 0.03*sig )*f1u[sc] ;
                     f3u[sc] = 2.45f;
                     crUp[sc] = (float) (0.02 + 0.005*(scUp+1d) + 0.05*sig(2d*(1d-off)));
                 }
@@ -172,8 +176,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             f3d = 3.0f;
 
             ulstrechDuration[maxSL] = 1f+0.18f*sUp/100;
-            ulstrechCost[maxSL]     = 0.7f+0.18f*sUp/100;
+            ulstrechCost[maxSL]     = (0.7f+0.18f*sUp/100);
 
+            fpower[maxSL]=1f;
             f1u[maxSL]=1.35f;
             f2u[maxSL]=f1u[maxSL]*1.15f;
             f3u[maxSL]=2.4f;
@@ -280,7 +285,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
         float f = (float) sig((0.05d-cr)*100d);
         float watt0 = watt0_high>watt0_base ? watt0_high+(watt0_base-watt0_high)*f: watt0_high;
-        float watt = this.watt > 175 ? this.watt + (175-this.watt)*f : this.watt;
+        float watt = ( this.watt > 175 ? this.watt + (175-this.watt)*f : this.watt ) * fpower[scUpExt];
 
         long t1 = System.nanoTime();
 
@@ -322,7 +327,10 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     if (slopes[i] < 0) durations[i] = durations[i] * distFactCostFunct;
                     else if (slopes[i] == 0.0f)
                         durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.7f);
-                    else durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
+                    else if ( i < slopes.length-1)
+                        durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
+                    else
+                        durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
                 }
             }
         }
@@ -439,7 +447,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     protected int getSurfaceCat(int surfaceLevel, int mtbDn, int mtbUp) {
         if (surfaceLevel < 0 || surfaceLevel > maxSL) throw new RuntimeException("invalid Surface Level");
-        if (surfaceLevel >= maxSL ) {
+        if (surfaceLevel == maxSL ) {
             int scUp;
             int scDn;
             if (mtbDn > -1)

@@ -15,6 +15,7 @@ import java.util.Map;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
 import mg.mgmap.application.util.ElevationProvider;
+import mg.mgmap.application.util.ElevationProviderImpl;
 import mg.mgmap.application.util.ElevationProviderImplHelper2;
 import mg.mgmap.application.util.HgtProvider2;
 import mg.mgmap.application.util.WayProviderHelper;
@@ -127,19 +128,20 @@ public class RoutingProfileTest {
 
         PointModelUtil.init(32);
 
-
-        ElevationProvider elevationProvider = new ElevationProviderImplHelper2( new HgtProvider2() );
+        Pref<Boolean> useQubicInterpolation = new Pref<>(true);
+        Pref<Boolean> useQubicSplineInterpolation = new Pref<>(true);
+        ElevationProvider elevationProvider = new ElevationProviderImpl( new HgtProvider2(), useQubicInterpolation, useQubicSplineInterpolation );
+//        ElevationProvider elevationProvider = new ElevationProviderImplHelper2( new HgtProvider2() );
         File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam.osm.map"); // !!! map is not uploaded to git (due to map size)
         System.out.println(mapFile.getAbsolutePath()+" "+mapFile.exists());
 
         MapDataStore mds = new MapFile(mapFile, "de");
         WayProvider wayProvider = new WayProviderHelper(mds);
-        GGraphTileFactory gGraphTileFactory = new mg.mgmap.generic.graph.impl2.GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("16"));
-//        GGraphTileFactory gGraphTileFactory = new mg.mgmap.generic.graph.impl.GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true));
+        GGraphTileFactory gGraphTileFactory = new mg.mgmap.generic.graph.impl2.GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
 
 
         Tests tests = defineTests();
-//        tests = new Tests(tests,"KurveUntSnktNikolausW2LeopoldSt");
+//        tests = new Tests(tests,"BoxbergForstQuelle2MiErlensumpfweg");
         TestResults testResults = new TestResults();
         TestResults offRouteTestResults = new TestResults();
 
@@ -160,7 +162,7 @@ public class RoutingProfileTest {
         for ( Map.Entry<String,TestResult> entry : testResults.entrySet() ){
             TestResult testResult = entry.getValue();
             int logLengthR = testResult.lengthRatio == 1.0 ? -16 : (int) Math.log10(testResult.lengthRatio - 1);
-            System.out.println("Cost Ratio: " + testResult.costRatio + (logLengthR<-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " + entry.getKey());
+            System.out.println("Cost Ratio: " + testResult.costRatio + (logLengthR<=-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " + entry.getKey());
             totalCostRatio += testResult.costRatio;
             cnt++;
         }
@@ -174,7 +176,7 @@ public class RoutingProfileTest {
         for ( Map.Entry<String,TestResult> entry : offRouteTestResults.entrySet() ){
             TestResult offRTR = entry.getValue();
             int logLengthR = offRTR.lengthRatio == 1.0 ? -16 : (int) Math.log10(offRTR.lengthRatio - 1);
-            System.out.println("Cost Ratio: " + offRTR.costRatio + (logLengthR<-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " +  entry.getKey() );
+            System.out.println("Cost Ratio: " + offRTR.costRatio + (logLengthR<=-5?" isOptRoute(" : " noOptRoute(") + logLengthR + ") for: " +  entry.getKey() );
             totalOffCostRatio += offRTR.costRatio;
             cnt++;
         }
@@ -349,7 +351,8 @@ public class RoutingProfileTest {
         points.put("3Eichen", new PointDef( PointType.start,new PointModelImpl(49.380051, 8.724140)));
         points.put("1Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.384575, 8.722852)));
         points.put("2Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.387458, 8.722325)));
-        points.put("HöhenWegOben", new PointDef( PointType.off_rt, new PointModelImpl(49.390047, 8.721883)));
+        points.put("HöhenWegVorLeo", new PointDef( PointType.off_rt, new PointModelImpl(49.390047, 8.721883)));
+        points.put("HöhenWegNachLeo", new PointDef( PointType.off_rt, new PointModelImpl(49.395111, 8.724165)));
         points.put("3Seg0", new PointDef( PointType.on_rt, new PointModelImpl(49.389915, 8.721471)));
         points.put("4Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.393342, 8.724873)));
         points.put("6Seg11", new PointDef( PointType.on_rt, new PointModelImpl(49.398255, 8.726851)));
@@ -359,10 +362,10 @@ public class RoutingProfileTest {
 
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
-        points.replace("3Seg0",PointType.off_rt);
+        points.remove("3Seg0");
+        points.remove("HöhenWegVorLeo");
         points.replace("6Seg11",PointType.off_rt);
         points.replace("RoteSuhlWeg",PointType.on_rt);
-        points.replace("HöhenWegOben",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("FalkFlowUpSeg3",mtb_k2s2);
@@ -482,6 +485,26 @@ public class RoutingProfileTest {
         points.replace("Zollstockweg1", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef("OdenwälderHütte2Schlossblick",mtb_k1s1);
+        points = testDef.points;
+        points.put("OdenwälderHütte", new PointDef( PointType.start,new PointModelImpl(49.419911, 8.710987)));
+        points.put("OdenwälderWegvorKührund", new PointDef( PointType.on_rt,new PointModelImpl(49.425223, 8.711807)));
+        points.put("OdenwälderWegSerpentine", new PointDef( PointType.on_rt, new PointModelImpl(49.426290, 8.717622)));
+        points.put("ZollstockwegUnten1", new PointDef( PointType.off_rt, new PointModelImpl(49.421362, 8.709809)));
+        points.put("ZollstockwegOben11", new PointDef( PointType.off_rt, new PointModelImpl(49.427568, 8.712532)));
+        points.put("SchlossblickHütte", new PointDef( PointType.stop,new PointModelImpl(49.429134, 8.715338)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("OdenwälderWegvorKührund",  PointType.off_rt);
+        points.replace("OdenwälderWegSerpentine", PointType.off_rt);
+        points.replace("ZollstockwegUnten1", PointType.on_rt );
+        points.replace("ZollstockwegOben11",  PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+
+
         testDef = new TestDef("BoxbergForstQuelle2MiErlensumpfweg",mtb_k1s1);
         points = testDef.points;
         points.put("startObererNeuerWeg", new PointDef( PointType.start,new PointModelImpl(49.381263, 8.706486)));
@@ -539,6 +562,46 @@ public class RoutingProfileTest {
         points.replace("AbzweigKSweg", PointType.on_rt);
         points.replace("VulpiusHütte", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("Hochstr2HeiligenBergKlost",mtb_k1s1);
+        points = testDef.points;
+        points.put("EndeHochstr", new PointDef( PointType.start,new PointModelImpl(49.427174, 8.710157)));
+        points.put("linkerTrail11", new PointDef( PointType.off_rt,new PointModelImpl(49.425702, 8.708751)));
+        points.put("ObererBitterbrunnenweg", new PointDef( PointType.on_rt, new PointModelImpl(49.427452, 8.707226)));
+        points.put("AbzweigTrack2Kloster", new PointDef( PointType.stop,new PointModelImpl(49.424704, 8.705870)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("linkerTrail11", PointType.on_rt);
+        points.replace("ObererBitterbrunnenweg", PointType.off_rt);
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef("Steigerweg2SteigerwegAmPfadvorbei",mtb_k1s1);
+        points = testDef.points;
+        points.put("SteigerwegVorTreppe", new PointDef( PointType.start,new PointModelImpl(49.396804, 8.695270)));
+        points.put("Pfad23", new PointDef( PointType.off_rt,new PointModelImpl(49.396506, 8.697440)));
+        points.put("SteigerwegSerpentine", new PointDef( PointType.on_rt, new PointModelImpl(49.396273, 8.698883)));
+        points.put("SteigerwegNachPfad", new PointDef( PointType.stop,new PointModelImpl(49.396267, 8.697167)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("SteubenStr2TheodorHeussBruecke",mtb_k1s1);
+        points = testDef.points;
+        points.put("SteubenStr", new PointDef( PointType.start,new PointModelImpl(49.421564, 8.689055)));
+        points.put("HandschuhsheimerLandStrHaltestelle", new PointDef( PointType.on_rt,new PointModelImpl(49.418641, 8.690552)));
+        points.put("Brückenstr", new PointDef( PointType.on_rt, new PointModelImpl(49.415520, 8.692009)));
+        points.put("BergStrEckeKussmaul", new PointDef( PointType.off_rt, new PointModelImpl(49.418668, 8.692200)));
+        points.put("BergStrEckeSchroeder", new PointDef( PointType.off_rt, new PointModelImpl(49.415945, 8.693222)));
+        points.put("AuffahrtTheodorHeuss", new PointDef( PointType.stop,new PointModelImpl(49.413683, 8.692206)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
 
 
         return tests;
