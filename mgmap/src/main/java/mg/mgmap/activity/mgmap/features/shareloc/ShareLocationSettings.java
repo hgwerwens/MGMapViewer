@@ -123,7 +123,7 @@ public class ShareLocationSettings {
         }
 
         dialogView.lock(() -> dialogView
-                .setTitle("Share Location Settings")
+                .setTitle("Share Location")
                 .setContentView(locationSettingsDialogView)
                 .setPositive("Save", evt -> {
                     if (saveSettings()){

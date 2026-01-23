@@ -16,14 +16,19 @@
             android:id="@+id/tvOwnEmail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textSize="16dp"
             android:layout_marginBottom="4dp"
+            tools:ignore="HardcodedText, spUsage"
             />
 
         <TextView
             android:id="@+id/tvCertValidity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:textSize="16dp"
             android:layout_marginBottom="8dp"
+            tools:ignore="HardcodedText, spUsage"
             />
 
         <LinearLayout
@@ -67,7 +72,9 @@
             android:layout_weight="1"
             android:text="Share location with/from ..."
             android:textStyle="bold"
-            tools:ignore="HardcodedText" />
+            android:textSize="16dp"
+            tools:ignore="HardcodedText, spUsage"
+            />
         <ImageButton
             android:id="@+id/btnAddPerson"
             android:layout_width="wrap_content"
