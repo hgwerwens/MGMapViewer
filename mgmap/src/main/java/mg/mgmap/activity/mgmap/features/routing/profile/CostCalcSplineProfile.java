@@ -64,7 +64,6 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         return dist * cubicProfileSpline.calc(vertDist / (float) dist) ;
     }
 
-
     public double heuristic(double dist, float vertDist) {
         if (dist <= 0.0000001) {
             return 0.0;
@@ -122,7 +121,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_left ));
     }
 
-    protected CubicSpline getCostSpline(int surfaceCat) throws Exception{
+    public CubicSpline getCostSpline(int surfaceCat) throws Exception{
         CubicSpline cubicSpline = SurfaceCatCostSpline[surfaceCat];
         if (cubicSpline == null) {
             cubicSpline = calcSpline(surfaceCat,getContext() );
@@ -221,12 +220,12 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
        float apply(float x);
     }
 
-    private float newtonNumeric(float start, float minval, function f, float deltax){
+    private static float newtonNumeric(float start, float minval, function f, float deltax){
         function fs = x -> ( f.apply(x + deltax) - f.apply(x - deltax) ) / ( 2f*deltax);
         return newton( start, minval,5, f, fs);
     }
 
-    private float newton( float start, float minval,int maxIter, function f, function fs){
+    private static float newton( float start, float minval,int maxIter, function f, function fs){
         float a;
         float na = start;
         float nb;

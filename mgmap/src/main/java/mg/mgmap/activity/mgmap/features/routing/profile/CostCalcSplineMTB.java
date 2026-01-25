@@ -106,10 +106,13 @@ public class CostCalcSplineMTB implements CostCalculator {
             if ( direction == dir.oneway && !primaryDirection)
                 cost = mfd*dist*costf + dist * 5 + 0.00001;
             else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
-                cost = mfd*dist*costf + 0.00001;
+                // stairs uphill
+                cost = dist * Math.max( mfd*surfaceCatSpline.calc(0.10f) , costf ) + 0.00001;
             else if (direction==dir.none)
+                // stairs without up/down attribute
                 cost = mfd/2d*dist*costf + 0.00001;
             else if (direction!=dir.oneway) {
+                // stairs downhill
                 cost = (1d + mfd / 2d * mProfileCalculator.sig(2d*(((CostCalcSplineProfileMTB.Context) mProfileCalculator.getContext()).sDn / 100d - 1d))) * dist * costf + 0.00001;
             }
             else

@@ -30,6 +30,7 @@ public class RoutingSummary {
     public double getCost(){
         return cost;
     }
+    public MultiPointModel getMpm() { return mpm; };
 
     @NonNull
     @Override

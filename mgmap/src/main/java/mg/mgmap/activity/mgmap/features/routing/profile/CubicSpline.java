@@ -64,6 +64,18 @@ public class CubicSpline {
         polynominals[n+1] = new float[] {y[n],polynominals[n][1] + 2* polynominals[n][2]*x1 + 3*polynominals[n][3]*x2}; // final linear section
     }
 
+    public float[] getX(){
+        return x;
+    }
+
+    public float[] getY(){
+        float[] y = new float[x.length];
+        for ( int i = 0; i < x.length; i++){
+            y[i]=polynominals[i+1][0];
+        }
+        return y;
+    }
+
     public float yintercept_linsec(linsec linsec){
         int in = (linsec == linsec.left)? 0 : x.length;
         float x1 = - this.x[(in == 0)?0:in-1];
