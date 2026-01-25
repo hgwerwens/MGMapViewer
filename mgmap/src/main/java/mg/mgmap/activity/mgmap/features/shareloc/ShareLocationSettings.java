@@ -1,7 +1,6 @@
 package mg.mgmap.activity.mgmap.features.shareloc;
 
 import android.annotation.SuppressLint;
-import android.graphics.Color;
 import android.os.SystemClock;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -35,7 +34,9 @@ import java.util.List;
 import java.util.Locale;
 
 import mg.mgmap.R;
+import mg.mgmap.activity.mgmap.view.AlphaColorPicker;
 import mg.mgmap.generic.util.CC;
+import mg.mgmap.generic.util.KeyboardUtil;
 import mg.mgmap.generic.util.Pref;
 import mg.mgmap.generic.util.basic.MGLog;
 import mg.mgmap.generic.view.DialogView;
@@ -122,7 +123,7 @@ public class ShareLocationSettings {
         }
 
         dialogView.lock(() -> dialogView
-                .setTitle("Share Location Settings")
+                .setTitle("Share Location")
                 .setContentView(locationSettingsDialogView)
                 .setPositive("Save", evt -> {
                     if (saveSettings()){
@@ -242,19 +243,21 @@ public class ShareLocationSettings {
         long now = System.currentTimeMillis();
         if (now > person.shareWithUntil) person.shareWithActive = false;
         CheckBox cbShareWithOn = itemView.findViewById(R.id.cbShareWithOn);
+        cbShareWithOn.setOnCheckedChangeListener((cb, b) -> person.shareWithActive = b);
         TextView tvShareWithUntil = itemView.findViewById(R.id.tvShareWithUntil);
         tvShareWithUntil.setBackground(ResourcesCompat.getDrawable(activity.getResources(), R.drawable.shape2, activity.getTheme()));
         tvShareWithUntil.setOnClickListener(v->editUntil(person, true));
 
         if (now > person.shareFromUntil) person.shareFromActive = false;
         CheckBox cbShareFromOn = itemView.findViewById(R.id.cbShareFromOn);
+        cbShareFromOn.setOnCheckedChangeListener((cb, b) -> person.shareFromActive = b);
         TextView tvShareFromUntil = itemView.findViewById(R.id.tvShareFromUntil);
         tvShareFromUntil.setBackground(ResourcesCompat.getDrawable(activity.getResources(), R.drawable.shape2, activity.getTheme()));
         tvShareFromUntil.setOnClickListener(v->editUntil(person, false));
 
         View viewColorPreview = itemView.findViewById(R.id.viewColorPreview);
         viewColorPreview.setBackgroundColor(person.color);
-        viewColorPreview.setOnClickListener(v->showColorPickerDialog(person));
+        itemView.findViewById(R.id.viewColorPreviewParent).setOnClickListener(v->showColorPickerDialog(person));
 
         person.addObserver(pce-> activity.runOnUiThread(() ->{
             tvEmail.setText(person.email);
@@ -283,6 +286,7 @@ public class ShareLocationSettings {
         enablePref.addObserver(pce->dialogViewChild.setEnablePositive(enablePref.getValue()));
 
         dialogViewChild.setLayoutParams(new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        dialogViewChild.setOnAttachRunnable(()->activity.runOnUiThread(()-> KeyboardUtil.showKeyboard(activity)) );
         dialogViewChild.lock(() -> dialogViewChild
                 .setTitle("Enter email address")
                 .setContentView(etEmail)
@@ -478,36 +482,24 @@ public class ShareLocationSettings {
     }
 
     private void showColorPickerDialog(SharePerson person) {
-        final String[] colorNames = {"Red", "Green", "Blue", "Yellow", "Cyan", "Magenta", "Black", "Gray", "Orange"};
-        final int[] colorValues = {Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA, Color.BLACK, Color.GRAY, CC.getColor(R.color.CC_ORANGE)};
-
-        LinearLayout llColors = new LinearLayout(activity);
-        llColors.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        llColors.setOrientation(LinearLayout.VERTICAL);
-
         DialogView dialogViewChild = new DialogView(activity);
-        for (int i=0; i<colorNames.length; i++){
-            int colorValue = colorValues[i];
-            View llColor = activity.getLayoutInflater().inflate(R.layout.item_color_picker, llColors, false);
-            View box = llColor.findViewById(R.id.viewColorBox);
-            TextView name = llColor.findViewById(R.id.tvColorName);
-            box.setBackgroundColor(colorValue);
-            name.setText(colorNames[i]);
-            llColor.setOnClickListener(v->{
-                person.color = colorValue;
-                person.changed();
-                dialogViewChild.cancel();
-            });
-            if (person.color == colorValue){
-                llColor.setBackgroundColor(CC.getColor(R.color.CC_GRAY240));
+        AlphaColorPicker colorPicker = new AlphaColorPicker(activity){
+            @Override
+            protected void onColorChanged(int color) {
+                int alpha = (color>>24) & 0xFF;
+                dialogViewChild.setEnablePositive( (alpha > 100) );
             }
-            llColors.addView(llColor);
-        }
-
+        };
+        colorPicker.setInitialColor(person.color);
         dialogViewChild.lock(() -> dialogViewChild
                 .setTitle("Select color")
                 .setMessage("Select a color that is used to visualize the shared position")
-                .setContentView(llColors)
+                .setContentView(colorPicker)
+                .setPositive("Select",pce->{
+                    person.color = colorPicker.getCurrentColor();
+                    person.changed();
+                })
+                .setNegative("Cancel", null)
                 .show());
 
     }

@@ -11,7 +11,7 @@ System.out.println("************************************************************
 // Saving of these increased values happens only at the end in the "_mgmapPublish" and the "_mgmapDebugApk" task - so effectively only these two task increase these counters
 
 def versionMajor = "0.9.8"
-String outputFileNameBundle
+String outputFileNameBundle = "failure.aab"
 String parentProjectDir = new File("${projectDir}").getParent()
 String buildDir = getProjectDir().toString() + "/build"
 
@@ -39,6 +39,7 @@ versionProps.put('BUILD_NBR',Integer.toString(mgBuildNbr))
 
 // Here are some method definitions
 
+//saveVersion method doesn't work anymore when org.gradle.configuration-cache=true, but not yet activated due to other problems
 static void saveVersion(Properties properties, File toFile){
     try (FileOutputStream fos = new FileOutputStream("${toFile}")) {
         properties.store(fos, " Automatically updated File - do not edit manually")
@@ -109,9 +110,6 @@ afterEvaluate {
 
     tasks.register('soft4mgReleaseCopyAab', Copy) {
         dependsOn "bundleSoft4mgRelease"
-//        This version of calculation for outputFileNameBundle caused a lot of warnings, therefore replaced by current method via outputFileNameBundle variable
-//        def versionName = android.applicationVariants.collect {x -> x.properties.versionName}.findAll {y->y.contains("soft4mg-release")}.first()
-//        def outputFileNameBundle = "${parent.name}-${versionName}.aab"
         System.out.println("outputFileNameBundle=" + outputFileNameBundle)
         from("$buildDir/outputs/bundle/soft4mgRelease/mgmap-soft4mg-release.aab")
         into "${parentProjectDir}/aab"
@@ -159,13 +157,14 @@ android {
     compileSdk = 36
     defaultConfig {
         def mgBuildTime = "\"${aBuildDate}\""
-        applicationId "mg.mgmap"
+        applicationId = "mg.mgmap"
         minSdkVersion 26
         targetSdkVersion 36
-        versionCode Integer.parseInt("$mgVersionCode")
-        versionName "${versionMajor}-${mgVersionCode}.${mgBuildNbr}"
+        versionCode = Integer.parseInt("$mgVersionCode")
+        versionName = "${versionMajor}-${mgVersionCode}.${mgBuildNbr}"
         buildConfigField "String", "BUILD_TIME", "${mgBuildTime}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        outputFileNameBundle = "${parent.name}-${versionName}-soft4mg-release.aab"
     }
     buildTypes {
         release {
@@ -203,14 +202,17 @@ android {
             excludes += ['META-INF/versions/9/OSGI-INF/MANIFEST.MF']
         }
     }
-    android.applicationVariants.configureEach { variant ->
-        variant.outputs.configureEach { output ->
-            outputFileName = "${parent.name}-${variant.versionName}.apk"
-            if ("${variant.versionName}".contains("release")){
-                outputFileNameBundle = "${parent.name}-${variant.versionName}.aab"
-            }
-        }
-    }
+
+    // doesn't work anymore with AGP9.0 -> replaced by androidComponents ... block for outputFileName
+    // while outputFileNameBundle is set in android.defaultConfig
+//    android.applicationVariants.configureEach { variant ->
+//        variant.outputs.configureEach { output ->
+//            outputFileName = "${parent.name}-${variant.versionName}.apk"
+//            if ("${variant.versionName}".contains("release")){
+//                outputFileNameBundle = "${parent.name}-${variant.versionName}.aab"
+//            }
+//        }
+//    }
 
     signingConfigs {
         mg4gh {
@@ -224,8 +226,8 @@ android {
                 keyPassword props.getProperty('keyPassword')
             }
             // Optional, specify signing versions used
-            v1SigningEnabled true
-            v2SigningEnabled true
+            v1SigningEnabled = true
+            v2SigningEnabled = true
         }
         soft4mg {
             keyAlias 'soft4mg'
@@ -240,36 +242,40 @@ android {
                 System.out.println("Failed to read secure props")
             }
             // Optional, specify signing versions used
-            v1SigningEnabled true
-            v2SigningEnabled true
+            v1SigningEnabled = true
+            v2SigningEnabled = true
         }
     }
 
     buildTypes {
         release {
-            productFlavors.mg4gh.signingConfig signingConfigs.mg4gh
-            productFlavors.soft4mg.signingConfig signingConfigs.soft4mg
+            productFlavors.mg4gh.signingConfig = signingConfigs.mg4gh
+            productFlavors.soft4mg.signingConfig = signingConfigs.soft4mg
         }
     }
 
     testOptions {
         unitTests.returnDefaultValues = true
     }
-    namespace 'mg.mgmap'
+    namespace = 'mg.mgmap'
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
 }
 
-// workaround (to prevent duplicate class error) after update to
-// 'androidx.appcompat:appcompat:1.5.0'
-// which is in conflict with 'androidx.preference:preference:1.2.0'
-// 20231017: workaround seems no longer necessary
-//configurations {
-//    all {
-//        exclude group: 'androidx.lifecycle', module: 'lifecycle-viewmodel-ktx'
-//    }
-//}
+// This block is a replacement for former:
+//    android.applicationVariants.configureEach { variant -> ...
+// as this doesn't work anymore with AGP9.0
+androidComponents {
+    onVariants(selector().all()) { variant ->
+
+        // Now, iterate through all outputs to configure each one
+        for (def output in variant.outputs) {
+            def versionName = output.versionName.getOrNull()
+            output.outputFileName.set("${parent.name}-${versionName}.apk")
+        }
+    }
+}
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -286,10 +292,6 @@ dependencies {
     implementation libs.okhttp
 //    implementation 'com.jcraft:jsch:0.1.55' // copied to libs folder of project -> access during project build
 
-//    implementation files('libs/commons-net-3.8.0.jar')
-//    implementation files('libs/javax.json-1.1.2.jar')
-//    implementation files('libs/javax.json-api-1.1.2.jar')
-
 
 // use mapsforge 0.22.0 + changes upto 08.12.24 via jar files in ./mgmap/libs
 //    implementation 'org.mapsforge:mapsforge-map-android:0.21.0'
@@ -298,9 +300,6 @@ dependencies {
 //    implementation 'com.caverock:androidsvg:1.4'
 
 
-
-//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
     testImplementation libs.junit
     androidTestImplementation libs.core
 
