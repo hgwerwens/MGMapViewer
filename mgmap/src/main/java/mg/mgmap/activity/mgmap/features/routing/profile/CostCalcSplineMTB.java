@@ -3,6 +3,7 @@ package mg.mgmap.activity.mgmap.features.routing.profile;
 import java.lang.invoke.MethodHandles;
 import java.util.Locale;
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
+import mg.mgmap.activity.mgmap.features.routing.IfProfileContextMTB;
 import mg.mgmap.generic.graph.WayAttributs;
 import mg.mgmap.generic.util.basic.MGLog;
 
@@ -85,7 +86,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             }
         }
         try {
-            this.surfaceCat = (short) mProfileCalculator.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
+            this.surfaceCat = (short) IfProfileContextMTB.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
             this.surfaceCatSpline = mProfileCalculator.getCostSpline(surfaceCat);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -143,7 +144,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             float v = 3.6f/spm;
             float finalSpm = spm;
             mgLog.v(()-> String.format(Locale.ENGLISH, "Slope=%.2f v=%.2f time=%.2f dist=%.2f cost=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f costf=%.2f",
-                    100f*slope,v, finalSpm *dist,dist, calcCosts(dist,vertDist,true),surfaceCat,mProfileCalculator.getSurfaceLevel(surfaceCat),mProfileCalculator.getMtbUp(surfaceCat),mProfileCalculator.getMtbDn(surfaceCat),mfd,costf));
+                    100f*slope,v, finalSpm *dist,dist, calcCosts(dist,vertDist,true),surfaceCat,IfProfileContextMTB.getSurfaceLevel(surfaceCat),IfProfileContextMTB.getMtbUp(surfaceCat),IfProfileContextMTB.getMtbDn(surfaceCat),mfd,costf));
             return (long) (1000*dist*spm);
         } else return 0;
     }
