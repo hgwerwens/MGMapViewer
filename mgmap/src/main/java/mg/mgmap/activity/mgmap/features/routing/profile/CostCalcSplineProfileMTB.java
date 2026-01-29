@@ -93,8 +93,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
     public CostCalcSplineProfileMTB(Object context) {
         super(context);
-        if (fullCalc(context))
-            checkAll();
+        if (fullCalc(context)) checkAll();
+        setFromContext(context);
     }
 
 
@@ -151,7 +151,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     f0u[sc] =  1.0f + 0.15f * sig;// + ( sc > 2 ? 0.05f * (sc - 2) : 0f );
                     f1u[sc] =  1.1f + 0.15f *  sig;
                     f2u[sc] = ( 1.1f )*f1u[sc] ;
-                    f3u[sc] = 2.2f;
+                    f3u[sc] = 2.2f + 0.4f *  sig;
 
                     crUp[sc] =  (0.0047f + 0.029f*sig((3.5-sc)*1.3));
                     crDn[sc] = crUp[sc];
@@ -164,9 +164,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     off = scUp - sUp/100d;
                     sig =  sig((0.5-off)*2.);
                     ulstrechDuration[sc] =  (1f  +0.18f*sUp/100 - 0.1f*sig);
-                    ulstrechCost[sc] =      (0.8f+0.18f*sUp/100 - 0.4f*sig);
+                    ulstrechCost[sc] =      (0.80f+0.18f*sUp/100 - 0.4f*sig);
 
-                    fpower[sc] =  (1.0f-0f*sig((1.5-off)*2.));
+                    fpower[sc] = 1.0f; // (1.0f-0f*sig((1.5-off)*2.));
                     f0u[sc] =  1.0f;
                     f1u[sc] =  (1.2f+0.15f*sig((1.5-off)*2.));
                     f2u[sc] =  1.1f*f1u[sc] ;
@@ -179,7 +179,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                     ulstrechDuration[sc] =  (1f  +0.18f*sUp/100 - 0.1f*sig);
                     ulstrechCost[sc] =      (0.70f+0.18f*sUp/100 - 0.4f*sig);
 
-                    fpower[sc] =  (1.0f-0f*sig((0.5d-off)*2.));
+                    fpower[sc] = 1.0f; //  (1.0f-0f*sig((0.5d-off)*2.));
                     f0u[sc] =  1.0f;
                     f1u[sc] =  (1.25f+0.15f*sig((0.5d-off)*2.));
                     f2u[sc] = 1.10f * f1u[sc]; // ( 1.1 + 0.03*sig )*f1u[sc] ;
@@ -232,8 +232,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     private void checkAll() {
         for ( int surfaceCat = 0 ; surfaceCat < maxSurfaceCat; surfaceCat++){
             try {
-                  if (hasCostSpline(surfaceCat))
-                      getDurationSpline(surfaceCat);
+               getDurationSpline(surfaceCat);
             } catch (Exception e) {
                 mgLog.e(e.getMessage());
             }
@@ -431,7 +430,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         }
     }
 
-    protected String getSurfaceCatTxt(int surfaceCat){
+    public String getSurfaceCatTxt(int surfaceCat){
         return String.format(Locale.ENGLISH,"%s SurfaceCat=%s SurfaceLevel=%s mtbDn=%s mtbUp=%s",getContext().toString(),surfaceCat,getSurfaceLevel(surfaceCat), getMtbDn(surfaceCat), getMtbUp(surfaceCat));
     }
 
@@ -440,17 +439,14 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         cubicSpline = SurfaceCatDurationSpline[surfaceCat];
         if (cubicSpline == null) {
               if (hasCostSpline(surfaceCat)) cubicSpline = calcSpline(false,surfaceCat,getContext() ); // calculate dedicated duration function
-              else                           cubicSpline = getCostSpline(surfaceCat);             // reuse existing cost function = duration function
+              else  cubicSpline = getCostSpline(surfaceCat);             // reuse existing cost function = duration function
               SurfaceCatDurationSpline[surfaceCat] = cubicSpline;
         }
         return cubicSpline;
     }
 
     private boolean hasCostSpline(int surfaceCat){
-        int scDn = getCatDn(surfaceCat);
-        int scUp = getCatUp(surfaceCat);
-        return ( scDn < distFactforCostFunct.length  ) ||
-               ( scUp < distFactforCostFunct.length  );
+        return true;
     }
 
     /*
@@ -493,7 +489,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     }
 
 
-    protected static int getMtbUp(int surfaceCat){
+    public static int getMtbUp(int surfaceCat){
         if (surfaceCat <= maxSL  )           return -1;
         else  if (surfaceCat < maxCatUpDn)   return (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else                                 return -1;
@@ -514,7 +510,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
 
     // calculates uphill category based on surface category. Its either between 0 and 6 for anything without MTB classification or 6 + 1 + downhill classification (mtbDn)
-    protected static int getMtbDn(int surfaceCat){
+    public static int getMtbDn(int surfaceCat){
         if (surfaceCat <= maxSL)          return -1;
         else if (surfaceCat < maxCatUpDn) return (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else                              return surfaceCat - maxCatUpDn;
