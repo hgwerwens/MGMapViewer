@@ -3,7 +3,6 @@ package mg.mgmap.activity.mgmap.features.routing.profile;
 import java.lang.invoke.MethodHandles;
 import java.util.Locale;
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
-import mg.mgmap.activity.mgmap.features.routing.IfProfileContextMTB;
 import mg.mgmap.generic.graph.WayAttributs;
 import mg.mgmap.generic.util.basic.MGLog;
 
@@ -16,6 +15,7 @@ public class CostCalcSplineMTB implements CostCalculator {
     private final CubicSpline surfaceCatSpline;
     private final short surfaceCat;
     private final CostCalcSplineProfileMTB mProfileCalculator;
+    static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
 
     public CostCalcSplineMTB(WayAttributs wayTagEval, CostCalcSplineProfileMTB profile) {
         mProfileCalculator = profile;
@@ -86,7 +86,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             }
         }
         try {
-            this.surfaceCat = (short) IfProfileContextMTB.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
+            this.surfaceCat = (short) sc2MTBc.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
             this.surfaceCatSpline = mProfileCalculator.getCostSpline(surfaceCat);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -114,7 +114,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 cost = mfd/2d*dist*costf + 0.00001;
             else if (direction!=dir.oneway) {
                 // stairs downhill
-                cost = (1d + mfd / 2d * mProfileCalculator.sig(2d*(((CostCalcSplineProfileMTB.Context) mProfileCalculator.getContext()).sDn / 100d - 1d))) * dist * costf + 0.00001;
+                cost = (1d + mfd / 2d * mProfileCalculator.sig(2d*(((SplineProfileContextMTB) mProfileCalculator.getContext()).sDn / 100d - 1d))) * dist * costf + 0.00001;
             }
             else
                 cost = mfd*dist*costf + 0.00001;
@@ -143,8 +143,8 @@ public class CostCalcSplineMTB implements CostCalculator {
             float costf = mfd*surfaceCatSpline.calc(slope)/mProfileCalculator.refCosts;
             float v = 3.6f/spm;
             float finalSpm = spm;
-            mgLog.v(()-> String.format(Locale.ENGLISH, "Slope=%.2f v=%.2f time=%.2f dist=%.2f cost=%.2f surfaceCat=%s surfaceLevel=%s scUp=%s scDn=%s mfd=%.2f costf=%.2f",
-                    100f*slope,v, finalSpm *dist,dist, calcCosts(dist,vertDist,true),surfaceCat,IfProfileContextMTB.getSurfaceLevel(surfaceCat),IfProfileContextMTB.getMtbUp(surfaceCat),IfProfileContextMTB.getMtbDn(surfaceCat),mfd,costf));
+            mgLog.v(()-> String.format(Locale.ENGLISH, "%s Slope=%6.2f v=%5.2f time=%6.2f dist=%5.2f cost=%6.2f mfd=%3.2f costf=%5.2f",
+                     mProfileCalculator.getSurfaceCatTxt(surfaceCat),100f*slope,v, finalSpm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf));
             return (long) (1000*dist*spm);
         } else return 0;
     }

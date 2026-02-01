@@ -8,7 +8,7 @@ import mg.mgmap.generic.graph.WayAttributs;
 public class MTB_K1S1 extends RoutingProfile {
 
     public MTB_K1S1( ) {
-        super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(100,100) ));
+        super(new CostCalcSplineProfileMTB( new SplineProfileContextMTB(100,100) ));
 /* successfully tested combination
         for (int sUp = 0; sUp <= 400; sUp = sUp + 100) {
             for (int sDn = 0; sDn <= 400; sDn = sDn + 100) {

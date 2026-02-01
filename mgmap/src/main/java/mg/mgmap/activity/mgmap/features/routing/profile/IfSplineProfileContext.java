@@ -1,19 +1,18 @@
-package mg.mgmap.activity.mgmap.features.routing;
+package mg.mgmap.activity.mgmap.features.routing.profile;
 
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
-
-public interface IfProfileContext {
+public interface IfSplineProfileContext {
+    static float[] slopesAll = new float[]{-0.76f, -0.36f, -0.32f, -0.2f, -0.04f, 0.0f, 0.065f,0.17f,0.195f, 0.275f};
     boolean getWithRef();
     CostCalcSplineProfile getRefProfile();
-    int getRefSc(int sc);
-    default int getMaxSurfaceCat(){return 0;}
-    default int getScHeuristicRefSpline(){return 0;}
-    default int getScProfileSpline(){return 0;};
+    default int getRefSc(int sc) { return sc;};
+    int getMaxSurfaceCat();
+    int getScHeuristicRefSpline();
+    int getScProfileSpline();
     default boolean isValidSc(int surfaceCat){return true;}
     default float getRefDnSlope() {return -0.2f;}
 
-    int getIndRefDnSlope();
-    float[] getSlopesAll();
+    default int getIndRefDnSlope() {return 3;};
+    default float[] getSlopesAll(){ return slopesAll;};
     float getRelSlope(int sc);
     float getF3d(int sc);
     float getF2d(int sc);

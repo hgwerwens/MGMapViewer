@@ -1,7 +1,6 @@
 package mg.mgmap.activity.mgmap.features.routing;
 
 import org.junit.Test;
-import org.mapsforge.core.model.LatLong;
 import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.reader.MapFile;
 
@@ -17,8 +16,7 @@ import java.util.Map;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileMTB;
-import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
-import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
+import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
 import mg.mgmap.application.util.ElevationProvider;
 import mg.mgmap.application.util.ElevationProviderImpl;
 import mg.mgmap.application.util.HgtProvider2;
@@ -363,12 +361,12 @@ public class RoutingProfileTest {
     private static class xMTBProf extends RoutingProfile{
         String id;
         public xMTBProf( int sUp, int sDn ) {
-            super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(sUp,sDn) ));
+            super(new CostCalcSplineProfileMTB( new SplineProfileContextMTB(sUp,sDn) ));
             id = String.format("ID_MTB_%03d_%03d",sUp,sDn);
         }
 
         public xMTBProf(int power, int sUp, int sDn ) {
-            super(new CostCalcSplineProfileMTB( new CostCalcSplineProfileMTB.Context(power,sUp,sDn) ));
+            super(new CostCalcSplineProfileMTB( new SplineProfileContextMTB(power,sUp,sDn) ));
         }
 
         protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {

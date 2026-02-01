@@ -1,0 +1,342 @@
+package mg.mgmap.activity.mgmap.features.routing.profile;
+
+import androidx.annotation.NonNull;
+
+import java.util.Locale;
+
+public class SplineProfileContextMTB implements IfSplineProfileContext {
+    private CostCalcSplineProfileMTB refProfile;
+    public final int power;
+    public final int sUp;
+    public final int sDn;
+    private final boolean withRef;
+    private final boolean checkAll;
+    float[] ulstrechDuration;
+    float[] ulstrechCost;
+    private final float[] fpower;
+    private final float[] f0u;
+    private final float[] f1u;
+    private final float[] f2u;
+    private final float[] f3u;
+    private final float f2d;
+    private final float f3d;
+    private final float[] crUp;
+    private final float[] crDn;
+    private final float[] srelSlope;
+    private final float[] deltaSM20Dn;
+    private final float[] factorDown;
+    private final float[] distFactforCostFunct;
+    private final float[] watt;
+    private final float[] watt0;
+    private final float[] slopesAll;
+    float refDnSlopeOpt = -0.04f; // slope at which cost function is optimized against slope of reference function
+    float refDnSlope = -0.2f;
+    int indRefDnSlope;
+    int heuristicRefSurfaceCat = 7;
+    float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.80f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
+    float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
+
+    static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
+
+    private SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
+        this.power = power;
+        this.sUp   = sUp;
+        this.sDn   = sDn;
+        this.withRef = withRef;
+        this.checkAll = checkAll;
+        if (withRef) refProfile = new CostCalcSplineProfileMTB(new SplineProfileContextMTB(100,200, sDn,false,false));
+        slopesAll = new float[]{-0.76f, -0.36f, -0.32f, refDnSlope, refDnSlopeOpt, 0.0f, 0.065f,0.17f,0.195f, 0.275f};
+        slopesAll[2] = -0.26f -  (0.05f*sDn/100f);
+        slopesAll[1] = slopesAll[2]-0.04f;
+        slopesAll[0] = slopesAll[1]-0.4f;
+        indRefDnSlope = 3;
+//        indRefDnSlopeOpt = indRefDnSlope + 1;
+        int sc;
+
+        double off;
+        float sig;
+
+        ulstrechDuration = new float[sc2MTBc.maxScUpExt];
+        ulstrechCost     = new float[sc2MTBc.maxScUpExt];
+        fpower = new float[sc2MTBc.maxScUpExt];
+        f0u = new float[sc2MTBc.maxScUpExt];
+        f1u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
+        f2u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
+        f3u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
+        crUp = new float[sc2MTBc.maxScUpExt]; // uphill friction
+        crDn = new float[sc2MTBc.maxScDn]; // downhill friction
+        srelSlope = new float[sc2MTBc.maxScDn]; // slope of auxiliary function for duration function at 0% slope to get to -4% slope
+        deltaSM20Dn = new float[sc2MTBc.maxScDn]; // duration (sec/m) at -20% slope
+        factorDown  = new float[sc2MTBc.maxScDn]; // slope of the duration function lower -20%
+        distFactforCostFunct = sdistFactforCostFunct;// factor on top of duration function for certain slopes to get a better cost function
+        watt = new float[sc2MTBc.maxSurfaceCat];
+        watt0 = new float[sc2MTBc.maxSurfaceCat];
+
+        float deltaSM20DnMin = 0.05f + dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d);
+        for (int scDn = sc2MTBc.maxSL+1; scDn<sc2MTBc.maxScDn;scDn++){
+            int lscDn = scDn - ( sc2MTBc.maxSL + 1 );
+            off = lscDn - sDn/100d;
+            crDn[scDn] =  (0.02f + 0.005f*(scDn-(sc2MTBc.maxSL+1)) + 0.05f* sig(2d*(2d-off)));
+            srelSlope[scDn]  =  ssrelSlope[scDn]+0.5f- sig((sDn/100d-2d));
+
+            deltaSM20Dn[scDn] = deltaSM20DnMin +  (0.5f* sig((1.5d-off)*2d))+lscDn*0.025f;
+            factorDown[scDn] = deltaSM20Dn[scDn]*7.5f;
+        }
+        float deltaSM20DnMinscLow = deltaSM20Dn[sc2MTBc.maxSL+1];
+
+
+        for (sc = 0; sc<sc2MTBc.maxScUpExt;sc++){
+            if (sc < sc2MTBc.maxSL) {
+
+                ulstrechDuration[sc] = 1f+0.18f*sUp/100;
+                ulstrechCost[sc]     = 1.3f+0.18f*sUp/100 - 0.5f *  sig((3.5-sc)*2.); //( sc > 2 ? 0.2f * (sc - 2) : 0f );
+                sig =  sig((3.5-sc)*2.);
+                fpower[sc] = 1.0f;// - ( sc > 2 ? 0.05f * (sc - 2) : 0f );
+                f0u[sc] =  1.0f + 0.15f * sig;// + ( sc > 2 ? 0.05f * (sc - 2) : 0f );
+                f1u[sc] =  1.1f + 0.15f *  sig;
+                f2u[sc] = ( 1.1f )*f1u[sc] ;
+                f3u[sc] = 2.2f + 0.4f *  sig;
+
+                crUp[sc] =  (0.0047f + 0.029f* sig((3.5-sc)*1.3));
+                crDn[sc] = crUp[sc];
+                srelSlope[sc]  = ssrelSlope[sc] +  ( 0.5f *( 0.5f - sig(sDn/100f-2)));
+                deltaSM20Dn[sc] = deltaSM20DnMinscLow - dSM20scDnLow(sc);
+                factorDown[sc] = deltaSM20Dn[sc]*10f;
+            }
+            else if(sc>sc2MTBc.maxSL && sc <sc2MTBc.maxScUp){
+                int scUp = sc - ( sc2MTBc.maxSL + 1 );
+                off = scUp - sUp/100d;
+                sig =  sig((0.5-off)*2.);
+                ulstrechDuration[sc] =  (1f  +0.18f*sUp/100 - 0.1f*sig);
+                ulstrechCost[sc] =      (0.80f+0.18f*sUp/100 - 0.4f*sig);
+
+                fpower[sc] = 1.0f; // (1.0f-0f*sig((1.5-off)*2.));
+                f0u[sc] =  1.0f;
+                f1u[sc] =  (1.2f+0.15f* sig((1.5-off)*2.));
+                f2u[sc] =  1.1f*f1u[sc] ;
+                f3u[sc] = 2.2f;
+                crUp[sc] =  (0.02f + 0.005f*scUp + 0.05f* sig(2d*(2d-off)));
+            } else if (sc!=sc2MTBc.maxSL) {
+                int scUp = sc -  sc2MTBc.maxScUp;
+                off = scUp - sUp/100d;
+                sig =  sig((-0.5-off)*2.);
+                ulstrechDuration[sc] =  (1f  +0.18f*sUp/100 - 0.1f*sig);
+                ulstrechCost[sc] =      (0.70f+0.18f*sUp/100 - 0.4f*sig);
+
+                fpower[sc] = 1.0f; //  (1.0f-0f*sig((0.5d-off)*2.));
+                f0u[sc] =  1.0f;
+                f1u[sc] =  (1.25f+0.15f* sig((0.5d-off)*2.));
+                f2u[sc] = 1.10f * f1u[sc]; // ( 1.1 + 0.03*sig )*f1u[sc] ;
+                f3u[sc] = 2.35f;
+                crUp[sc] =  (0.025f + 0.005f*scUp + 0.05f* sig(2d*(1d-off)));
+            }
+        }
+
+        f2d = 1.07f;
+        f3d = 3.0f;
+
+        ulstrechDuration[sc2MTBc.maxSL] = 1f+0.18f*sUp/100;
+        ulstrechCost[sc2MTBc.maxSL]     = (0.40f+0.18f*sUp/100);
+
+        f0u[sc2MTBc.maxSL] =  1.0f;
+        f1u[sc2MTBc.maxSL]=1.35f;
+        f2u[sc2MTBc.maxSL]=f1u[sc2MTBc.maxSL]*1.15f;
+        f3u[sc2MTBc.maxSL]=2.9f;
+        crUp[sc2MTBc.maxSL] = 0.03f;
+        crDn[sc2MTBc.maxSL] = 0.02f;
+        srelSlope[sc2MTBc.maxSL] = srelSlope[sc2MTBc.maxSL+1];
+
+        deltaSM20Dn[sc2MTBc.maxSL] = deltaSM20Dn[sc2MTBc.maxSL+1+2];
+        factorDown[sc2MTBc.maxSL]  = deltaSM20Dn[sc2MTBc.maxSL+1+3]*(7.5f + 5f* sig(2.*(sDn/100.-1.)));
+
+        float watt0 = (float) power;
+        float watt  = 1.7f*power;
+        for (sc=0;sc<sc2MTBc.maxSurfaceCat;sc++){
+            int scDn = sc2MTBc.getCatDn(sc) ;
+            int scUp = sc2MTBc.getCatUpExt(sc);
+            float crUp = this.crUp[scUp];
+            float crDn = this.crDn[scDn];
+            float cr0 = (crUp + crDn)/2f;
+            float f0 =  sig((0.05d-cr0)*100d);
+            float watt0_high =  watt0+(watt-watt0)*f0;
+            float watt0_base = 100f + (175f-100f)*f0;
+            float f =  sig((0.05d-crUp)*100d);
+            this.watt0[sc] = watt0_high>watt0_base ? watt0_high+(watt0_base-watt0_high)*f: watt0_high;
+            this.watt[sc] =  watt > 175 ? watt + (175-watt)*f : watt;
+        }
+    }
+
+    static float sig(double base){
+        return (float) (1./(1.+Math.exp(base)));}
+
+    static float dSM20scDnLow(int scDn){
+        return 0.2f * ( sig(1.5 * (scDn - 2.)) - 0.5f);
+    }
+
+    public SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll) {
+        this(power, sUp, sDn, checkAll, true);
+    }
+
+    public SplineProfileContextMTB(int power, int sUp, int sDn) {
+        this(power, sUp, sDn, true);
+    }
+
+    public SplineProfileContextMTB(int sUp, int sDn, boolean checkAll) {
+        this((int) (47.5 + 25 * sUp / 100d), sUp, sDn, checkAll, true);
+    }
+
+    public SplineProfileContextMTB(int sUp, int sDn) {
+        this(sUp, sDn, true);
+    }
+
+    @NonNull
+    public String toString() {
+        return String.format(Locale.ENGLISH, "power=%3d sUp=%3d sDn=%3d hasRef=%s", power, sUp, sDn, withRef ? "x" : " ");
+    }
+
+    public boolean fullCalc() {
+        return checkAll && withRef;
+    }
+
+    @Override
+    public boolean getWithRef() {
+        return withRef;
+    }
+
+    @Override
+    public CostCalcSplineProfile getRefProfile() {
+        return refProfile;
+    }
+
+    @Override
+    public int getRefSc(int sc) {
+        int scDn = sc2MTBc.getMtbDn(sc);
+        return sc2MTBc.getSurfaceCat(sc2MTBc.getSurfaceLevel(sc), scDn, scDn);
+    }
+
+    @Override
+    public int getMaxSurfaceCat() {
+        return sc2MTBc.maxSurfaceCat;
+    }
+
+    @Override
+    public int getScHeuristicRefSpline() {
+        return   heuristicRefSurfaceCat;
+    }
+
+    @Override
+    public int getScProfileSpline() {
+        return sc2MTBc.maxSL;
+    }
+
+    @Override
+    public boolean isValidSc(int surfaceCat) {
+        return sc2MTBc.isValidSc(surfaceCat);
+    }
+
+    @Override
+    public float getRefDnSlope() {
+        return refDnSlope;
+    }
+
+    @Override
+    public int getIndRefDnSlope() {
+        return 3;
+    }
+
+    @Override
+    public float[] getSlopesAll() {
+        return slopesAll;
+    }
+
+    @Override
+    public float getRelSlope(int sc) {
+        return srelSlope[sc2MTBc.getCatDn(sc)];
+    }
+
+    @Override
+    public float getF3d(int sc) {
+        return f3d;
+    }
+
+    @Override
+    public float getF2d(int sc) {
+        return f2d;
+    }
+
+    @Override
+    public float getDeltaSM20Dn(int sc) {
+        return deltaSM20Dn[sc2MTBc.getCatDn(sc)];
+    }
+
+    @Override
+    public float getFactorDn(int sc) {
+        return factorDown[sc2MTBc.getCatDn(sc)];
+    }
+
+    @Override
+    public float getCrDn(int sc) {
+        return crDn[sc2MTBc.getCatDn(sc)];
+    }
+
+    @Override
+    public float getCrUp(int sc) {
+        return crUp[sc2MTBc.getCatUpExt(sc)];
+    }
+
+
+    @Override
+    public float getF0u(int sc) {
+        return f0u[sc2MTBc.getCatUpExt(sc)];
+    }
+
+    @Override
+    public float getF1u(int sc) {
+        return f1u[sc2MTBc.getCatUpExt(sc)];
+    }
+
+    @Override
+    public float getF2u(int sc) {
+        return f2u[sc2MTBc.getCatUpExt(sc)];
+    }
+
+    @Override
+    public float getF3u(int sc) {
+        return f3u[sc2MTBc.getCatUpExt(sc)];
+    }
+
+    @Override
+    public float getUlstrechCost(int sc) {
+        return ulstrechCost[sc2MTBc.getCatUpExt(sc)];
+    }
+
+    @Override
+    public float getUlstrechDuration(int sc) {
+        return ulstrechDuration[sc2MTBc.getCatUpExt(sc)];
+    }
+
+    @Override
+    public float getDistFactforCostFunct(int sc) {
+        int scUpExt = sc2MTBc.getCatUpExt(sc);
+        return scUpExt < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : 0f;
+    }
+
+    @Override
+    public String getSurfaceCatTxt(int sc) {
+        int mtbUp = sc2MTBc.getMtbUp(sc);
+        String mtbUpTxt = String.format("%s", (mtbUp < 0 ? "-" : mtbUp));
+        int mtbDn = sc2MTBc.getMtbUp(sc);
+        String mtbDnTxt = String.format("%s", (mtbUp < 0 ? "-" : mtbDn));
+        return String.format(Locale.ENGLISH, "%s SurfCat=%2d SurfLvl=%1d mtbDn=%s mtbUp=%s", this, sc, sc2MTBc.getSurfaceLevel(sc), mtbDnTxt, mtbUpTxt);
+    }
+
+    @Override
+    public float getWatt0(int sc) {
+        return watt0[sc];
+    }
+
+    @Override
+    public float getWatt(int sc) {
+        return watt[sc];
+    }
+}
