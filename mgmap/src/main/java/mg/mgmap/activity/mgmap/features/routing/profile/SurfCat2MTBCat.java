@@ -8,19 +8,11 @@ public class SurfCat2MTBCat {
     int maxScDn = maxSL+1+maxDn +1; // maximum number of factors depending on the surfaced category for downhill calculation
     int maxScUp = maxSL+1+maxUp +1;         // maximum number of factors depending on the surfaced category for uphill calculation
     int maxScUpExt = maxScUp + maxDn+1;
-    // Heuristic is derived from a path with mtbDn = 0 and mtbUp = 0. All other surface categories have higher costs, either because they are disfavored like for anything without mtb classification or because they more difficult
-    int HeuristicRefSurfaceCat = 7;
 
     int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
     public int maxSurfaceCat = maxCatUpDn + maxDn + 1 ; // includes on top those ones, which have only downhill classification
  // slope which all profiles use
 
-    static float sig(double base){
-        return (float) (1./(1.+Math.exp(base)));}
-
-    static float dSM20scDnLow(int scDn){
-        return 0.2f * ( sig(1.5 * (scDn - 2.)) - 0.5f);
-    }
 
     public int getSurfaceCat(int surfaceLevel, int mtbDn, int mtbUp) {
         if (surfaceLevel < 0 || surfaceLevel > maxSL) throw new RuntimeException("invalid Surface Level");
@@ -88,12 +80,6 @@ public class SurfCat2MTBCat {
             return maxSL+1 + surfaceCat - maxCatUpDn;
     }
 
-    int getScProfileSpline(){
-        return maxSL;
-    }
-    int getScHeuristicRefSpline(){
-        return HeuristicRefSurfaceCat;
-    }
 
     boolean isValidSc(int surfaceCat){
         return  getCatUp(surfaceCat) < maxScUp ;

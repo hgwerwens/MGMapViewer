@@ -61,7 +61,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
 
 
     protected boolean fullCalc(Object context){
-        SplineProfileContextMTB contxt = (SplineProfileContextMTB) context;
+        IfSplineProfileContext contxt = (IfSplineProfileContext) context;
         return contxt.fullCalc();
     }
 
@@ -88,9 +88,9 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float f3Up = contxt.getF3u(surfaceCat);
         float cr0 = (crDn+crUp)/2f;
         float cr1 =  (0.1f*crDn + 0.9f*crUp);
-        float sm20Dn = contxt.getDeltaSM20Dn(surfaceCat);
+        float sm20Dn = contxt.getSm20Dn(surfaceCat);
         float factorDn = contxt.getFactorDn(surfaceCat);
-        float distFactCostFunct = contxt.getDistFactforCostFunct(surfaceCat);
+        float[] distFactCostFunct = contxt.getDistFactforCostFunct(surfaceCat);
         float refDnSlope = contxt.getRefDnSlope();
 
         float watt0 = contxt.getWatt0(surfaceCat);
@@ -130,7 +130,12 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
             durations[indRefDnSlopeOpt] = durations[slopes.length-5]+contxt.getRelSlope(surfaceCat)*slopes[indRefDnSlopeOpt];
         }
 
-        if (costSpline && distFactCostFunct>0) {
+        if (costSpline&&distFactCostFunct.length>0){
+            for (int i = 0; i < distFactCostFunct.length; i++) {
+                durations[i] = durations[i] * distFactCostFunct[i];
+            }
+
+/*        if (costSpline && distFactCostFunct>0) {
 //            if (surfaceCat < maxSL ) {
                 for (int i = 0; i < durations.length; i++) {
                     if (slopes[i] < 0) durations[i] = durations[i] * distFactCostFunct;
@@ -140,7 +145,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                         durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
                     }
                 }
-//            }
+//            } */
         }
 
 //        String OptSpline = contxt.getWithRef() ? "with ref" : allSlopes ? "Optimized ref" :"ref";

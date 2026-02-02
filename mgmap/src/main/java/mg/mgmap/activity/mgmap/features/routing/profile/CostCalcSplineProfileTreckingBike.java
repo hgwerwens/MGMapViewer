@@ -7,11 +7,11 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
 
     private static final int maxSurfaceCat = 7;
     private static final float[] slopesAll = new float[]{ -0.6f,-0.4f,-0.2f, -0.02f, 0.0f, 0.08f, 0.2f, 0.4f};
-    protected CostCalcSplineProfileTreckingBike() {
+    public CostCalcSplineProfileTreckingBike() {
         super(new Object());
     }
 
-    protected int getMaxSurfaceCat(){
+    public int getMaxSurfaceCat(){
         return maxSurfaceCat;
     }
 
@@ -82,7 +82,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         return getSpline(slopes, durations);
     }
 
-    protected String getSurfaceCatTxt(int surfaceCat){
+    public String getSurfaceCatTxt(int surfaceCat){
         return String.format(Locale.ENGLISH,"SurfaceLevel=%s",surfaceCat);
     }
 

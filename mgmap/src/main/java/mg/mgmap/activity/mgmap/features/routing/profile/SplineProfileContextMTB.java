@@ -25,7 +25,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     private final float[] srelSlope;
     private final float[] deltaSM20Dn;
     private final float[] factorDown;
-    private final float[] distFactforCostFunct;
+    private final float[][] distFactforCostFunct;
     private final float[] watt;
     private final float[] watt0;
     private final float[] slopesAll;
@@ -68,10 +68,20 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
         srelSlope = new float[sc2MTBc.maxScDn]; // slope of auxiliary function for duration function at 0% slope to get to -4% slope
         deltaSM20Dn = new float[sc2MTBc.maxScDn]; // duration (sec/m) at -20% slope
         factorDown  = new float[sc2MTBc.maxScDn]; // slope of the duration function lower -20%
-        distFactforCostFunct = sdistFactforCostFunct;// factor on top of duration function for certain slopes to get a better cost function
+        distFactforCostFunct = new float[sdistFactforCostFunct.length][slopesAll.length];// factor on top of duration function for certain slopes to get a better cost function
         watt = new float[sc2MTBc.maxSurfaceCat];
         watt0 = new float[sc2MTBc.maxSurfaceCat];
 
+        for (sc=0;sc<sdistFactforCostFunct.length;sc++) {
+            for (int i = 0; i < slopesAll.length; i++) {
+                if (slopesAll[i] < 0) distFactforCostFunct[sc][i] = sdistFactforCostFunct[sc];
+                else if (slopesAll[i] == 0.0f)
+                    distFactforCostFunct[sc][i] = (1f + (sdistFactforCostFunct[sc] - 1f) * 0.7f);
+                else {
+                    distFactforCostFunct[sc][i] = (1f + (sdistFactforCostFunct[sc] - 1f) * 0.3f);
+                }
+            }
+        }
         float deltaSM20DnMin = 0.05f + dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d);
         for (int scDn = sc2MTBc.maxSL+1; scDn<sc2MTBc.maxScDn;scDn++){
             int lscDn = scDn - ( sc2MTBc.maxSL + 1 );
@@ -265,7 +275,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     }
 
     @Override
-    public float getDeltaSM20Dn(int sc) {
+    public float getSm20Dn(int sc) {
         return deltaSM20Dn[sc2MTBc.getCatDn(sc)];
     }
 
@@ -316,9 +326,9 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     }
 
     @Override
-    public float getDistFactforCostFunct(int sc) {
+    public float[] getDistFactforCostFunct(int sc) {
         int scUpExt = sc2MTBc.getCatUpExt(sc);
-        return scUpExt < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : 0f;
+        return scUpExt < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : new float[]{};
     }
 
     @Override

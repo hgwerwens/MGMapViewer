@@ -39,7 +39,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 
     }
 
-    protected abstract int getMaxSurfaceCat();
+    public abstract int getMaxSurfaceCat();
 
     protected abstract  CubicSpline getProfileSpline(Object context);
     protected abstract  CubicSpline getHeuristicRefSpline(Object context);
@@ -47,7 +47,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     protected abstract  float getMinDistFactSC0();
     protected abstract  CubicSpline calcSpline(int surfaceCat, Object context) throws Exception;
 
-    protected abstract String getSurfaceCatTxt(int surfaceCat);
+    public abstract String getSurfaceCatTxt(int surfaceCat);
 /*    protected CubicSpline getProfileSpline(){
         return cubicProfileSpline;
     } */
