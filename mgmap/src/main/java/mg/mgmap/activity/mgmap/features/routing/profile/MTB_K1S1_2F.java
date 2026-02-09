@@ -6,7 +6,11 @@ import mg.mgmap.activity.mgmap.features.routing.RoutingProfile;
 import mg.mgmap.generic.graph.WayAttributs;
 
 public class MTB_K1S1_2F extends RoutingProfile {
-
+    static String id = "OL_MTB_K1S1";
+    @Override
+    public String getId() {
+        return id;
+    }
     public MTB_K1S1_2F( ) {
         super(new CostCalculatorTwoPieceFunc( (short) 1, (short)1, (short)1));
     }

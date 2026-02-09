@@ -47,7 +47,7 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         }
     }
 
-    protected float getMinDistFactSC0(){
+    protected float getMinDistFactSC0(Object contxt){
         return (float) TagEval.minDistfSc0;
     }
 
@@ -92,6 +92,11 @@ public class CostCalcSplineProfileTreckingBike extends CostCalcSplineProfile {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public IfFunction getDurationFunc(int surfaceCat) {
+        return getSpline((short) surfaceCat);
     }
 }
 

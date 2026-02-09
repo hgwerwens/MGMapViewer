@@ -11,11 +11,11 @@ public class CostCalcSplineTreckingBike implements CostCalculator {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private final float mfd;
     private final boolean oneway;
-    private final CubicSpline surfaceCatSpline;
+    private final IfFunction surfaceCatSpline;
     private final short surfaceCat;
-    private final CostCalcSplineProfileTreckingBike mProfileCalculator;
+    private final IfProfileCostCalculator mProfileCalculator;
 
-    public CostCalcSplineTreckingBike(WayAttributs wayTagEval, CostCalcSplineProfileTreckingBike profile) {
+    public CostCalcSplineTreckingBike(WayAttributs wayTagEval, IfProfileCostCalculator profile) {
         mProfileCalculator = profile;
         oneway = wayTagEval.oneway;
 
@@ -62,7 +62,7 @@ public class CostCalcSplineTreckingBike implements CostCalculator {
             mgLog.e("Wrong surface Cat:"+ surfaceCat + " ,Tag.highway:" + wayTagEval.highway + " ,Tag.trackType:" + wayTagEval.trackType);
         }
         this.surfaceCat = surfaceCat;
-        this.surfaceCatSpline = mProfileCalculator.getSpline(surfaceCat);
+        this.surfaceCatSpline = mProfileCalculator.getCostFunc(surfaceCat);
         mfd =  distFactor;
     }
 
@@ -81,13 +81,14 @@ public class CostCalcSplineTreckingBike implements CostCalculator {
 
     @Override
     public long getDuration(double dist, float vertDist) {
+        IfFunction durationFunc = mProfileCalculator.getDurationFunc(surfaceCat);
         if (dist >= 0.00001) {
             float slope = vertDist / (float) dist;
-            double spm = surfaceCatSpline.calc(slope);
+            double spm = durationFunc.calc(slope);
             double v = 3.6/spm;
             mgLog.v(()-> String.format(Locale.ENGLISH, "DurationCalc: Slope=%.2f v=%.2f time=%.2f dist=%.2f surfaceCat=%s",100f*slope,v,spm*dist,dist,surfaceCat));
         }
-        return ( dist >= 0.00001) ? (long) ( 1000 * dist * surfaceCatSpline.calc(vertDist/(float) dist)) : 0;
+        return ( dist >= 0.00001) ? (long) ( 1000 * dist * durationFunc.calc(vertDist/(float) dist)) : 0;
     }
 
 }

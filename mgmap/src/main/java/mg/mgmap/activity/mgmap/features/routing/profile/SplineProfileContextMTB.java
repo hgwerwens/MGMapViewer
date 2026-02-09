@@ -4,7 +4,7 @@ import androidx.annotation.NonNull;
 
 import java.util.Locale;
 
-public class SplineProfileContextMTB implements IfSplineProfileContext {
+public class SplineProfileContextMTB implements IfSplineProfileContextMTB {
     private CostCalcSplineProfileMTB refProfile;
     public final int power;
     public final int sUp;
@@ -13,7 +13,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     private final boolean checkAll;
     float[] ulstrechDuration;
     float[] ulstrechCost;
-    private final float[] fpower;
     private final float[] f0u;
     private final float[] f1u;
     private final float[] f2u;
@@ -29,8 +28,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     private final float[] watt;
     private final float[] watt0;
     private final float[] slopesAll;
-    float refDnSlopeOpt = -0.04f; // slope at which cost function is optimized against slope of reference function
-    float refDnSlope = -0.2f;
     int indRefDnSlope;
     int heuristicRefSurfaceCat = 7;
     float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.80f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
@@ -38,14 +35,14 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
 
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
 
-    private SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
+    public SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
         this.power = power;
         this.sUp   = sUp;
         this.sDn   = sDn;
         this.withRef = withRef;
         this.checkAll = checkAll;
         if (withRef) refProfile = new CostCalcSplineProfileMTB(new SplineProfileContextMTB(100,200, sDn,false,false));
-        slopesAll = new float[]{-0.76f, -0.36f, -0.32f, refDnSlope, refDnSlopeOpt, 0.0f, 0.065f,0.17f,0.195f, 0.275f};
+        slopesAll = IfSplineProfileContext.slopesAll.clone();
         slopesAll[2] = -0.26f -  (0.05f*sDn/100f);
         slopesAll[1] = slopesAll[2]-0.04f;
         slopesAll[0] = slopesAll[1]-0.4f;
@@ -58,7 +55,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
 
         ulstrechDuration = new float[sc2MTBc.maxScUpExt];
         ulstrechCost     = new float[sc2MTBc.maxScUpExt];
-        fpower = new float[sc2MTBc.maxScUpExt];
         f0u = new float[sc2MTBc.maxScUpExt];
         f1u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
         f2u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
@@ -82,26 +78,24 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
                 }
             }
         }
-        float deltaSM20DnMin = 0.05f + dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d);
+        float deltaSlToSl2 = dSM20scDnLow(3d/(sDn/100d+1d)+1d); // for sc 7 (mtbDn=0,mtbUp=0) the delta which surface level has same value, with lower sDn sl becomes higher and vice versa, if deltaSlToSl2=0 (for sDn=2) than deltaSM20DnMin=deltaSM20Dn(2)
+        float deltaSM20DnMin = 0.05f + deltaSlToSl2 - dSM20scDnLow(0) + 0.52f * (float) Math.exp(-sDn/100d * 0.4d); //deltaSM20DnMin value for sc 7 (mtbDn=0,mtbUp=0)
         for (int scDn = sc2MTBc.maxSL+1; scDn<sc2MTBc.maxScDn;scDn++){
             int lscDn = scDn - ( sc2MTBc.maxSL + 1 );
             off = lscDn - sDn/100d;
             crDn[scDn] =  (0.02f + 0.005f*(scDn-(sc2MTBc.maxSL+1)) + 0.05f* sig(2d*(2d-off)));
             srelSlope[scDn]  =  ssrelSlope[scDn]+0.5f- sig((sDn/100d-2d));
-
             deltaSM20Dn[scDn] = deltaSM20DnMin +  (0.5f* sig((1.5d-off)*2d))+lscDn*0.025f;
-            factorDown[scDn] = deltaSM20Dn[scDn]*7.5f;
+            factorDown[scDn] = deltaSM20Dn[scDn]*10f;
         }
-        float deltaSM20DnMinscLow = deltaSM20Dn[sc2MTBc.maxSL+1];
+        float deltaSM20DnMinscLow = deltaSM20Dn[sc2MTBc.maxSL+1] - deltaSlToSl2;
 
 
         for (sc = 0; sc<sc2MTBc.maxScUpExt;sc++){
             if (sc < sc2MTBc.maxSL) {
-
                 ulstrechDuration[sc] = 1f+0.18f*sUp/100;
                 ulstrechCost[sc]     = 1.3f+0.18f*sUp/100 - 0.5f *  sig((3.5-sc)*2.); //( sc > 2 ? 0.2f * (sc - 2) : 0f );
                 sig =  sig((3.5-sc)*2.);
-                fpower[sc] = 1.0f;// - ( sc > 2 ? 0.05f * (sc - 2) : 0f );
                 f0u[sc] =  1.0f + 0.15f * sig;// + ( sc > 2 ? 0.05f * (sc - 2) : 0f );
                 f1u[sc] =  1.1f + 0.15f *  sig;
                 f2u[sc] = ( 1.1f )*f1u[sc] ;
@@ -110,7 +104,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
                 crUp[sc] =  (0.0047f + 0.029f* sig((3.5-sc)*1.3));
                 crDn[sc] = crUp[sc];
                 srelSlope[sc]  = ssrelSlope[sc] +  ( 0.5f *( 0.5f - sig(sDn/100f-2)));
-                deltaSM20Dn[sc] = deltaSM20DnMinscLow - dSM20scDnLow(sc);
+                deltaSM20Dn[sc] = deltaSM20DnMinscLow + dSM20scDnLow(sc);
                 factorDown[sc] = deltaSM20Dn[sc]*10f;
             }
             else if(sc>sc2MTBc.maxSL && sc <sc2MTBc.maxScUp){
@@ -120,7 +114,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
                 ulstrechDuration[sc] =  (1f  +0.18f*sUp/100 - 0.1f*sig);
                 ulstrechCost[sc] =      (0.80f+0.18f*sUp/100 - 0.4f*sig);
 
-                fpower[sc] = 1.0f; // (1.0f-0f*sig((1.5-off)*2.));
                 f0u[sc] =  1.0f;
                 f1u[sc] =  (1.2f+0.15f* sig((1.5-off)*2.));
                 f2u[sc] =  1.1f*f1u[sc] ;
@@ -133,7 +126,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
                 ulstrechDuration[sc] =  (1f  +0.18f*sUp/100 - 0.1f*sig);
                 ulstrechCost[sc] =      (0.70f+0.18f*sUp/100 - 0.4f*sig);
 
-                fpower[sc] = 1.0f; //  (1.0f-0f*sig((0.5d-off)*2.));
                 f0u[sc] =  1.0f;
                 f1u[sc] =  (1.25f+0.15f* sig((0.5d-off)*2.));
                 f2u[sc] = 1.10f * f1u[sc]; // ( 1.1 + 0.03*sig )*f1u[sc] ;
@@ -179,8 +171,9 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     static float sig(double base){
         return (float) (1./(1.+Math.exp(base)));}
 
-    static float dSM20scDnLow(int scDn){
-        return 0.2f * ( sig(1.5 * (scDn - 2.)) - 0.5f);
+    static float dSM20scDnLow(double scDn){
+        float scDnLow = 0.2f * ( sig(1.5 * (2.-scDn)) - 0.5f); // is zero for scDn = 2;
+        return scDnLow;
     }
 
     public SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll) {
@@ -245,18 +238,25 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     }
 
     @Override
-    public float getRefDnSlope() {
-        return refDnSlope;
+    public float[] getCostSlopes(int sc) {
+       return getSlopes(ulstrechCost[sc2MTBc.getCatUpExt(sc)] );
     }
 
-    @Override
-    public int getIndRefDnSlope() {
-        return 3;
+    public float[] getDurationSlopes(int sc) {
+        return getSlopes( ulstrechDuration[sc2MTBc.getCatUpExt(sc)] );
     }
 
-    @Override
-    public float[] getSlopesAll() {
-        return slopesAll;
+    private float[] getSlopes(float ulstrech){
+        float[] slopes ;
+        slopes = new float[slopesAll.length];
+        int i =0;
+        for (float slope : slopesAll) {
+            if (slope <= 0)
+                slopes[i++] = slope;
+            else
+                slopes[i++] = slope * ulstrech;
+        }
+        return slopes;
     }
 
     @Override
@@ -316,16 +316,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     }
 
     @Override
-    public float getUlstrechCost(int sc) {
-        return ulstrechCost[sc2MTBc.getCatUpExt(sc)];
-    }
-
-    @Override
-    public float getUlstrechDuration(int sc) {
-        return ulstrechDuration[sc2MTBc.getCatUpExt(sc)];
-    }
-
-    @Override
     public float[] getDistFactforCostFunct(int sc) {
         int scUpExt = sc2MTBc.getCatUpExt(sc);
         return scUpExt < distFactforCostFunct.length ? distFactforCostFunct[scUpExt] : new float[]{};
@@ -335,8 +325,8 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     public String getSurfaceCatTxt(int sc) {
         int mtbUp = sc2MTBc.getMtbUp(sc);
         String mtbUpTxt = String.format("%s", (mtbUp < 0 ? "-" : mtbUp));
-        int mtbDn = sc2MTBc.getMtbUp(sc);
-        String mtbDnTxt = String.format("%s", (mtbUp < 0 ? "-" : mtbDn));
+        int mtbDn = sc2MTBc.getMtbDn(sc);
+        String mtbDnTxt = String.format("%s", (mtbDn < 0 ? "-" : mtbDn));
         return String.format(Locale.ENGLISH, "%s SurfCat=%2d SurfLvl=%1d mtbDn=%s mtbUp=%s", this, sc, sc2MTBc.getSurfaceLevel(sc), mtbDnTxt, mtbUpTxt);
     }
 
@@ -348,5 +338,15 @@ public class SplineProfileContextMTB implements IfSplineProfileContext {
     @Override
     public float getWatt(int sc) {
         return watt[sc];
+    }
+
+    @Override
+    public float getMinDistFactSC0() {
+        return 1f;
+    }
+
+    @Override
+    public int getSDn() {
+        return sDn;
     }
 }

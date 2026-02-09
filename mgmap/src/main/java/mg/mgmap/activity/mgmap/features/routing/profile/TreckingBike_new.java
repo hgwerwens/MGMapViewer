@@ -5,29 +5,26 @@ import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
 import mg.mgmap.activity.mgmap.features.routing.RoutingProfile;
 import mg.mgmap.generic.graph.WayAttributs;
 
-public class MTB_K2S2_2F extends RoutingProfile {
-    static String id = "OL_MTB_K2S2";
-    @Override
-    public String getId() {
-        return id;
-    }
-    public MTB_K2S2_2F( ) {
-        super(new CostCalculatorTwoPieceFunc( (short) 2, (short)2, (short)1));
+public class TreckingBike_new extends RoutingProfile {
+
+    public TreckingBike_new( ) {
+        super(new CostCalcSplineProfileMTB( new SplineProfileContextTreckingBike() ));
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
-        return new CostCalculatorMTB(wayAttributs, (CostCalculatorTwoPieceFunc) profileCalculator);
-    }
-    @Override
-    public int getIconIdActive() {
-        return R.drawable.rp_mtb_k2s2_a;
+        return new CostCalcSplineTreckingBike(wayAttributs, (CostCalcSplineProfileMTB) profileCalculator);
     }
 
     @Override
+    public int getIconIdActive() {
+        return R.drawable.rp_trekking_a;
+    }
+    @Override
     protected int getIconIdInactive() {
-        return R.drawable.rp_mtb_k2s2_i;
+        return R.drawable.rp_trekking_i;
     }
     protected int getIconIdCalculating() {
-        return R.drawable.rp_mtb_k2s2_c;
+        return R.drawable.rp_trekking_c;
     }
+
 }

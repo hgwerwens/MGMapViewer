@@ -5,9 +5,9 @@ public class SurfCat2MTBCat {
     public int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
     public int maxDn = 6; // maximum downhill category
     public int maxUp = 6; // maximum uphill category
-    int maxScDn = maxSL+1+maxDn +1; // maximum number of factors depending on the surfaced category for downhill calculation
-    int maxScUp = maxSL+1+maxUp +1;         // maximum number of factors depending on the surfaced category for uphill calculation
-    int maxScUpExt = maxScUp + maxDn+1;
+    public int maxScDn = maxSL+1+maxDn +1; // maximum number of factors depending on the surfaced category for downhill calculation
+    public int maxScUp = maxSL+1+maxUp +1;         // maximum number of factors depending on the surfaced category for uphill calculation
+    public int maxScUpExt = maxScUp + maxDn+1;
 
     int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
     public int maxSurfaceCat = maxCatUpDn + maxDn + 1 ; // includes on top those ones, which have only downhill classification
@@ -39,7 +39,7 @@ public class SurfCat2MTBCat {
             return surfaceLevel;
     }
 
-    int getSurfaceLevel(int surfaceCat){
+    public int getSurfaceLevel(int surfaceCat){
         return Math.min(surfaceCat, maxSL);
     }
 
@@ -59,7 +59,7 @@ public class SurfCat2MTBCat {
         else                               return maxSL;
     }
 
-    int getCatUpExt(int surfaceCat){
+    public int getCatUpExt(int surfaceCat){
         if (surfaceCat <= maxSL)           return surfaceCat;
         else if (surfaceCat < maxCatUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else                               return surfaceCat - maxCatUpDn + maxScUp;
@@ -73,7 +73,7 @@ public class SurfCat2MTBCat {
         else                              return surfaceCat - maxCatUpDn;
     }
 
-    int getCatDn(int surfaceCat){
+    public int getCatDn(int surfaceCat){
         if (surfaceCat <= maxSL)          return surfaceCat;
         else if (surfaceCat < maxCatUpDn) return maxSL+1 + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else
@@ -81,7 +81,7 @@ public class SurfCat2MTBCat {
     }
 
 
-    boolean isValidSc(int surfaceCat){
+    public boolean isValidSc(int surfaceCat){
         return  getCatUp(surfaceCat) < maxScUp ;
     }
 

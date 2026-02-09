@@ -6,7 +6,7 @@ import java.util.Arrays;
 /**
  * computes natural cubic spline. Algorithm: <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">...</a>
  */
-public class CubicSpline {
+public class CubicSpline implements IfFunction{
 
     public enum linsec {left,right}
     private final float[][] polynominals;
@@ -202,10 +202,30 @@ public class CubicSpline {
         polynominals[n+1] = new float[] {cubicSpline.calc(max),cubicSpline.calcSlope(max)};
     }
 
+
+
+    public CubicSpline getFactCubicSpline(float factor){
+        return new CubicSpline(factor,this);
+    }
+
+    private CubicSpline( float fact,CubicSpline cubicSpline){
+        polynominals = new float[cubicSpline.x.length+1][4];
+        x = Arrays.copyOf(cubicSpline.x,cubicSpline.x.length);
+        polynominals[0][0] = cubicSpline.polynominals[0][0] * fact;
+        polynominals[0][1] = cubicSpline.polynominals[0][1] * fact;
+        polynominals[cubicSpline.x.length][0] = cubicSpline.polynominals[cubicSpline.x.length][0] * fact ;
+        polynominals[cubicSpline.x.length][1] = cubicSpline.polynominals[cubicSpline.x.length][1] * fact;
+        for ( int i = 1; i < cubicSpline.x.length; i++ )   {
+            polynominals[i][0] = cubicSpline.polynominals[i][0] * fact;
+            polynominals[i][1] = cubicSpline.polynominals[i][1] * fact;
+            polynominals[i][2] = cubicSpline.polynominals[i][2] * fact;
+            polynominals[i][3] = cubicSpline.polynominals[i][3] * fact;
+        }
+    }
+
     public CubicSpline getTransYCubicSpline(float transY){
         return new CubicSpline(this,transY);
     }
-
     private CubicSpline(CubicSpline cubicSpline, float transY){
         polynominals = new float[cubicSpline.x.length+1][4];
 

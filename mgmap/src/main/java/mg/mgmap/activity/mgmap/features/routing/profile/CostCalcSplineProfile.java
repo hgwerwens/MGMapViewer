@@ -4,10 +4,9 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
 import mg.mgmap.generic.util.basic.MGLog;
 
-public abstract class CostCalcSplineProfile implements CostCalculator {
+public abstract class CostCalcSplineProfile implements IfProfileCostCalculator {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private static final float lowstart = -0.15f;
     private static final float highstart = 0.15f;
@@ -25,9 +24,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         this.context = context;
         SurfaceCatCostSpline = new CubicSpline[getMaxSurfaceCat()+1];
         if (fullCalc(context)) {
-            mgLog.i("Spline Profile for " + this.getClass().getName() + " " + context.toString());
-            CubicSpline cubicHeuristicRefSpline = getHeuristicRefSpline(context);
-            cubicHeuristicSpline = calcHeuristicSpline(cubicHeuristicRefSpline);
+            cubicHeuristicSpline = getCubicHeuristicSpline();
             cubicProfileSpline = getProfileSpline(context);
             checkAll();
             refCosts = cubicProfileSpline.calc(0f);
@@ -44,7 +41,11 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     protected abstract  CubicSpline getProfileSpline(Object context);
     protected abstract  CubicSpline getHeuristicRefSpline(Object context);
 
-    protected abstract  float getMinDistFactSC0();
+    protected abstract  float getMinDistFactSC0(Object context);
+
+    public float getMinDistFactSC0(){
+        return getMinDistFactSC0(context);
+    }
     protected abstract  CubicSpline calcSpline(int surfaceCat, Object context) throws Exception;
 
     public abstract String getSurfaceCatTxt(int surfaceCat);
@@ -56,7 +57,17 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         return true;
     }
 
-    protected Object getContext(){return context;}
+    public Object getContext(){return context;}
+
+    public CubicSpline getCubicHeuristicSpline(){
+        if (cubicHeuristicSpline == null) {
+            mgLog.i("Spline Profile for " + this.getClass().getName() + " " + context.toString());
+            CubicSpline cubicHeuristicRefSpline = getHeuristicRefSpline(context);
+            return calcHeuristicSpline(cubicHeuristicRefSpline);
+        } else {
+            return cubicHeuristicSpline;
+        }
+    }
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection) {
         if (dist <= 0.0000001) {
@@ -122,6 +133,14 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
             throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_left ));
     }
 
+    public mg.mgmap.activity.mgmap.features.routing.profile.IfFunction getCostFunc(int surfaceCat) {
+        try {
+            return getCostSpline(surfaceCat);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public CubicSpline getCostSpline(int surfaceCat) throws Exception{
         CubicSpline cubicSpline = SurfaceCatCostSpline[surfaceCat];
         if (cubicSpline == null) {
@@ -132,8 +151,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     }
 
     protected CubicSpline getSlopeOptSpline(float[] slopes, float[] durations, int targetat, float slopeTarget, int varyat) {
-        //     function of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
-        function slope = smvary -> {
+        //     IfFunction of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
+        IfFunction slope = smvary -> {
             try {
                 durations[varyat] = smvary;
                 CubicSpline cubicSpline = new CubicSpline(slopes,durations);
@@ -161,9 +180,11 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         }
     }
 
+
+
     protected ArrayList<CubicSpline.Value> checkSplineHeuristic(CubicSpline cubicSpline, int surfaceCat)  {
         float xs = lowstart - 0.2f;
-        float minmfd = (surfaceCat == 0) ? getMinDistFactSC0() : 1f;
+        float minmfd = (surfaceCat == 0) ? getMinDistFactSC0(context) : 1f;
         ArrayList<CubicSpline.Value> violations = new ArrayList<>();
         do {
             xs = xs + 0.001f;
@@ -195,7 +216,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 
     /* How the heuristic is determined:
        Given two points with a distance d and vertical distance v and a continuously differentiable
-       cost function of the elevation f(e) = f(v/d) (given here as a cubicSpline function) and the costs from source to target point is
+       cost IfFunction of the elevation f(e) = f(v/d) (given here as a cubicSpline IfFunction) and the costs from source to target point is
        given by: c(d,v) = d*f(v/d). If the vertical distance is given and constant, one can vary the path to the
        target and thereby increase the distance. A criteria of this minimum cost is that the first
        derivative varying d is 0, c'(d) = f(v/d) - d * f'(d) v/d^2 = f(e) - f'(e)*e = 0 or
@@ -208,8 +229,8 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
 
     private CubicSpline calcHeuristicSpline(CubicSpline refCubicSpline ){
         // cut out a new cubic spline out of the existing one using the to touch points of the tangents
-        function tangent = x -> refCubicSpline.calc(x) - refCubicSpline.calcSlope(x) * x - 0.0001f;
-        function tangDeriv = x -> -refCubicSpline.calcCurve(x) * x;
+        IfFunction tangent = x -> refCubicSpline.calc(x) - refCubicSpline.calcSlope(x) * x - 0.0001f;
+        IfFunction tangDeriv = x -> -refCubicSpline.calcCurve(x) * x;
         float tDnSlope = newton(lowstart,0.00005f,10,tangent,tangDeriv);
         float tUpSlope = newton(highstart,0.00005f,10,tangent,tangDeriv);
         mgLog.i(()-> String.format(Locale.ENGLISH, "Heuristic for %s: DnSlopeLim=%.2f UpSlopeLim=%.2f",getContext().toString(),tDnSlope*100,tUpSlope*100));
@@ -217,16 +238,14 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
     }
 
 
-    private interface function{
-       float apply(float x);
-    }
 
-    private static float newtonNumeric(float start, float minval, function f, float deltax){
-        function fs = x -> ( f.apply(x + deltax) - f.apply(x - deltax) ) / ( 2f*deltax);
+
+    private static float newtonNumeric(float start, float minval, IfFunction f, float deltax){
+        IfFunction fs = x -> ( f.calc(x + deltax) - f.calc(x - deltax) ) / ( 2f*deltax);
         return newton( start, minval,5, f, fs);
     }
 
-    private static float newton( float start, float minval,int maxIter, function f, function fs){
+    private static float newton(float start, float minval, int maxIter, IfFunction f, IfFunction fs){
         float a;
         float na = start;
         float nb;
@@ -237,18 +256,18 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
         float sfa;
         int i = 0;
         int j;
-        nfa = f.apply(start);
+        nfa = f.calc(start);
         do {
             i = i+1;
             if ( i >= maxIter)
                 throw new RuntimeException("Too many Newton iterations= " + maxIter);
             a = na;
             fa = nfa;
-            float fsv = fs.apply(a);
+            float fsv = fs.calc(a);
             if ( fsv == 0f)
                 throw new RuntimeException("Newton iteration - First derivative is 0");
             na = a - fa / fsv;
-            nfa = f.apply(na);
+            nfa = f.calc(na);
             nfb = fa;
             nb = a;
             j  = 0;
@@ -257,7 +276,7 @@ public abstract class CostCalcSplineProfile implements CostCalculator {
                 if ( j >= maxIter)
                     throw new RuntimeException("Too many Regula Falsi iterations= " + maxIter);
                 sa = ( na * nfb - nb * nfa) / ( nfb -nfa );
-                sfa = f.apply(sa) - minval;
+                sfa = f.calc(sa) - minval;
                 if (Math.signum(sfa) == Math.signum(nfa)) {
                    na = sa;
                    nfa = sfa;

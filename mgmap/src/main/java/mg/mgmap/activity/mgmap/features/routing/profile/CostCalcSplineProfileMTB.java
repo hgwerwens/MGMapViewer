@@ -26,6 +26,7 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
     public int getMaxSurfaceCat(){
         return ((IfSplineProfileContext) getContext()).getMaxSurfaceCat();
     }
+
     protected float sig(double base){
         return (float) (1./(1.+Math.exp(base)));
     }
@@ -65,8 +66,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         return contxt.fullCalc();
     }
 
-    protected float getMinDistFactSC0(){
-        return 1f;
+    protected float getMinDistFactSC0(Object contxt){
+        return ((IfSplineProfileContext) contxt).getMinDistFactSC0();
     }
 
     protected CubicSpline calcSpline(int surfaceCat, Object context) throws Exception {
@@ -91,28 +92,16 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float sm20Dn = contxt.getSm20Dn(surfaceCat);
         float factorDn = contxt.getFactorDn(surfaceCat);
         float[] distFactCostFunct = contxt.getDistFactforCostFunct(surfaceCat);
-        float refDnSlope = contxt.getRefDnSlope();
-
+        float[] slopes = costSpline ? contxt.getCostSlopes(surfaceCat): contxt.getDurationSlopes(surfaceCat);
+        float refDnSlope = slopes[indRefDnSlope];
         float watt0 = contxt.getWatt0(surfaceCat);
         float watt  = contxt.getWatt(surfaceCat);
 
         long t1 = System.nanoTime();
 
-        float[] slopes ;
-        int sc = 0;
-        slopes = new float[contxt.getSlopesAll().length];
 
-        float ulstrech = costSpline ? contxt.getUlstrechCost(surfaceCat): contxt.getUlstrechDuration(surfaceCat);//ulstrechCost[scUpExt] : ulstrechDuration[scUpExt];
-
-        for (float slope : contxt.getSlopesAll()) {
-            if (slope <= 0)
-              slopes[sc++] = slope;
-            else
-              slopes[sc++] = slope * ulstrech;
-        }
-
-                float[] durations = new float[slopes.length];
-        boolean allSlopes = slopes.length == contxt.getSlopesAll().length;
+        float[] durations = new float[slopes.length];
+        boolean allSlopes = slopes.length == slopes.length;
         //      for slopes <=20% pure heuristic formulas apply that derivative of the duration function is equal to factorDn. For smaller slopes additional factors apply (f2d,f3d) to enforce positive
         //      curvature of the duration function
         durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) * contxt.getF3d(surfaceCat); //f3d
@@ -135,20 +124,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
                 durations[i] = durations[i] * distFactCostFunct[i];
             }
 
-/*        if (costSpline && distFactCostFunct>0) {
-//            if (surfaceCat < maxSL ) {
-                for (int i = 0; i < durations.length; i++) {
-                    if (slopes[i] < 0) durations[i] = durations[i] * distFactCostFunct;
-                    else if (slopes[i] == 0.0f)
-                        durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.7f);
-                    else {
-                        durations[i] = durations[i] * (1f + (distFactCostFunct - 1f) * 0.3f);
-                    }
-                }
-//            } */
         }
 
-//        String OptSpline = contxt.getWithRef() ? "with ref" : allSlopes ? "Optimized ref" :"ref";
         String SplineType = costSpline ? "cost":"dura";
         String contextString = String.format(Locale.ENGLISH,"spline=%s %s ",SplineType,getSurfaceCatTxt(surfaceCat));
 
@@ -228,7 +205,14 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         }
     }
 
-
+    @Override
+    public IfFunction getDurationFunc(int surfaceCat) {
+        try {
+            return getDurationSpline(surfaceCat);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     protected CubicSpline getDurationSpline(int surfaceCat) throws Exception{
         CubicSpline cubicSpline;
