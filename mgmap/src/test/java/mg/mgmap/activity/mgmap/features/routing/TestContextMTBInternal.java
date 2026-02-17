@@ -5,7 +5,6 @@ import androidx.annotation.NonNull;
 import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContextMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
@@ -15,7 +14,7 @@ public class TestContextMTBInternal implements IfSplineProfileContextMTB {
     public static float sf2d = 1.04f;
     public static float facDnStrech = 8f;
     public static float dlstrechFac = 1.9f;
-    private CostCalcSplineProfileMTB refProfile;
+    private CostCalcSplineProfile refProfile;
     public final int power;
     public final int sUp;
     public final int sDn;
@@ -52,7 +51,7 @@ public class TestContextMTBInternal implements IfSplineProfileContextMTB {
         this.withRef = withRef;
         this.checkAll = checkAll;
         if (withRef)
-            refProfile = new CostCalcSplineProfileMTB(new TestContextMTBInternal(100, 200, sDn, false, false));
+            refProfile = new CostCalcSplineProfile(new TestContextMTBInternal(100, 200, sDn, false, false));
         slopesAll = IfSplineProfileContext.slopesAll.clone();
         indRefDnSlope = 3;
 //        slopesAll[indRefDnSlope]=slopesAll[indRefDnSlope] -  0.02f + 0.01f*sDn/100f;
@@ -328,7 +327,7 @@ public class TestContextMTBInternal implements IfSplineProfileContextMTB {
             return distFactforCostFunct[sc];
         else if ( sc2MTBc.getMtbDn(sc) >= 2 && sDn >= 300  ) { // for sDn=300 do explicitly prefer scDn = 3 ( and to a lesser extent 2 and 4 )
             double off = sDn/100f - sc2MTBc.getMtbDn(sc);
-            float bell = (float) Math.exp(-0.5d*(off*off));
+            float bell = (float) Math.exp(-0.6d*(off*off));
             float[] distFact = new float[slopesAll.length];
             for (int i=0;i<distFact.length;i++) {
                 if (slopesAll[i]<-0.2f)

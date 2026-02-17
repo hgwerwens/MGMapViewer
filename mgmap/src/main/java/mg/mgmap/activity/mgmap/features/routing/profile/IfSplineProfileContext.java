@@ -30,8 +30,7 @@ public interface IfSplineProfileContext {
     String getSurfaceCatTxt(int sc);
     float getWatt0(int sc);
     float getWatt(int sc);
-
     float getMinDistFactSC0();
-
+    String toString();
 
 }

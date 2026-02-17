@@ -14,6 +14,16 @@ public class SurfCat2MTBCat {
  // slope which all profiles use
 
 
+    /*
+       SurfaceCat is devided in 3 ranges:
+       -the first few ones (SurfaceCat < maxSL ) where there is no mtb classification neither up nor down available.
+        In this range the surfaceCat is equal to the surfaceLevel, which starts with very smooth big asphalt streets and ends with trails(path) without any mtb classification.
+       -than all values for those where both a down and up classification is available ( maxSL <= SurfaceCat <= maxCatUpDn ).
+        SurfaceCat is calculated by the difference of up minus down. However the difference is limited to 3 levels ( E.g. for MtbDn = 1 1<=MtbUp<=4 ) and each combination is represented
+        by one SurfaceCat
+        -last but not least all values where only down classification is given ( maxCatUpDn < SurfaceCat <= maxSurfaceCat ). Here one surfaceCat is reserved for each MtbDn
+     */
+
     public int getSurfaceCat(int surfaceLevel, int mtbDn, int mtbUp) {
         if (surfaceLevel < 0 || surfaceLevel > maxSL) throw new RuntimeException("invalid Surface Level");
         if (surfaceLevel == maxSL ) {

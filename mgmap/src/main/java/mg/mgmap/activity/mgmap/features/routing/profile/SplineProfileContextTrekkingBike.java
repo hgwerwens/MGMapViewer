@@ -1,6 +1,6 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
-public class SplineProfileContextTreckingBike implements IfSplineProfileContext {
+public class SplineProfileContextTrekkingBike implements IfSplineProfileContext {
 
     int maxSurfaceCat = 7;
 
@@ -12,8 +12,8 @@ public class SplineProfileContextTreckingBike implements IfSplineProfileContext 
     boolean fullCalc;
 
 
-    public SplineProfileContextTreckingBike(){this(true);}
-    public SplineProfileContextTreckingBike(boolean fullCalc){
+    public SplineProfileContextTrekkingBike(){this(true);}
+    public SplineProfileContextTrekkingBike(boolean fullCalc){
         this.fullCalc = fullCalc;
         for ( int sc=0 ;sc < maxSurfaceCat;sc++){
             factorDown[sc]  = sm20Dn[sc]*10f;
@@ -85,6 +85,11 @@ public class SplineProfileContextTreckingBike implements IfSplineProfileContext 
     @Override
     public float getMinDistFactSC0() {
         return (float) TagEval.minDistfSc0;
+    }
+
+    @Override
+    public String toString(){
+        return "Trekking Bike";
     }
 }
 

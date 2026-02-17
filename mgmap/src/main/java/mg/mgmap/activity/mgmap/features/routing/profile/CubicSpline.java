@@ -15,40 +15,56 @@ public class CubicSpline implements IfFunction{
     public record Value(float x, float y) {
     }
 
-    public CubicSpline(float[] x, float[] y) throws Exception {
-        if  ( x.length < 3 ) {
+
+    public CubicSpline (float[] x, float[] y) throws Exception {
+        this(new IfSplineDefinition() {
+            @Override
+            public float[] x() { return x; }
+            @Override
+            public float[] y() { return y; }
+            // Natural ist Default, also NICHT überschreiben
+            // leftBoundary() und rightBoundary() kommen aus default-Methoden
+        });
+
+    }
+
+    public CubicSpline(IfSplineDefinition def) throws Exception {
+        x = def.x();
+        float [] y = def.y();
+        if (x.length < 3) {
             throw new Exception("input array too short");
-        } else if ( x.length != y.length ) {
+        } else if (x.length != y.length) {
             throw new Exception("x and y vector size don't match");
         }
-        float min = - Float.MAX_VALUE;
+        float min = -Float.MAX_VALUE;
         for (float v : x) {
             if (v <= min) throw new Exception("x not sorted in ascending order");
             min = v;
         }
-        this.x = x;
         int n = x.length - 1;
-
         float[] h = new float[n];
+        float[] b = new float[n];
+        float[] c = new float[n+1];
+        float[] d = new float[n];
+
         for (int i = 0; i < n; i++) {
-            h[i] = x[i+1] - x[i];
+            h[i] = x[i + 1] - x[i];
         }
         float[] mu = new float[n];
-        float[] z = new float[n+1];
-        mu[0] = 0.0f;
-        z[0] = 0.0f;
+        float[] z = new float[n + 1];
         float l;
+
+        def.leftBoundary().apply(h,y,mu,z,c);
+
         for (int i = 1; i < n; i++) {
             l = 2.0f * (x[i+1] - x[i-1]) - h[i-1] * mu[i-1];
             mu[i] = h[i] / l;
             z[i] = (3.0f * (y[i+1] * h[i-1] - y[i] * (x[i+1] - x[i-1])+ y[i-1] * h[i]) /
                     (h[i-1] * h[i]) - h[i-1] * z[i-1])/ l;
         }
-        float[] b = new float[n];
-        float[] c = new float[n+1];
-        float[] d = new float[n];
-        z[n] = 0.0f;
-        c[n] = 0.0f;
+
+        def.rightBoundary().apply(h,y,mu,z,c);
+
         for (int j = n -1; j >=0; j--) {
             c[j] = z[j] - mu[j] * c[j+1];
             b[j] = (y[j + 1] - y[j])/h[j] - h[j] * (c[j+1] + 2.0f*c[j])/3.0f;
@@ -64,9 +80,13 @@ public class CubicSpline implements IfFunction{
         polynominals[n+1] = new float[] {y[n],polynominals[n][1] + 2* polynominals[n][2]*x1 + 3*polynominals[n][3]*x2}; // final linear section
     }
 
+
+
+
     public float[] getX(){
         return x;
     }
+
 
     public float[] getY(){
         float[] y = new float[x.length];

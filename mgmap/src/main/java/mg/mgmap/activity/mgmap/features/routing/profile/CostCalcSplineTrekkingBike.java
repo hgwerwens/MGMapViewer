@@ -8,9 +8,9 @@ import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
 import mg.mgmap.generic.graph.WayAttributs;
 import mg.mgmap.generic.util.basic.MGLog;
 
-public class CostCalcSplineTreckingBike implements CostCalculator {
+public class CostCalcSplineTrekkingBike implements CostCalculator {
 
-    private static final HashMap<CostCalcSplineTreckingBike,WayAttributs> AttributsHashMap = new HashMap<>();
+    private static final HashMap<CostCalcSplineTrekkingBike,WayAttributs> AttributsHashMap = new HashMap<>();
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private final float mfd;
     private final boolean oneway;
@@ -18,7 +18,7 @@ public class CostCalcSplineTreckingBike implements CostCalculator {
     private final short surfaceCat;
     private final IfProfileCostCalculator mProfileCalculator;
 
-    public CostCalcSplineTreckingBike(WayAttributs wayTagEval, IfProfileCostCalculator profile) {
+    public CostCalcSplineTrekkingBike(WayAttributs wayTagEval, IfProfileCostCalculator profile) {
         mProfileCalculator = profile;
         oneway = wayTagEval.oneway;
         if ( mgLog.level.ordinal() <= MGLog.Level.VERBOSE.ordinal() ){

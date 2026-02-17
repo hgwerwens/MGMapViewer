@@ -1,25 +1,22 @@
 package mg.mgmap.activity.mgmap.features.routing;
 
-import androidx.annotation.NonNull;
-
-import java.util.Locale;
-
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileMTB;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContextMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
-import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
 
 public class SplineProfileTestContextMTB implements IfSplineProfileContextMTB {
-    public static boolean testProfile = true;
+
+
+    public interface Factory {
+        IfSplineProfileContextMTB create(int power, int sUp, int sDn, boolean checkAll, boolean withRef);
+    }
+
+    public static Factory factory = SplineProfileContextMTB::new;
+
 
     private final IfSplineProfileContextMTB splineProfileContextMTB;
     private SplineProfileTestContextMTB(int power, int sUp, int sDn, boolean checkAll, boolean withRef){
-        if (testProfile)
-            splineProfileContextMTB = new TestContextMTBInternal( power, sUp, sDn, checkAll,  withRef);
-        else
-            splineProfileContextMTB = new SplineProfileContextMTB(power, sUp, sDn, checkAll,  withRef);
+        splineProfileContextMTB = factory.create(power, sUp, sDn, checkAll, withRef);
     }
 
     SplineProfileTestContextMTB(int power, int sUp, int sDn, boolean checkAll) {
@@ -176,5 +173,9 @@ public class SplineProfileTestContextMTB implements IfSplineProfileContextMTB {
     @Override
     public float getMinDistFactSC0() {
         return splineProfileContextMTB.getMinDistFactSC0();
+    }
+
+    public String toString(){
+        return splineProfileContextMTB.toString();
     }
 }
