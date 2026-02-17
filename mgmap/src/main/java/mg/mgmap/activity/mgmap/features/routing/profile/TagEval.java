@@ -14,11 +14,10 @@ public class TagEval {
                 "motorway".equals(wayTagEval.highway) || "trunk".equals(wayTagEval.highway) ||
                 "private".equals(wayTagEval.bicycle)  ||
                 ( "bic_no".equals(wayTagEval.bicycle) &&  !( "path".equals(wayTagEval.highway) || "track".equals(wayTagEval.highway)|| "steps".equals(wayTagEval.highway) ||
-                   wayTagEval.mtbScale != null) ) ||
+                          wayTagEval.mtbScale != null || isBikeRoute(wayTagEval) )) ||
                 ( ( "private".equals(wayTagEval.access) || "acc_no".equals(wayTagEval.access) )  &&
                        !(  "bic_yes".equals(wayTagEval.bicycle)         || "bic_designated".equals(wayTagEval.bicycle) ||
-                            "bic_permissive".equals(wayTagEval.bicycle) || "lcn".equals(wayTagEval.network)            ||
-                             "rcn".equals(wayTagEval.network)           || "icn".equals(wayTagEval.network)            ||
+                            "bic_permissive".equals(wayTagEval.bicycle) || isBikeRoute(wayTagEval)          ||
                              wayTagEval.mtbScaleUp != null              || wayTagEval.mtbScale != null
                        )
                 );
@@ -61,7 +60,7 @@ public class TagEval {
         double distFactor ;
         if ("cycleway".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat>0) ? surfaceCat :1;
-            if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network))
+            if (isBikeRoute(wayTagEval))
                 distFactor = 1.0;
             else
                 distFactor = 1.3;
@@ -69,7 +68,7 @@ public class TagEval {
             surfaceCat = (surfaceCat <= 1) ? 0 : surfaceCat;
             if ("bic_no".equals(wayTagEval.bicycle))
                 distFactor = 10;
-            else if ( "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) || ( wayTagEval.cycleway != null && "lcn".equals(wayTagEval.network)))
+            else if ( isBikeRoute(wayTagEval))
                 distFactor = 1.45;
             else if (wayTagEval.cycleway != null || "lcn".equals(wayTagEval.network)  )
                 distFactor = 1.8;
@@ -77,7 +76,7 @@ public class TagEval {
                 distFactor = 2.5;
         } else if ("secondary".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat <= 1) ? 0 : surfaceCat;
-            if ( "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) || ( wayTagEval.cycleway != null && "lcn".equals(wayTagEval.network)))
+            if ( isNotLocalBikeRoute(wayTagEval) || ( wayTagEval.cycleway != null && "lcn".equals(wayTagEval.network)))
                 distFactor = 1.4;
             else if (wayTagEval.cycleway != null || "lcn".equals(wayTagEval.network) )
                 distFactor = 1.6;
@@ -85,7 +84,7 @@ public class TagEval {
                 distFactor = 1.8;
         } else if ("tertiary".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat <= 1) ? 0 : surfaceCat;
-            if ( "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) || ( wayTagEval.cycleway != null && "lcn".equals(wayTagEval.network)))
+            if ( isNotLocalBikeRoute(wayTagEval) || ( wayTagEval.cycleway != null && "lcn".equals(wayTagEval.network)))
                 distFactor = 1.21;
             else if (wayTagEval.cycleway != null || "lcn".equals(wayTagEval.network))
                 distFactor = 1.3;
@@ -93,15 +92,15 @@ public class TagEval {
                 distFactor = 1.5;
         } else if ("residential".equals(wayTagEval.highway)||"living_street".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat>0) ? surfaceCat :1;
-            if ("bic_destination".equals(wayTagEval.bicycle) || "lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) ) {
+            if ("bic_destination".equals(wayTagEval.bicycle) || isBikeRoute(wayTagEval) ) {
                 distFactor = 1.0;
  /*           } else if( surfaceCat > 2){
                 distFactor = 1.5; */
-            } else  distFactor = 1.15;
+            } else  distFactor = 1.135;
         } else if ("footway".equals(wayTagEval.highway) || "pedestrian".equals(wayTagEval.highway)) {
-            if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network) || "bic_yes".equals(wayTagEval.bicycle))
+            if (isBikeRoute(wayTagEval) || "bic_yes".equals(wayTagEval.bicycle))
                 distFactor = 1.0;
-            else if  ((wayTagEval.mtbScale != null || wayTagEval.mtbScaleUp != null) && mtb && ( surfaceCat == 4|| surfaceCat == -1 )) {
+            else if  ((wayTagEval.mtbScale != null || wayTagEval.mtbScaleUp != null) && mtb && ( surfaceCat >= 4|| surfaceCat == -1 )) {
                 distFactor = 1.0;
                 surfaceCat = 6;
             }
@@ -110,7 +109,7 @@ public class TagEval {
             else
                 distFactor = 3.0;
             surfaceCat = (surfaceCat < 1) ? 2 : surfaceCat;
-        } else if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network)) {
+        } else if (isBikeRoute(wayTagEval)) {
             distFactor = 1;
             surfaceCat = (surfaceCat < 1) ? 2 : surfaceCat;
         } else if ("service".equals(wayTagEval.highway)) {
@@ -124,6 +123,9 @@ public class TagEval {
         } else if ("construction".equals(wayTagEval.highway)){
             distFactor = 10;
             surfaceCat = 4;
+        } else if ("bridleway".equals(wayTagEval.highway)){
+            distFactor = 1.8;
+            surfaceCat = 6;
         } else {
             distFactor = 1.3;
             surfaceCat = (surfaceCat <= 1) ? 2 : surfaceCat;
@@ -132,6 +134,17 @@ public class TagEval {
             throw new RuntimeException("distFactor for surfaceLevel 0 too small");
         return new Factors(distFactor, surfaceCat);
     }
+
+    public static boolean isBikeRoute( WayAttributs wayAttributs){
+        String network=wayAttributs.network;
+        return "lcn".equals(network) || "rcn".equals(network) || "ocn".equals(network)|| "ncn".equals(network)|| "icn".equals(network);
+    }
+
+    public static boolean isNotLocalBikeRoute( WayAttributs wayAttributs){
+        String network=wayAttributs.network;
+        return  "rcn".equals(network) || "ocn".equals(network)|| "ncn".equals(network)|| "icn".equals(network);
+    }
+
 
     public static class Factors{
         public final double  distFactor;

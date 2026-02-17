@@ -1,6 +1,7 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
 import java.lang.invoke.MethodHandles;
+import java.util.HashMap;
 import java.util.Locale;
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
 import mg.mgmap.generic.graph.WayAttributs;
@@ -9,16 +10,20 @@ import mg.mgmap.generic.util.basic.MGLog;
 public class CostCalcSplineMTB implements CostCalculator {
     enum dir {up,down,none,oneway}
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
+    private static final HashMap<CostCalcSplineMTB,WayAttributs> AttributsHashMap = new HashMap<>();
 
     private final float mfd;
     private final dir direction;
-    private final CubicSpline surfaceCatSpline;
+    private final IfFunction surfaceCatSpline;
     private final short surfaceCat;
     private final CostCalcSplineProfileMTB mProfileCalculator;
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
 
     public CostCalcSplineMTB(WayAttributs wayTagEval, CostCalcSplineProfileMTB profile) {
         mProfileCalculator = profile;
+        if ( mgLog.level.ordinal() <= MGLog.Level.VERBOSE.ordinal() ){
+            AttributsHashMap.put(this,wayTagEval);
+        }
         dir direction = null;
         int mtbUp = -1;
         int mtbDn = -1;
@@ -108,7 +113,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 cost = mfd*dist*costf + dist * 5 + 0.00001;
             else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
                 // stairs uphill
-                cost = dist * Math.max( mfd*surfaceCatSpline.calc(0.10f) , costf ) + 0.00001;
+                cost = dist * Math.max( mfd*surfaceCatSpline.calc(0.1f) , costf ) + 0.00001;
             else if (direction==dir.none)
                 // stairs without up/down attribute
                 cost = mfd/2d*dist*costf + 0.00001;
@@ -140,11 +145,12 @@ public class CostCalcSplineMTB implements CostCalculator {
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            float costf = mfd*surfaceCatSpline.calc(slope)/mProfileCalculator.refCosts;
-            float v = 3.6f/spm;
-            float finalSpm = spm;
-            mgLog.v(()-> String.format(Locale.ENGLISH, "%s Slope=%6.2f v=%5.2f time=%6.2f dist=%5.2f cost=%6.2f mfd=%3.2f costf=%5.2f",
-                     mProfileCalculator.getSurfaceCatTxt(surfaceCat),100f*slope,v, finalSpm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf));
+            mgLog.v(()-> {
+                float costf = mfd*surfaceCatSpline.calc(slope)/mProfileCalculator.refCosts;
+                float v = 3.6f/spm;
+                return String.format(Locale.ENGLISH, "%s Slope=%6.2f v=%5.2f time=%6.2f dist=%5.2f cost=%6.2f mfd=%3.2f costf=%5.2f %s",
+                     mProfileCalculator.getSurfaceCatTxt(surfaceCat),100f*slope,v, spm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf,AttributsHashMap.get(this).toDetailedString());
+            });
             return (long) (1000*dist*spm);
         } else return 0;
     }

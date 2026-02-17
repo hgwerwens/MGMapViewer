@@ -91,6 +91,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         float cr1 =  (0.1f*crDn + 0.9f*crUp);
         float sm20Dn = contxt.getSm20Dn(surfaceCat);
         float factorDn = contxt.getFactorDn(surfaceCat);
+        float f2d      = contxt.getF2d(surfaceCat);
+        float f3d      = contxt.getF3d(surfaceCat);
         float[] distFactCostFunct = contxt.getDistFactforCostFunct(surfaceCat);
         float[] slopes = costSpline ? contxt.getCostSlopes(surfaceCat): contxt.getDurationSlopes(surfaceCat);
         float refDnSlope = slopes[indRefDnSlope];
@@ -104,8 +106,8 @@ public class CostCalcSplineProfileMTB extends CostCalcSplineProfile {
         boolean allSlopes = slopes.length == slopes.length;
         //      for slopes <=20% pure heuristic formulas apply that derivative of the duration function is equal to factorDn. For smaller slopes additional factors apply (f2d,f3d) to enforce positive
         //      curvature of the duration function
-        durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) * contxt.getF3d(surfaceCat); //f3d
-        durations[1] = ( sm20Dn -(slopes[1]-refDnSlope)*factorDn) * contxt.getF2d(surfaceCat);//f2d;
+        durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) *f3d; //f3d
+        durations[1] = ( sm20Dn -(slopes[1]-refDnSlope)*factorDn) *f2d;//f2d;
         durations[2] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
         durations[3] =   sm20Dn ;
         //      for everything with slope >=0% durations (sec/m) is calculated based on the speed derived from friction and input power (Watt)

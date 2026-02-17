@@ -42,8 +42,8 @@ import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S3;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S2;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3;
+import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.ShortestDistance;
-import mg.mgmap.activity.mgmap.features.routing.profile.TreckingBike_new;
 import mg.mgmap.activity.mgmap.features.routing.profile.TrekkingBike;
 import mg.mgmap.activity.mgmap.view.MultiMultiPointView;
 import mg.mgmap.application.MGMapApplication;
@@ -212,9 +212,9 @@ public class FSRouting extends FeatureService {
         addDefinedRoutingProfile(prefCache, new MTB_K3S2(), false);
         addDefinedRoutingProfile(prefCache, new MTB_K3S3(), true);
         addDefinedRoutingProfile(prefCache, new TrekkingBike(), true);
-        addDefinedRoutingProfile(prefCache, new TreckingBike_new(), true);
         addDefinedRoutingProfile(prefCache, new MTB_K1S1_2F(), true);
         addDefinedRoutingProfile(prefCache, new MTB_K2S2_2F(), true);
+        addDefinedRoutingProfile(prefCache, new MTB_K3S3_2F(), true);
 
         prefRoutingProfileId.addObserver(evt -> {
             String id = prefRoutingProfileId.getValue();

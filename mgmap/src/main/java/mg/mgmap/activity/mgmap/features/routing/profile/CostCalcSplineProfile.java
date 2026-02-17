@@ -97,6 +97,7 @@ public abstract class CostCalcSplineProfile implements IfProfileCostCalculator {
     private void checkAll() {
         boolean negativeCurvature = false;
         CubicSpline cubicSpline = null;
+        StringBuilder msgTxt = new StringBuilder();
         //noinspection unchecked
         ArrayList<CubicSpline.Value>[] violations = (ArrayList<CubicSpline.Value>[]) new ArrayList[getMaxSurfaceCat()+1];
         for ( int surfaceCat = 0 ; surfaceCat < getMaxSurfaceCat(); surfaceCat++){
@@ -104,6 +105,7 @@ public abstract class CostCalcSplineProfile implements IfProfileCostCalculator {
                cubicSpline = getCostSpline(surfaceCat);
             } catch (Exception e) {
                 mgLog.e(e.getMessage());
+                msgTxt.append(e.getMessage());
                 negativeCurvature = true;
             }
             if (cubicSpline!= null ) violations[surfaceCat] = checkSplineHeuristic(cubicSpline, surfaceCat);
@@ -113,17 +115,15 @@ public abstract class CostCalcSplineProfile implements IfProfileCostCalculator {
             if (violations[surfaceCat]!=null && !violations[surfaceCat].isEmpty()) {
                 heuristicViolation = true;
                 int fSurfaceCat = surfaceCat;
-                mgLog.e(() -> {
-                    StringBuilder msgTxt = new StringBuilder(String.format(Locale.ENGLISH,"Violation of Heuristic for %s at",getSurfaceCatTxt(fSurfaceCat)));
-                    for (CubicSpline.Value violationAt : violations[fSurfaceCat]){
-                        msgTxt.append(String.format(Locale.ENGLISH, "(%.1f,%.5f)", violationAt.x() * 100, violationAt.y()));
-                    }
-                    return msgTxt.toString();
-                });
+                msgTxt.append(String.format(Locale.ENGLISH,"\rViolation of Heuristic for %s at",getSurfaceCatTxt(fSurfaceCat)));
+                for (CubicSpline.Value violationAt : violations[fSurfaceCat]){
+                    msgTxt.append(String.format(Locale.ENGLISH, "(%.1f,%.5f)", violationAt.x() * 100, violationAt.y()));
+                }
+                mgLog.e(() -> msgTxt.toString());
             }
         }
         if (negativeCurvature||heuristicViolation)
-            throw new RuntimeException( heuristicViolation ? "Heuristic Violation" : "Curvature Violation" );
+            throw new RuntimeException( msgTxt.toString() );
 
         float yintercept_right = cubicHeuristicSpline.yintercept_linsec(CubicSpline.linsec.right);
         if (yintercept_right <= 0.00003)
@@ -133,7 +133,7 @@ public abstract class CostCalcSplineProfile implements IfProfileCostCalculator {
             throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_left ));
     }
 
-    public mg.mgmap.activity.mgmap.features.routing.profile.IfFunction getCostFunc(int surfaceCat) {
+    public IfFunction getCostFunc(int surfaceCat) {
         try {
             return getCostSpline(surfaceCat);
         } catch (Exception e) {
@@ -227,7 +227,7 @@ public abstract class CostCalcSplineProfile implements IfProfileCostCalculator {
        Equations solved via Newton Iteration.
      */
 
-    private CubicSpline calcHeuristicSpline(CubicSpline refCubicSpline ){
+    public CubicSpline calcHeuristicSpline(CubicSpline refCubicSpline ){
         // cut out a new cubic spline out of the existing one using the to touch points of the tangents
         IfFunction tangent = x -> refCubicSpline.calc(x) - refCubicSpline.calcSlope(x) * x - 0.0001f;
         IfFunction tangDeriv = x -> -refCubicSpline.calcCurve(x) * x;

@@ -8,7 +8,7 @@ import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileMTB;
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileTreckingBike;
+
 import mg.mgmap.activity.mgmap.features.routing.profile.CubicSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
@@ -35,44 +35,54 @@ public class RoutingProfileCreateTest {
 
 
     @Test
+    public void ProfileVary() throws Exception {
+        for (TestContextMTBInternal.dlstrechFac = 2.2f; TestContextMTBInternal.dlstrechFac <= 2.4f; TestContextMTBInternal.dlstrechFac += 0.1f) {
+            for (TestContextMTBInternal.facDnStrech = 8f; TestContextMTBInternal.facDnStrech <= 8.25f; TestContextMTBInternal.facDnStrech += 0.25f) {
+                for (TestContextMTBInternal.sf2d = 1.03f; TestContextMTBInternal.sf2d <= 1.05f; TestContextMTBInternal.sf2d += 0.01f) {
+                    for (int sDn = 00; sDn <= 400; sDn += 100) {
+                        for (int sUp = 0; sUp <= 400; sUp += 100) {
+                            for (int mtbDn = 0; mtbDn <= 0; mtbDn += 1) {
+                                int sc = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbDn);
+                                CostCalcSplineProfileMTB costCalcSplineProfileMTB = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn, false));
+                                CubicSpline cubicSplineSc = costCalcSplineProfileMTB.getCostSpline(sc);
+                                checkCurvature(cubicSplineSc, new StringBuilder(String.format("%s f2d=%3.2f facDnStrech=%3.2f dlstrechFac=%3.2f", costCalcSplineProfileMTB.getSurfaceCatTxt(sc),
+                                        TestContextMTBInternal.sf2d,TestContextMTBInternal.facDnStrech,TestContextMTBInternal.dlstrechFac)));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     public void singlescCompare() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        int sUp = 100;
-        int sDn = 100;
-        int sc1 = 1;
-        int sc2 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 5);
-        CostCalcSplineProfileMTB costCalcSplineProfileMTB = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn,false));
+        int sUp = 300;
+        int sDn1 = 300;
+        int sDn2 = sDn1;
+        int sc1 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 3, 5);//sc2MTBc.maxSL;
+        int sc2 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 0);
+        SplineProfileTestContextMTB.testProfile = false;
+        CostCalcSplineProfileMTB costCalcSplineProfileMTB1 = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn1,false));
+        SplineProfileTestContextMTB.testProfile = false;
+        CostCalcSplineProfileMTB costCalcSplineProfileMTB2 = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn2,false));
         try {
-            CubicSpline cubicSplineSc1 = costCalcSplineProfileMTB.getCostSpline(sc1);
-            CubicSpline cubicSplineSc2 = costCalcSplineProfileMTB.getCostSpline(sc2);
-            System.out.println(costCalcSplineProfileMTB.getSurfaceCatTxt(sc1));
+            CubicSpline cubicSplineSc1 = costCalcSplineProfileMTB1.getCostSpline(sc1);
+            CubicSpline cubicSplineSc2 = costCalcSplineProfileMTB2.getCostSpline(sc2);
+            System.out.println(costCalcSplineProfileMTB1.getSurfaceCatTxt(sc1));
             checkCubicSpline(cubicSplineSc1,new StringBuilder(),-0.4f,0.4f);
-            System.out.println(costCalcSplineProfileMTB.getSurfaceCatTxt(sc2));
+            System.out.println(costCalcSplineProfileMTB2.getSurfaceCatTxt(sc2));
             checkCubicSpline(cubicSplineSc2,new StringBuilder(),-0.4f,0.4f);
             compareCubicSpline(cubicSplineSc1,cubicSplineSc2,-0.4f,0.4f,
-                    new StringBuilder(costCalcSplineProfileMTB.getSurfaceCatTxt(sc1)).append(costCalcSplineProfileMTB.getSurfaceCatTxt(sc2)),true);
+                    new StringBuilder(costCalcSplineProfileMTB1.getSurfaceCatTxt(sc1)).append(costCalcSplineProfileMTB2.getSurfaceCatTxt(sc2)),true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
         softAssert.assertAll();
     }
 
-    @Test
-    public void CompareOldNewTr() {
-        for ( int sc = 0;sc < 7; sc++ ) {
-            CostCalcSplineProfileMTB costCalcSplineProfileTr_new = new CostCalcSplineProfileMTB(new SplineProfileContextTreckingBike(false));
-            CostCalcSplineProfileTreckingBike costCalcSplineTreckingBike = new CostCalcSplineProfileTreckingBike();
-            System.out.println(costCalcSplineProfileTr_new.getSurfaceCatTxt(sc)+ "  " +costCalcSplineTreckingBike.getSurfaceCatTxt(sc));
-            try {
-                compareCubicSpline(costCalcSplineTreckingBike.getCostSpline(sc),costCalcSplineProfileTr_new.getCostSpline(sc), -0.5f, 0.3f,
-                        new StringBuilder(costCalcSplineProfileTr_new.getSurfaceCatTxt(sc)).append(costCalcSplineTreckingBike.getSurfaceCatTxt(sc)), true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        softAssert.assertAll();
-    }
 
     @Test
     public void singleProfileTr() {
@@ -83,20 +93,14 @@ public class RoutingProfileCreateTest {
         softAssert.assertAll();
     }
 
-    @Test
-    public void singleProfileTrOld() {
-        CostCalcSplineProfileTreckingBike costCalcSplineProfileTr = new CostCalcSplineProfileTreckingBike();
-        checkSurfaceCats(costCalcSplineProfileTr, new StringBuilder(),-0.4f,0.4f);
-        softAssert.assertAll();
-    }
 
     @Test
     public void singleProfileMTB() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        int sUp = 100;
-        int sDn = 100;
-        CostCalcSplineProfileMTB costCalcSplineProfileMTB = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn,false));
+        int sUp = 300;
+        int sDn = 300;
+        CostCalcSplineProfileMTB costCalcSplineProfileMTB = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn,true));
         checkProfile(costCalcSplineProfileMTB, new StringBuilder(String.format("sUp=%3d sDn=%3d", sUp, sDn)),-0.6f,0.6f);
         softAssert.assertAll();
     }
@@ -105,10 +109,11 @@ public class RoutingProfileCreateTest {
     public void VaryContext_default()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
 //        MGLog.setUnittest(true);
+        SplineProfileTestContextMTB.testProfile = true;
         for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
             for (int sDn = 100; sDn <= 300; sDn = sDn + 100) {
                 CostCalcSplineProfileMTB costCalcSplineProfileMTB = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(sUp, sDn,true));
-                checkProfile(costCalcSplineProfileMTB, new StringBuilder(String.format("sUp=%3d sDn=%3d", sUp, sDn)),0f,0f);
+                checkProfile(costCalcSplineProfileMTB, new StringBuilder(),0f,0f);
              }
         }
         softAssert.assertAll();
@@ -121,8 +126,9 @@ public class RoutingProfileCreateTest {
         for (int sUp = 0; sUp <= 400; sUp = sUp + 100) {
             for (int sDn = 0; sDn <= 400; sDn = sDn + 100) {
                 for (int power = 48 + sUp / 100 * 25; power <= 150f; power = power + 25) {
+
                     CostCalcSplineProfileMTB costCalcSplineProfileMTB = new CostCalcSplineProfileMTB(new SplineProfileTestContextMTB(power, sUp, sDn,false));
-                    StringBuilder msg = new StringBuilder(String.format("sUp=%3d sDn=%3d pow=%3d", sUp, sDn, power));
+                    StringBuilder msg = new StringBuilder();
                     checkProfile(costCalcSplineProfileMTB, msg,0f, 0f);
                 }
             }
@@ -133,7 +139,7 @@ public class RoutingProfileCreateTest {
 
     private void checkProfile(CostCalcSplineProfileMTB costCalcSplineProfileMTB, StringBuilder msg,float slStart, float slStop){
         checkSurfaceCats(costCalcSplineProfileMTB, msg,slStart,slStop);
-        compareSurfaceCats(costCalcSplineProfileMTB, msg);
+//        compareSurfaceCats(costCalcSplineProfileMTB, msg);
     }
 
     private void checkSurfaceCats(CostCalcSplineProfile costCalcSplineProfile, StringBuilder rmsg, float slStart, float slStop){
@@ -164,7 +170,7 @@ public class RoutingProfileCreateTest {
                     cubicSpline = cubicSpline.getFactCubicSpline(costCalcSplineProfile.getMinDistFactSC0());
                 }
                 if (cubicSpline != null){
-                    msg = new StringBuilder(rmsg).append(" Compare " +costCalcSplineProfile.getSurfaceCatTxt(sc) +" with Heuristic:");
+                    msg = new StringBuilder(rmsg).append(" compare " +costCalcSplineProfile.getSurfaceCatTxt(sc) +" with Heuristic:");
                     ScCompRes compRes = compareCubicSpline(cubicHeuristicSpline,cubicSpline,-0.4f,0.4f,msg,false);
                     softAssert.check(compRes.crossings.size()==0,compRes.msg().append(" 0 crossings expected").toString());
                 }
@@ -212,7 +218,7 @@ public class RoutingProfileCreateTest {
                         msg.append(m);
                         critmsg.append(m);
                     }
-                    else if (curvature < 0.1f)
+                    else if (curvature < 10f)
                         msg.append(String.format(Locale.ENGLISH, " Slope=%.2f      Critical Curve Radius=%.2f", 100 * negCurvature.x(), curvature));
                     else
                         msg.append(String.format(Locale.ENGLISH, " slope=%.2f curve radius=%.2f", 100 * negCurvature.x(), curvature));
@@ -234,23 +240,51 @@ public class RoutingProfileCreateTest {
     }
 
     private void compareSurfaceCats(CostCalcSplineProfileMTB costCalcSplineProfileMTB, StringBuilder msg){
-        for (int sc = 0; sc < sc2MTBc.maxSL - 1; sc++){
-            compareTwoSc(costCalcSplineProfileMTB, msg,sc,sc+1,sc>1,0);
+
+       for (int sc = 0; sc < sc2MTBc.maxSL - 1; sc++){
+            compareTwoSc(costCalcSplineProfileMTB, msg,sc,sc+1,sc>1,0,0f,0.5f);
         }
-        for (int mtbDn = 0; mtbDn <= sc2MTBc.maxDn+1; mtbDn++) {
+        for (int mtbDn = 0; mtbDn <= sc2MTBc.maxDn; mtbDn++) {
             for (int mtbUp = mtbDn; mtbUp < Math.min(mtbDn + sc2MTBc.maxUptoDn, sc2MTBc.maxUp); mtbUp++) {
                 int sc1 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbUp);
                 int sc2 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbUp + 1);
-                compareTwoSc(costCalcSplineProfileMTB, msg,sc1,sc2,true,0);
+                compareTwoSc(costCalcSplineProfileMTB, msg,sc1,sc2,true,0,0f,0.5f);
             }
         }
         for (int mtbDn = 0; mtbDn < sc2MTBc.maxDn; mtbDn++) {
-            int sc1 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, -1);
-            int sc2 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn+1, -1);
-            compareTwoSc(costCalcSplineProfileMTB, msg,sc1,sc2,true,0);
+            for (int mtbUp = mtbDn; mtbUp <= Math.min(mtbDn + sc2MTBc.maxUptoDn, sc2MTBc.maxUp); mtbUp++) {
+                int sc1 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbUp);
+                int sc2 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn+1, mtbUp);
+                compareTwoSc(costCalcSplineProfileMTB, msg,sc1,sc2,true,0,-0.5f,0);
+            }
         }
 
-/*        for (int mtbDn1 = 0; mtbDn1 < CostCalcSplineProfileMTB.maxDn; mtbDn1++) {
+        for (int mtbDn = 0; mtbDn < sc2MTBc.maxDn; mtbDn++) {
+            int sc1 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, -1);
+            int sc2 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn+1, -1);
+            compareTwoSc(costCalcSplineProfileMTB, msg,sc1,sc2,true,0,-0.5f,0.5f);
+        }
+
+/*        for (int sc = 0; sc <= sc2MTBc.maxSL - 1; sc++){
+           compareTwoSc(costCalcSplineProfileMTB, msg,sc,6,false,1,0f,0.5f);
+        }
+
+       for (int mtbDn = 0; mtbDn <= sc2MTBc.maxDn+1; mtbDn++) {
+            for (int mtbUp = mtbDn; mtbUp <= Math.min(mtbDn + sc2MTBc.maxUptoDn, sc2MTBc.maxUp); mtbUp++) {
+                int sc = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbUp);
+                compareTwoSc(costCalcSplineProfileMTB, msg,sc,6,mtbDn+mtbUp<=1,mtbDn+mtbUp>1?1:0,0f,0.5f);
+            }
+        } */
+
+/*        for (int mtbDn = 2; mtbDn <= 2; mtbDn++) {
+            for (int mtbUp = mtbDn; mtbUp <= Math.min(mtbDn + sc2MTBc.maxUptoDn, sc2MTBc.maxUp); mtbUp++) {
+                int sc = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbUp);
+                compareTwoSc(costCalcSplineProfileMTB, msg,sc,6,mtbDn+mtbUp<=1,1,-0.5f,0.0f);
+            }
+        }
+
+
+       for (int mtbDn1 = 0; mtbDn1 < CostCalcSplineProfileMTB.maxDn; mtbDn1++) {
             int sc1 = CostCalcSplineProfileMTB.getSurfaceCat(CostCalcSplineProfileMTB.maxSL, mtbDn1, -1);
             for (int mtbDn = 0; mtbDn <= CostCalcSplineProfileMTB.maxDn+1; mtbDn++) {
                 for (int mtbUp = mtbDn; mtbUp < Math.min(mtbDn + CostCalcSplineProfileMTB.maxUptoDn,CostCalcSplineProfileMTB.maxUp); mtbUp++) {
@@ -263,28 +297,19 @@ public class RoutingProfileCreateTest {
         } */
 
 
-        for (int sc = 0; sc <= sc2MTBc.maxSL - 1; sc++){
-           compareTwoSc(costCalcSplineProfileMTB, msg,sc,6,false,1);
-        }
 
-        for (int mtbDn = 0; mtbDn <= sc2MTBc.maxDn+1; mtbDn++) {
-            for (int mtbUp = mtbDn; mtbUp < Math.min(mtbDn + sc2MTBc.maxUptoDn, sc2MTBc.maxUp); mtbUp++) {
-                int sc = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbUp);
-                compareTwoSc(costCalcSplineProfileMTB, msg,sc,6,mtbDn+mtbUp<=1,mtbDn+mtbUp>1?1:0);
-            }
-        }
 //        System.out.println(imsg);
 
     }
 
-    private Point compareTwoSc(CostCalcSplineProfileMTB costCalcSplineProfileMTB, StringBuilder msg, int sc1, int sc2, boolean sc1LTsc2, int numcross){
-        StringBuilder imsg = new StringBuilder(msg).append(String.format(Locale.ENGLISH," compare%s%s",costCalcSplineProfileMTB.getSurfaceCatTxt(sc1),costCalcSplineProfileMTB.getSurfaceCatTxt(sc2)));
+    private Point compareTwoSc(CostCalcSplineProfileMTB costCalcSplineProfileMTB, StringBuilder msg, int sc1, int sc2, boolean sc1LTsc2, int numcross,float startSlope, float endSlope){
+        StringBuilder imsg = new StringBuilder(msg).append(String.format(Locale.ENGLISH," compare  between %3.0f°|%3.0f° %s with %s",startSlope*100f, endSlope*100f,costCalcSplineProfileMTB.getSurfaceCatTxt(sc1),costCalcSplineProfileMTB.getSurfaceCatTxt(sc2)));
         Point crossingAt = null;
         try {
             float delAt0 = costCalcSplineProfileMTB.getCostSpline(sc2).calc(0f) - costCalcSplineProfileMTB.getCostSpline(sc1).calc(0f);
             softAssert.check(delAt0>=-0.002f&&sc1LTsc2 || delAt0<=0.002f&&!sc1LTsc2 ,new String(new StringBuilder(imsg).append(String.format(Locale.ENGLISH, " wrong costSequence sc=%.3f",delAt0))));
             if ((delAt0<0 && delAt0>=-0.002f&&sc1LTsc2) || (delAt0>0 &&delAt0<=0.002f&&!sc1LTsc2)) numcross = numcross-1;
-            ScCompRes scCompRes = compareCubicSpline(costCalcSplineProfileMTB.getCostSpline(sc1),costCalcSplineProfileMTB.getCostSpline(sc2),0f,0.5f,imsg,false);
+            ScCompRes scCompRes = compareCubicSpline(costCalcSplineProfileMTB.getCostSpline(sc1),costCalcSplineProfileMTB.getCostSpline(sc2),startSlope,endSlope,imsg,false);
             softAssert.check(scCompRes.crossings.size()==numcross , scCompRes.msg().append(String.format(": %1d crossings expected",numcross)).toString());
             crossingAt = scCompRes.crossings.isEmpty() ? null : scCompRes.crossings.get(0);
         } catch (Exception e) {

@@ -1,5 +1,7 @@
 package mg.mgmap.activity.mgmap.features.routing;
 
+import androidx.annotation.NonNull;
+
 import org.junit.Test;
 import org.mapsforge.map.datastore.MapDataStore;
 import org.mapsforge.map.reader.MapFile;
@@ -13,9 +15,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineMTB;
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
@@ -26,7 +27,6 @@ import mg.mgmap.application.util.ElevationProvider;
 import mg.mgmap.application.util.ElevationProviderImpl;
 import mg.mgmap.application.util.HgtProvider2;
 import mg.mgmap.application.util.WayProviderHelper;
-import mg.mgmap.generic.graph.WayAttributs;
 import mg.mgmap.generic.graph.impl2.GGraphTileFactory;
 //import mg.mgmap.generic.graph.impl.GGraphTileFactory;
 import mg.mgmap.generic.graph.impl2.RoutingSummary;
@@ -106,8 +106,8 @@ public class RoutingProfileTest {
             return "invalid";
         }
     }
-    private record TrackResult(double cost, double length, double duration, ArrayList<RoutingSummary> routingSummary){
-        public TrackResult{
+    private record TrackResultValues(double cost, TrackLogStatistic trackLogStatistic, ArrayList<RoutingSummary> routingSummary){
+        public TrackResultValues{
             if (routingSummary!=null)
               routingSummary = new ArrayList<>(routingSummary);
             else
@@ -115,7 +115,95 @@ public class RoutingProfileTest {
         }
     }
 
-    private static class TrackResults extends LinkedHashMap<String,TrackResult>{}
+    private record TrackResultKey( int up, int dn, String upDnClass, String trackType,String pointName, String testName, String implementingClass){
+        @NonNull
+        @Override
+        public String toString() {
+            return String.format("%s_%s_%s_%s_%s_K%1dS%1d",testName,upDnClass,trackType,pointName,implementingClass,up,dn);
+        }
+        public String getGroupName(){
+            return String.format("%s_%s_K%1dS%1d",testName,upDnClass,up,dn);
+        }
+    }
+
+
+    private record TrackResult(TrackResultKey trackResultKey, TrackResultValues trackResultValues ){}
+
+    private static class TrackResults extends TreeMap<TrackResultKey, TrackResultValues> {
+        private static final Comparator<TrackResultKey> FULL_COMPARATOR =
+                Comparator.comparingInt(TrackResultKey::up)
+                        .thenComparingInt(TrackResultKey::dn)
+                        .thenComparing(TrackResultKey::upDnClass)
+                        .thenComparing(TrackResultKey::trackType)
+                        .thenComparing(TrackResultKey::pointName)
+                        .thenComparing(TrackResultKey::testName)
+                        .thenComparing(TrackResultKey::implementingClass)
+;
+        private static final Comparator<TrackResultKey> TESTGROUP_COMPARATOR =
+                Comparator.comparingInt(TrackResultKey::up)
+                        .thenComparingInt(TrackResultKey::dn)
+                        .thenComparing(TrackResultKey::upDnClass)
+                        .thenComparing(TrackResultKey::trackType)
+                        .thenComparing(TrackResultKey::pointName)
+                        .thenComparing(TrackResultKey::testName);
+
+        TrackResults() {
+            super(FULL_COMPARATOR );
+        }
+        static boolean isSameGroup(TrackResultKey a, TrackResultKey b) {
+            return a != null && b != null && TESTGROUP_COMPARATOR.compare(a, b) == 0;
+        }
+
+
+            }
+    private record TrackResultAggrKey(int up, int dn, String upDnClass, String trackType,String pointName, String implementingClass){
+        TrackResultAggrKey(TrackResultKey trackResultKey){
+            this(trackResultKey.up,trackResultKey.dn,trackResultKey.upDnClass,trackResultKey.trackType,trackResultKey.pointName, trackResultKey.implementingClass);
+        }
+        public String groupKeyString(){
+            return String.format("K%1dS%1d %s",up,dn,upDnClass);
+        }
+    }
+    private static class TrackResultAggrVal{
+        private double totalDuration;
+        public void aggr( TrackResultValues trackResultValues){
+            totalDuration = trackResultValues.trackLogStatistic.getDuration() + totalDuration;
+        }
+        @NonNull
+        public String toString(){
+            return String.format("total Duration=%9.3f",totalDuration/1000);
+        }
+    }
+
+    private static class TrackResultsAggr extends TreeMap<TrackResultAggrKey,TrackResultAggrVal>{
+        private static final Comparator<TrackResultAggrKey> FULL_COMPARATOR =
+                Comparator.comparingInt(TrackResultAggrKey::up)
+                        .thenComparingInt(TrackResultAggrKey::dn)
+                        .thenComparing(TrackResultAggrKey::upDnClass)
+                        .thenComparing(TrackResultAggrKey::trackType)
+                        .thenComparing(TrackResultAggrKey::pointName)
+                        .thenComparing(TrackResultAggrKey::implementingClass);
+        private static final Comparator<TrackResultAggrKey> GROUP_COMPARATOR =
+                Comparator.comparingInt(TrackResultAggrKey::up)
+                        .thenComparingInt(TrackResultAggrKey::dn)
+                        .thenComparing(TrackResultAggrKey::upDnClass)
+                        .thenComparing(TrackResultAggrKey::trackType)
+                        .thenComparing(TrackResultAggrKey::pointName);
+        TrackResultsAggr() {
+            super(FULL_COMPARATOR );
+        }
+        static boolean isSameGroup(TrackResultAggrKey a, TrackResultAggrKey b) {
+            return a != null && b != null && GROUP_COMPARATOR.compare(a, b) == 0;
+        }
+
+        public void aggr(TrackResultKey resKey, TrackResultValues resVal){
+            computeIfAbsent( new TrackResultAggrKey(resKey),
+                            k -> new TrackResultAggrVal()
+                    ).aggr(resVal);
+        }
+    }
+
+
 
     private record TestResult(double costRatio, double lengthRatio){}
     private static class TestResults extends LinkedHashMap<String,TestResult>{
@@ -124,7 +212,7 @@ public class RoutingProfileTest {
             super(ref.size());
 
             ref.entrySet().stream()
-                    .sorted(Map.Entry.comparingByValue(cmp))
+                    .sorted(Entry.comparingByValue(cmp))
                     .forEach(e -> put(e.getKey(), e.getValue()));
         }
 
@@ -140,7 +228,7 @@ public class RoutingProfileTest {
     private static class Tests extends LinkedHashMap<String,TestDef>{
         public Tests(Tests ref, String filter){
             for (String key : ref.keySet()){
-                if (key.contains(filter))
+                if (filter==null || key.contains(filter))
                     this.put(key,ref.get(key));
             }
         }
@@ -154,7 +242,8 @@ public class RoutingProfileTest {
     @Test
     public void _01_routing()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-//        MGLog.setUnittest(true);
+        String testFilter = null;// "Darkstone2SchwabenwegBeiHütte_MTB_K3S3";
+        if (testFilter!=null)  MGLog.setUnittest(true);
         mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 
 
@@ -169,75 +258,90 @@ public class RoutingProfileTest {
 
         MapDataStore mds = new MapFile(mapFile, "de");
         WayProvider wayProvider = new WayProviderHelper(mds);
-        GGraphTileFactory gGraphTileFactory = new mg.mgmap.generic.graph.impl2.GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
+        GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
 
 
         RoutingProfile mtb_k1s1 =  new MTB_K1S1_2F();
         RoutingProfile mtb_k2s2 =  new MTB_K2S2_2F(); //
         RoutingProfile mtb_k3s3 =  new MTB_K3S3_2F();
         Tests tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
-//        tests = new Tests(tests,"nix");
-        TrackResults oldProfTrackResults = new TrackResults();
+        if (testFilter!=null) tests = new Tests(tests,"nix");
+        TrackResults trackResults = new TrackResults();
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
             TestDef testDef = entry.getValue();
             TrackResult trackResult = executeSingle(testDef,PointType.on_rt,-1,gGraphTileFactory);
-            oldProfTrackResults.put(entry.getKey(),trackResult);
+            trackResults.put(trackResult.trackResultKey,trackResult.trackResultValues);
         }
 
         mtb_k1s1 =  new MTB_K1S1();
         mtb_k2s2 =  new MTB_K2S2(); //
         mtb_k3s3 =  new MTB_K3S3();
         tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
-//        tests = new Tests(tests,"nix");
-        TrackResults currProfTrackResults = new TrackResults();
+        if (testFilter!=null) tests = new Tests(tests,"nix");
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
             TestDef testDef = entry.getValue();
             TrackResult trackResult = executeSingle(testDef,PointType.on_rt,-1,gGraphTileFactory);
-            currProfTrackResults.put(entry.getKey(),trackResult);
+            trackResults.put(trackResult.trackResultKey,trackResult.trackResultValues);
         }
 
-//        SplineProfileTestContextMTB.testProfile=false;
+        SplineProfileTestContextMTB.testProfile=true;
         mtb_k1s1 =  new xMTBProf(100,100);//new MTB_K1S1();
         mtb_k2s2 =  new xMTBProf(200,200);//new MTB_K2S2(); //
         mtb_k3s3 =  new xMTBProf(300,300);//new MTB_K3S3();//
+
         tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
 
-//        tests = new Tests(tests,"Falknerei2Rodelweg1Trailkreuzung");
+        tests = new Tests(tests,testFilter);
         TestResults testResults = new TestResults();
         TestResults offRouteTestResults = new TestResults();
 
-        TrackResults newProfTrackResults = new TrackResults();
+
 //      Execute Tests
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
             TestDef testDef = entry.getValue();
             TestResultDetails testResult = excuteTest(testDef,gGraphTileFactory);
-            newProfTrackResults.put(entry.getKey(),testResult.allPointsOnRouteResult);
+            trackResults.put(testResult.allPointsOnRouteResult.trackResultKey,testResult.allPointsOnRouteResult.trackResultValues);
             testResults.put(entry.getKey(),testResult.testResult);
             offRouteTestResults.putAll(testResult.offRouteTestResults);
         }
 
 
-        for ( Map.Entry<String,TrackResult> entry : newProfTrackResults.entrySet() ){
-            TrackResult newRes = entry.getValue();
-            String key = entry.getKey();
-            TrackResult oldRes = oldProfTrackResults.get(key);
-            TrackResult currRes = currProfTrackResults.get(key);
-            if (oldRes != null || currRes != null) {
-                StringBuilder msgText = new StringBuilder(String.format("%-60s newProfDur=%4d",key,(int) newRes.duration/1000));
-                if (oldRes!=null){
-                    double n2oRatio = newRes.length/oldRes.length;
-                    double logN2ORatio = n2oRatio == 1d ? -16 : Math.log10(Math.abs(n2oRatio-1));
-                    msgText.append(String.format(" oldProfDur=%4d logLengthRatio=%3.0f",(int) oldRes.duration/1000,logN2ORatio ));
-                }
-                if (currRes!=null){
-                    double n2cRatio = newRes.length/currRes.length;
-                    double logN2CRatio = n2cRatio == 1d ? -16 : Math.log10(Math.abs(n2cRatio-1));
-                    msgText.append(String.format(" curProfDur=%4d logLengthRatio=%3.0f",(int) currRes.duration/1000,logN2CRatio ));
-                }
-                System.out.println(msgText);
+        TrackResultKey previouskey = null;
+        TrackResultsAggr trackResultsAggr = new TrackResultsAggr();
+        double reflength = 0;
+        StringBuilder output = new StringBuilder();
+        for ( Map.Entry<TrackResultKey,TrackResultValues> entry : trackResults.entrySet() ){
+            TrackResultValues trackResultValues = entry.getValue();
+            TrackLogStatistic trackLogStatistic = trackResultValues.trackLogStatistic;
+            TrackResultKey key = entry.getKey();
+            if (!TrackResults.isSameGroup(previouskey,key)) {
+                previouskey = key;
+                if (output !=null) System.out.println(output);
+                output = new StringBuilder(String.format("%-60s Prof_%s_Dur=%9.3f",key.getGroupName(), key.implementingClass, trackLogStatistic.getDuration() /1000f));
+                reflength = trackLogStatistic.getTotalLength();
+            } else {
+                double n2cRatio = trackLogStatistic.getTotalLength() / reflength;
+                double logN2RRatio = n2cRatio == 1d ? -16 : Math.log10(Math.abs(n2cRatio - 1));
+                output.append(String.format(" Prof_%s_Dur=%9.3f logLengthRatio=%3.0f", key.implementingClass,  trackLogStatistic.getDuration() / 1000f, logN2RRatio));
+            }
+            trackResultsAggr.aggr(key,trackResultValues);
+        }
+        System.out.println(output);
+
+        output = null;
+        TrackResultAggrKey previousaggrkey = null;
+        for ( Map.Entry<TrackResultAggrKey,TrackResultAggrVal> entry : trackResultsAggr.entrySet()){
+            TrackResultAggrKey key = entry.getKey();
+            TrackResultAggrVal val = entry.getValue();
+            if (!TrackResultsAggr.isSameGroup(previousaggrkey,key)) {
+                if (output !=null) System.out.println(output);
+                previousaggrkey = key;
+                output = new StringBuilder(String.format("%-20s %s %s", key.groupKeyString(), key.implementingClass(),val));
+            } else {
+                output.append(String.format("    %s  %s", key.implementingClass(),  val));
             }
         }
-
+        System.out.println(output);
 
 
         testResults = new TestResults(testResults,Comparator.comparing(TestResult::costRatio));
@@ -254,7 +358,7 @@ public class RoutingProfileTest {
             int logLengthR = offRTR.lengthRatio == 1.0 ? -16 : (int) Math.log10(offRTR.lengthRatio - 1);
             boolean isOptRoute = logLengthR<=-3;
             if (isOptRoute) cntOptRoute ++;
-            System.out.println(String.format("Cost Ratio=%1.10f %sOptRoute(%3d) for: %s",offRTR.costRatio, (isOptRoute?"is" : "no"), logLengthR , entry.getKey()));
+            System.out.printf("Cost Ratio=%1.10f %sOptRoute(%3d) for: %s%n",offRTR.costRatio, (isOptRoute?"is" : "no"), logLengthR , entry.getKey());
 
             totalOffCostRatio += offRTR.costRatio;
             weigthtedCostRatio += getWeight(offRTR.costRatio);
@@ -275,7 +379,7 @@ public class RoutingProfileTest {
             int logCostR = testResult.costRatio == 1.0 ? -16 : (int) Math.log10(Math.abs(testResult.costRatio - 1));
             boolean isOptRoute = logLengthR<=-4 || logLengthR <=-3 && logCostR <=-4;
             if (!isOptRoute) cntNotOptRoute ++;
-            System.out.println(String.format("Cost Ratio=%1.10f %sOptRoute(%3d) for: %s",testResult.costRatio, (isOptRoute?"is" : "no"), logLengthR , entry.getKey()));
+            System.out.printf("Cost Ratio=%1.10f %sOptRoute(%3d) for: %s%n",testResult.costRatio, (isOptRoute?"is" : "no"), logLengthR , entry.getKey());
             totalCostRatio += testResult.costRatio;
             weigthtedCostRatio += getWeight(testResult.costRatio);
             cntOn++;
@@ -313,8 +417,8 @@ public class RoutingProfileTest {
         TrackResult opt_cost = executeSingle(testDef,PointType.start,0,routingEngine);
 //        printSlopes(opt_cost.routingSummary);
 
-        double ref2opt = ref_cost.cost / opt_cost.cost;
-        double lengthRatio =  ref_cost.length / opt_cost.length;
+        double ref2opt = ref_cost.trackResultValues.cost / opt_cost.trackResultValues.cost;
+        double lengthRatio =  ref_cost.trackResultValues.trackLogStatistic.getTotalLength() / opt_cost.trackResultValues.trackLogStatistic.getTotalLength();
         mgLog.d("Ref2OptCosts: " + ref2opt);
         TestResultDetails testResult = new  TestResultDetails(new TestResult(ref2opt,lengthRatio),ref_cost);
 
@@ -331,8 +435,8 @@ public class RoutingProfileTest {
 
         while (++pointNumber <= rt_offCnt ) {
             TrackResult off_cost = executeSingle(testDef,PointType.off_rt,pointNumber,routingEngine);
-            double ref2off = ref_cost.cost / off_cost.cost;
-            lengthRatio = off_cost.length / opt_cost.length ;
+            double ref2off = ref_cost.trackResultValues.cost / off_cost.trackResultValues.cost;
+            lengthRatio = off_cost.trackResultValues.trackLogStatistic.getTotalLength() / opt_cost.trackResultValues.trackLogStatistic.getTotalLength() ;
             testResult.offRouteTestResults.put(testDef.getId() + "_" + testDef.getPointName(PointType.off_rt,pointNumber),new TestResult(ref2off,lengthRatio));
             mgLog.d("Ref2OffCosts: " + ref2off);
         }
@@ -341,45 +445,47 @@ public class RoutingProfileTest {
 
     private TrackResult executeSingle(TestDef testDef, PointType pointType, int pointNumber, RoutingEngine routingEngine) {
         StringBuilder testName = new StringBuilder(testDef.name);
+        String trackType = "";
         if (pointType == PointType.start )
-            testName.append("StartStop");
+            trackType="StartStop";
         else if ( pointType == PointType.on_rt && pointNumber < 0 )
-            testName.append("AllPointsOnRoute");
+            trackType="AllPointsOnRoute";
         else if ( pointType == PointType.off_rt && pointNumber < 0 )
-            testName.append("AllPointsOffRoute");
+            trackType="AllPointsOffRoute";
         else if ( pointType == PointType.on_rt && pointNumber > 0 )
-            testName.append("OnRoute");
+            trackType="OnRoute";
         else if ( pointType == PointType.off_rt && pointNumber > 0 )
-            testName.append("OffRoute");
+            trackType="OffRoute";
 
         long timestamp = 1L;
         WriteableTrackLog mtlb = new WriteableTrackLog("test_mtlb");
 
-        {
-            int pointCnt = 0;
-            PointDef point;
-            for (Map.Entry<String, PointDef> pointEntry : testDef.points.entrySet()) {
-                point = pointEntry.getValue();
-                if (point != null)
-                    if (point.pointType == PointType.start) {
-                        mtlb.startTrack(timestamp+=10);
-                        mtlb.startSegment(timestamp+=10);
+
+        int pointCnt = 0;
+        PointDef point;
+        String pointName ="";
+        for (Map.Entry<String, PointDef> pointEntry : testDef.points.entrySet()) {
+            point = pointEntry.getValue();
+            if (point != null)
+                if (point.pointType == PointType.start) {
+                    mtlb.startTrack(timestamp+=10);
+                    mtlb.startSegment(timestamp+=10);
+                    mtlb.addPoint(point.pointModelImpl);
+                } else if (point.pointType == PointType.stop) {
+                    mtlb.addPoint(point.pointModelImpl);
+                    mtlb.stopSegment(timestamp+=10);
+                    mtlb.stopTrack(timestamp+=10);
+                } else if (point.pointType == pointType) {
+                    pointCnt++;
+                    if (pointNumber < 0 || (pointNumber > 0 && pointNumber == pointCnt)) {
                         mtlb.addPoint(point.pointModelImpl);
-                    } else if (point.pointType == PointType.stop) {
-                        mtlb.addPoint(point.pointModelImpl);
-                        mtlb.stopSegment(timestamp+=10);
-                        mtlb.stopTrack(timestamp+=10);
-                    } else if (point.pointType == pointType) {
-                        pointCnt++;
-                        if (pointNumber < 0 || (pointNumber > 0 && pointNumber == pointCnt)) {
-                            mtlb.addPoint(point.pointModelImpl);
-                            if (pointNumber > 0 )
-                                testName.append(pointEntry.getKey());
-                        }
+                        if (pointNumber > 0 )
+                            pointName = pointEntry.getKey();
                     }
-            }
+                }
         }
 
+        testName.append(pointName);
         testName.append(routingEngine.routingProfile.getId());
 
 
@@ -393,18 +499,40 @@ public class RoutingProfileTest {
         }
 
         TrackLogStatistic trackStatisic = rotl.getTrackStatistic();
-        mgLog.d("\r"+testName + ": " + cost);
-        mgLog.d(trackStatisic.toString());
 
+        String upDnClass;
+        if ( trackStatisic.getGain()/ trackStatisic.getTotalLength() < 0.03 && trackStatisic.getLoss()/ trackStatisic.getTotalLength() < 0.03 ){
+            upDnClass = "--";
+        } else
+            upDnClass = ( trackStatisic.getGain() > trackStatisic.getLoss() ) ?  "up" :  "dn";
+
+        String profileID = testDef.profile.getId();
+        String implemented;
+        String    up="0";
+        String    dn="0";
+        if (profileID.regionMatches(3,"MTB",0,3)){
+            implemented = profileID.substring(0,6);
+            up          = profileID.substring(8,9);
+            dn          = profileID.substring(10,11);
+        } else {
+            implemented = profileID;
+        }
+//        TrackResultValues trackResult = new TrackResultValues(cost, trackStatisic, RoutingSummary.routingSummaries);
+        TrackResult trackResult = new TrackResult(
+                new TrackResultKey(Integer.parseInt(up),Integer.parseInt(dn),upDnClass,trackType,pointName, testDef.name, implemented),
+                new TrackResultValues(cost, trackStatisic, RoutingSummary.routingSummaries) );
+
+        String testname = trackResult.trackResultKey.toString();
+
+        mgLog.d("\r"+testname + ": " + cost);
+        mgLog.d(trackStatisic.toString());
         for (RoutingSummary routingSummary : RoutingSummary.routingSummaries){
             mgLog.d(routingSummary);
         }
 
-        TrackResult trackResult = new TrackResult(cost, trackStatisic.getTotalLength(), trackStatisic.getDuration(), RoutingSummary.routingSummaries);
-
         RoutingSummary.routingSummaries.clear();
 
-        String fileName = "src/test/assets/temp_local/" + testName  + ".gpx";
+        String fileName = "src/test/assets/temp_local/" + testname  + ".gpx";
         File gpxFile = new File(fileName);
         try {
             GpxExporter.export(new PrintWriter(gpxFile), rotl);
@@ -455,6 +583,9 @@ public class RoutingProfileTest {
         points.put("3Eichen", new PointDef( PointType.stop,new PointModelImpl(49.379322, 8.723820)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.remove("3Eichen");
@@ -469,11 +600,17 @@ public class RoutingProfileTest {
         points.put("Anfang00untKiefernWald", new PointDef( PointType.stop,new PointModelImpl(49.372128, 8.742574)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef("Bärenbr3Eichen3_11Pf",mtb_k2s2);
         points = testDef.points;
         points.put("WeisserSteinschlagUnten", new PointDef( PointType.start,new PointModelImpl(49.373600, 8.736291)));
         points.put("kurzer11Pf", new PointDef( PointType.on_rt, new PointModelImpl(49.373679, 8.736045)));
         points.put("WeisserSteinschlagOben", new PointDef( PointType.stop,new PointModelImpl(49.373710, 8.735737)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
 
@@ -491,6 +628,9 @@ public class RoutingProfileTest {
         points.put("Vulpius", new PointDef( PointType.stop,new PointModelImpl(49.400871, 8.727354)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.remove("3Seg0");
@@ -499,19 +639,25 @@ public class RoutingProfileTest {
         points.replace("RoteSuhlWeg",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef("FalkFlowUpSeg3",mtb_k2s2);
+        testDef = new TestDef("FalkFlowUpSeg3",mtb_k3s3);
         points = testDef.points;
         points.put("unter1Seg", new PointDef( PointType.start,new PointModelImpl(49.409164, 8.729769)));
-        points.put("up2Track", new PointDef( PointType.on_rt, new PointModelImpl(49.408569, 8.728617)));
-        points.put("Verbindungsw", null);
-        points.put("up2Path", new PointDef( PointType.off_rt, new PointModelImpl(49.408019, 8.729566)));
+        points.put("up2Track", new PointDef( PointType.off_rt, new PointModelImpl(49.408569, 8.728617)));
+        points.put("Verbindungsw", new PointDef( PointType.off_rt, new PointModelImpl(49.408763, 8.726771)));
+        points.put("up2Path", new PointDef( PointType.on_rt, new PointModelImpl(49.408019, 8.729566)));
         points.put("ueber1Seg", new PointDef( PointType.stop,new PointModelImpl(49.406211, 8.729933)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("up2Track",PointType.on_rt);
+        points.replace("up2Path",PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.remove("up2Track");
-        points.replace("Verbindungsw", new PointDef( PointType.on_rt, new PointModelImpl(49.408763, 8.726771)));
+        points.replace("Verbindungsw", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("Riesenstein2Rondell",mtb_k2s2);
@@ -520,6 +666,9 @@ public class RoutingProfileTest {
         points.put("2Seg1rechts", new PointDef( PointType.on_rt, new PointModelImpl(49.406325, 8.699979)));
         points.put("2Seg1geradeaus", new PointDef( PointType.off_rt, new PointModelImpl(49.406741, 8.702646)));
         points.put("ueberRondellunten", new PointDef( PointType.stop,new PointModelImpl(49.405756, 8.700372)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
@@ -543,6 +692,9 @@ public class RoutingProfileTest {
         points.replace("KohlhöferSteige", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef("obSteigerweg2Sprunghöhe",mtb_k1s1);
         points = testDef.points;
         points.put("obSteigerweg", new PointDef( PointType.start,new PointModelImpl(49.396727, 8.698018)));
@@ -557,6 +709,8 @@ public class RoutingProfileTest {
         points.replace("KreuzungJohannesHoops", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("Birkenbank2Gaisberg",mtb_k1s1);
         points = testDef.points;
@@ -572,6 +726,9 @@ public class RoutingProfileTest {
         points.replace("Geschützstellung", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef("WasserspeicherJohannesHoops2Birkenbank",mtb_k1s1);
         points = testDef.points;
         points.put("Wasserspeicher", new PointDef( PointType.start,new PointModelImpl(49.405633, 8.707340)));
@@ -580,6 +737,14 @@ public class RoutingProfileTest {
         points.put("Birkenbank", new PointDef( PointType.stop,new PointModelImpl(49.405930, 8.704055)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("1Pf11Kreuz", PointType.on_rt);
+        points.replace("ueberRondell", PointType.off_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("Blockhütte2KSPlattform",mtb_k1s1);
         points = testDef.points;
@@ -602,6 +767,9 @@ public class RoutingProfileTest {
         testDef = new TestDef(testDef,mtb_k2s2);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef("OdenwälderHütte2KrStephanswZollstockw",mtb_k1s1);
         points = testDef.points;
         points.put("OdenwälderHütte", new PointDef( PointType.start,new PointModelImpl(49.419911, 8.710987)));
@@ -614,6 +782,9 @@ public class RoutingProfileTest {
         points = testDef.points;
         points.replace("AusichtsturmwSL2", PointType.off_rt);
         points.replace("Zollstockweg1", PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("OdenwälderHütte2Schlossblick",mtb_k1s1);
@@ -634,7 +805,8 @@ public class RoutingProfileTest {
         points.replace("ZollstockwegOben11",  PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
-
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("BoxbergForstQuelle2MiErlensumpfweg",mtb_k1s1);
         points = testDef.points;
@@ -644,8 +816,12 @@ public class RoutingProfileTest {
         points.put("MiErlensumpfweg", new PointDef( PointType.stop,new PointModelImpl(49.380649, 8.707409)));
         tests.put(testDef.getId(),testDef);
 
-//        testDef = new TestDef(testDef,mtb_k2s2);
-//        tests.put(testDef.getId(),testDef);
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
 
         testDef = new TestDef("KühlerGrundBrückeRohrbach2PfadAmHangKurveHoch12",mtb_k1s1);
         points = testDef.points;
@@ -682,7 +858,9 @@ public class RoutingProfileTest {
         points = testDef.points;
         points.put("Blockhütte", new PointDef( PointType.start,new PointModelImpl(49.401235, 8.713260)));
         points.put("AbzweigRodelweg", new PointDef( PointType.on_rt,new PointModelImpl(49.407584, 8.728162)));
+    //    points.put("KönigsforsterHohleP1",new PointDef( PointType.off_rt,new PointModelImpl(49.400524, 8.723204)));
         points.put("AbzweigKSweg", new PointDef( PointType.off_rt, new PointModelImpl(49.401889, 8.724593)));
+        points.put("KönigsforsterHohleP2",new PointDef( PointType.off_rt,new PointModelImpl(49.401448, 8.725744)));
         points.put("VulpiusHütte", new PointDef( PointType.off_rt,new PointModelImpl(49.400834, 8.727354)));
         points.put("Falknerei", new PointDef( PointType.stop,new PointModelImpl(49.403808, 8.728194)));
         tests.put(testDef.getId(),testDef);
@@ -693,6 +871,32 @@ public class RoutingProfileTest {
         points.replace("AbzweigKSweg", PointType.on_rt);
         points.replace("VulpiusHütte", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        points = testDef.points;
+        points.replace("VulpiusHütte", PointType.off_rt);
+        points.replace("AbzweigKSweg", PointType.off_rt);
+    //    points.replace("KönigsforsterHohleP1", PointType.on_rt);
+        points.replace("KönigsforsterHohleP2", PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("Kriegsweg2KreuzungKSwegKönigsforsterHohle",mtb_k3s3);
+        points = testDef.points;
+        points.put("AbzweigZurKönigsforsterHohleVomKriegsweg", new PointDef( PointType.start,new PointModelImpl(49.400603, 8.722113)));
+        points.put("AbzweigKSweg", new PointDef( PointType.off_rt, new PointModelImpl(49.401889, 8.724593)));
+        points.put("KönigsforsterHohleP1",new PointDef( PointType.on_rt,new PointModelImpl(49.400524, 8.723204)));
+    //    points.put("KönigsforsterHohleP1",new PointDef( PointType.on_rt,new PointModelImpl(49.400408, 8.721848)));
+        points.put("KreuzungKSwegKönigsforsterHohle", new PointDef( PointType.stop,new PointModelImpl(49.400849, 8.724528)));
+        tests.put(testDef.getId(),testDef);
+
+/*        testDef = new TestDef("Kriegsweg2KönigsforsterHohle",mtb_k3s3);
+        points = testDef.points;
+        points.put("AbzweigZurKönigsforsterHohleVomKriegsweg", new PointDef( PointType.start,new PointModelImpl(49.400603, 8.722113)));
+        points.put("AbzweigKSweg", new PointDef( PointType.off_rt, new PointModelImpl(49.401889, 8.724593)));
+        points.put("KönigsforsterHohleP1",new PointDef( PointType.on_rt,new PointModelImpl(49.400524, 8.723204)));
+//        points.put("KönigsforsterHohleP1",new PointDef( PointType.stop,new PointModelImpl(49.400569, 8.722126)));
+        tests.put(testDef.getId(),testDef);*/
+
 
         testDef = new TestDef("Hochstr2HeiligenBergKlost",mtb_k1s1);
         points = testDef.points;
@@ -708,6 +912,9 @@ public class RoutingProfileTest {
         points.replace("ObererBitterbrunnenweg", PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
 
         testDef = new TestDef("Steigerweg2SteigerwegAmPfadvorbei",mtb_k1s1);
         points = testDef.points;
@@ -718,6 +925,14 @@ public class RoutingProfileTest {
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        points = testDef.points;
+        points.replace("SteigerwegSerpentine",PointType.off_rt);
+        points.replace("Pfad23",PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("SteubenStr2TheodorHeussBruecke",mtb_k1s1);
@@ -733,6 +948,8 @@ public class RoutingProfileTest {
         testDef = new TestDef(testDef,mtb_k2s2);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("UnterHampen2DreiEichen",mtb_k1s1);
         points = testDef.points;
@@ -744,7 +961,7 @@ public class RoutingProfileTest {
         points.put("GabeleichwegSpitzkehre", new PointDef( PointType.off_rt,new PointModelImpl(49.382216, 8.717772)));
     //    points.put("DreiEichenPfadSeg1_31", new PointDef( PointType.off_rt,new PointModelImpl(49.379447, 8.717306)));
     //    points.put("RechtsVonDreiEichenPfadSeg1_31", new PointDef( PointType.off_rt,new PointModelImpl(49.379323, 8.717168)));
-        points.put("DreiEichenPfadSeg1_21", new PointDef( PointType.off_rt,new PointModelImpl(49.379326, 8.717155)));
+        points.put("DreiEichenPfadSeg1_21", new PointDef( PointType.off_rt,new PointModelImpl(49.379401, 8.717521)));
         points.put("DreiEichenPfadSeg2_21", new PointDef( PointType.off_rt,new PointModelImpl(49.379824, 8.719031)));
         points.put("DreiEichenPfadSeg3_21", new PointDef( PointType.off_rt,new PointModelImpl(49.380187, 8.720865)));
         points.put("DreiEichen", new PointDef( PointType.stop,new PointModelImpl(49.379856, 8.722989)));
@@ -760,6 +977,12 @@ public class RoutingProfileTest {
         points.replace("HangwegTeil1", PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        points = testDef.points;
+        points.replace("DreiEichenPfadSeg1_21", PointType.on_rt);
+        points.replace("HangwegTeil1", PointType.off_rt);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef("UnterHampen2DreiEichenPfadSeg1_21",mtb_k2s2);
         points = testDef.points;
         points.put("AlterSteinbruchSchlagweg", new PointDef( PointType.start,new PointModelImpl(49.379343, 8.716802)));
@@ -768,8 +991,13 @@ public class RoutingProfileTest {
         points.put("DreiEichenPfadSeg1_21", new PointDef( PointType.stop,new PointModelImpl(49.379392, 8.717485)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         tests.put(testDef.getId(),testDef);
+
+
 
         testDef = new TestDef("DarkStoneEtappe0Up",mtb_k1s1);
         points = testDef.points;
@@ -792,6 +1020,9 @@ public class RoutingProfileTest {
         points.put("AbzweigAufStrasse", new PointDef( PointType.stop,new PointModelImpl(49.406560, 8.713886)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.replace("Pf1letzteKurve",PointType.off_rt);
@@ -809,6 +1040,9 @@ public class RoutingProfileTest {
         points.put("PhiloswegAmEndeDesPart1", new PointDef( PointType.stop,new PointModelImpl(49.422069, 8.714820)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.replace("Engelswiesenweg12Part1",PointType.off_rt);
@@ -823,6 +1057,9 @@ public class RoutingProfileTest {
         points.put("Webersbrunnenweg1", new PointDef( PointType.off_rt,new PointModelImpl(49.421337, 8.718462)));
         points.put("Moltkehütte", new PointDef( PointType.off_rt,new PointModelImpl(49.421518, 8.721593)));
         points.put("KühruheKreuzung", new PointDef( PointType.stop,new PointModelImpl(49.422300, 8.718283)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
@@ -850,6 +1087,9 @@ public class RoutingProfileTest {
         points.put("ObererDarmutswegPart2", new PointDef( PointType.on_rt,new PointModelImpl(49.453802, 8.721095)));
         points.put("EinfacherGeraderTrailzuWeissenSt_01", new PointDef( PointType.off_rt,new PointModelImpl(49.453426, 8.718033)));
         points.put("WeisserSteinTurmBank", new PointDef( PointType.stop,new PointModelImpl(49.453064, 8.723055)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
@@ -891,6 +1131,7 @@ public class RoutingProfileTest {
         points.put("KreuzungBlockhausweg", new PointDef( PointType.on_rt,new PointModelImpl(49.406216, 8.729923)));
         points.put("KreuzungBlockhauswegRodelweg", new PointDef( PointType.off_rt,new PointModelImpl(49.407562, 8.728199)));
         points.put("RodelwegUntererTeil", new PointDef( PointType.off_rt,new PointModelImpl(49.408048, 8.728302)));
+        points.put("HakaKakaAbBlockhausweg",new PointDef( PointType.off_rt,new PointModelImpl(49.408470, 8.727858)) );
         points.put("Trail25eingangBismarkhöhenweg", new PointDef( PointType.stop,new PointModelImpl(49.409790, 8.728947)));
         tests.put(testDef.getId(),testDef);
 
@@ -898,7 +1139,8 @@ public class RoutingProfileTest {
         points = testDef.points;
         points.replace("KreuzungBlockhausweg",PointType.off_rt);
         points.replace("KreuzungBlockhauswegRodelweg",PointType.on_rt);
-        points.replace("RodelwegUntererTeil",PointType.on_rt);
+        points.replace("HakaKakaAbBlockhausweg",PointType.on_rt);
+        points.replace("RodelwegUntererTeil",PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("Falknerei2Bismarkhöhenweg",mtb_k3s3);
@@ -922,6 +1164,9 @@ public class RoutingProfileTest {
         points.put("Leopoldstein", new PointDef( PointType.stop,new PointModelImpl(49.391975, 8.722021)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         tests.put(testDef.getId(),testDef);
 
@@ -939,31 +1184,32 @@ public class RoutingProfileTest {
         points.replace("SchneiderscherenTrail",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef("UntermHampen2SteilrunterAbKreuzung",mtb_k2s2);
+        testDef = new TestDef("UntermHampen2SteilrunterAbKreuzung",mtb_k3s3);
         points = testDef.points;
         points.put("KreuzungUntermHampenVorTrail11Eingang", new PointDef( PointType.start,new PointModelImpl(49.379328, 8.716803)));
-        points.put("Trail35NachKreuzungNeuerSternbruchschlagweg", new PointDef( PointType.off_rt,new PointModelImpl(49.380794, 8.714995)));
+        points.put("Trail35NachKreuzungNeuerSternbruchschlagweg", new PointDef( PointType.on_rt,new PointModelImpl(49.380794, 8.714995)));
         points.put("Trail01GewannlinieEingang", new PointDef( PointType.off_rt,new PointModelImpl(49.385957, 8.712795)));
-        points.put("Trail11endeVorLützelbrunnenweg", new PointDef( PointType.on_rt,new PointModelImpl(49.375643, 8.710657)));
+        points.put("Trail11endeVorLützelbrunnenweg", new PointDef( PointType.off_rt,new PointModelImpl(49.375643, 8.710657)));
         points.put("Trail35ausgangNäheBergmannslochquelle", new PointDef( PointType.stop,new PointModelImpl(49.380796, 8.712766)));
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef(testDef,mtb_k1s1);
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("Trail11endeVorLützelbrunnenweg",PointType.on_rt);
+        points.replace("Trail35NachKreuzungNeuerSternbruchschlagweg",PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef(testDef,"UntermHampen2SteilrunterAbTrail35eingang",mtb_k2s2);
+/*        testDef = new TestDef(testDef,mtb_k1s1);
+        tests.put(testDef.getId(),testDef);*/
+
+        testDef = new TestDef(testDef,"UntermHampen2SteilRunterAbTrail35eingang",mtb_k1s1);
         points = testDef.points;
         points.remove("KreuzungUntermHampenVorTrail11Eingang");
         points.addNewStart("Traileingang35",new PointDef( PointType.start,new PointModelImpl(49.379846, 8.717033)) );
         points.replace("Trail11endeVorLützelbrunnenweg",PointType.off_rt);
-        points.replace("Trail35NachKreuzungNeuerSternbruchschlagweg",PointType.on_rt);
-        tests.put(testDef.getId(),testDef);
-
-        testDef = new TestDef(testDef,mtb_k1s1);
-        points = testDef.points;
-        points.replace("Trail35NachKreuzungNeuerSternbruchschlagweg",PointType.off_rt);
         points.replace("Trail01GewannlinieEingang",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
+
 
 
         testDef = new TestDef("DurchDenErlensumpf",mtb_k2s2);
@@ -972,6 +1218,9 @@ public class RoutingProfileTest {
         points.put("Trail2UntererErlensumpfweg", new PointDef( PointType.on_rt,new PointModelImpl(49.381103, 8.709465)));
         points.put("KreuzungKatzensteigRebmanspfad", new PointDef( PointType.off_rt,new PointModelImpl(49.382415, 8.708809)));
         points.put("Trail2ausgangAufRebmnannspfad", new PointDef( PointType.stop,new PointModelImpl(49.381370, 8.708344)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
@@ -988,6 +1237,9 @@ public class RoutingProfileTest {
         points.put("KreuzungSchwippschwappUntererNistlerweg", new PointDef( PointType.on_rt,new PointModelImpl(49.441648, 8.692963)));
         points.put("Trail0EingangVomSchrägerWegZumHellenbachbrunnen", new PointDef( PointType.off_rt,new PointModelImpl(49.441478, 8.701421)));
         points.put("Trail2ausgangAufHellebachtalweg", new PointDef( PointType.stop,new PointModelImpl(49.440915, 8.692267)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
@@ -1009,6 +1261,9 @@ public class RoutingProfileTest {
         testDef = new TestDef(testDef,mtb_k1s1);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef("HeiligenbergTrailAbFuchsrondell",mtb_k3s3);
         points = testDef.points;
         points.put("Trail25EingangAbBismarksäulenweg", new PointDef( PointType.start,new PointModelImpl(49.453224, 8.722876)));
@@ -1022,6 +1277,114 @@ public class RoutingProfileTest {
         points.replace("VorKreuzungMitBismarksäulenweg",PointType.off_rt);
         points.replace("Trail01EingangbeiMönchsberghütte",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("HakkaKakkaDue(links steil)",mtb_k2s2);
+        points = testDef.points;
+        points.put("VorAbzweigAufLinkenTrail3", new PointDef( PointType.start,new PointModelImpl(49.404957, 8.728335)));
+        points.put("UntereKreuzungTrail2ObSchlosshangweg", new PointDef( PointType.on_rt,new PointModelImpl(49.407229, 8.727651)));
+        points.put("ObereKreuzungTrail3ObSchlosshangweg", new PointDef( PointType.off_rt,new PointModelImpl(49.405849, 8.726312)));
+        points.put("Trail3LinksAusgangBlockhausweg", new PointDef( PointType.stop,new PointModelImpl(49.406513, 8.725379)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        points = testDef.points;
+        points.replace("UntereKreuzungTrail2ObSchlosshangweg",PointType.off_rt);
+        points.replace("ObereKreuzungTrail3ObSchlosshangweg",PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("RocknRollLowerletztesSeg2UntSnktNikolauswegKurve",mtb_k3s3);
+        points = testDef.points;
+        points.put("KreuzungTrail12mitRocknRollLower", new PointDef( PointType.start,new PointModelImpl(49.390982, 8.713487)));
+        points.put("mittenImRocknRoller", new PointDef( PointType.on_rt,new PointModelImpl(49.390816, 8.713254)));
+        points.put("KreuzungTr12Gutselbankwweg", new PointDef( PointType.off_rt,new PointModelImpl(49.392125, 8.712285)));
+        points.put("RocknRollAusgangGutselbankweg", new PointDef( PointType.stop,new PointModelImpl(49.390878, 8.712198)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("mittenImRocknRoller",PointType.off_rt);
+        points.replace("KreuzungTr12Gutselbankwweg",PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("RocknRollAbLeopoldBisNikolaustrail00",mtb_k2s2);
+        points = testDef.points;
+        points.put("AbzweigZumRocknRollLower", new PointDef( PointType.start,new PointModelImpl(49.391304, 8.720920)));
+        points.put("KurveTrail23nachSchneiderschere", new PointDef( PointType.on_rt,new PointModelImpl(49.386050, 8.718701)));
+        points.put("RocknRoll2Seg", new PointDef( PointType.off_rt,new PointModelImpl(49.391298, 8.716664)));
+        points.put("AufNikolaustrailZwischenAusgangRocknRollUndTrailSchneiderschere", new PointDef( PointType.stop,new PointModelImpl(49.390060, 8.715939)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        points = testDef.points;
+        points.replace("KurveTrail23nachSchneiderschere",PointType.off_rt);
+        points.replace("RocknRoll2Seg",PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("Dossenheim2Handschuhsheim",mtb_k2s2);
+        points = testDef.points;
+        points.put("EingangInsFeldBeiChilli", new PointDef( PointType.start,new PointModelImpl(49.445735, 8.677127)));
+        points.put("ErsteKurve", new PointDef( PointType.on_rt,new PointModelImpl(49.442731, 8.678377)));
+        points.put("KreuzungHöllenbachweg", new PointDef( PointType.on_rt,new PointModelImpl(49.438463, 8.680897)));
+        points.put("DossenheimerLandStr", new PointDef( PointType.off_rt,new PointModelImpl(49.441184, 8.677819)));
+        points.put("KrezungZumSteinberg", new PointDef( PointType.stop,new PointModelImpl(49.434137, 8.683404)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k1s1);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
+/*        testDef = new TestDef("HebertTrailAbKreuzungPipelinePfad2Strasse",mtb_k2s2);
+        points = testDef.points;
+        points.put("KreuzungPipelinePfad", new PointDef( PointType.start,new PointModelImpl(49.443190, 8.968595)));
+        points.put("AufDemHebert", new PointDef( PointType.on_rt,new PointModelImpl(49.444141, 8.969492)));
+        points.put("PipelinePfad", new PointDef( PointType.off_rt,new PointModelImpl(49.444272, 8.968929)));
+        points.put("KreuzungRüdenwaldwegStrasse", new PointDef( PointType.stop,new PointModelImpl(49.445093, 8.969311)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k1s1);
+        tests.put(testDef.getId(),testDef);*/
+
+
+        testDef = new TestDef("ZweiarmigerBanditVorLetztesUndLetztesSegment",mtb_k3s3);
+        points = testDef.points;
+        points.put("EingangTrailsegmentMitKurzerVerbindungZumLudwigsPfad", new PointDef( PointType.start,new PointModelImpl(49.460704, 9.000151)));
+        points.put("AufDemZweiarmigerBanditKreuzungVorVorletzemSeg", new PointDef( PointType.on_rt,new PointModelImpl(49.461107, 8.998830)));
+        points.put("EndeLudwigspfad", new PointDef( PointType.off_rt,new PointModelImpl(49.461296, 8.997313)));
+        points.put("EingangLetztesTrailsegment", new PointDef( PointType.stop,new PointModelImpl(49.461859, 8.998727)));
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef("ZweiarmigerBanditLetztesTrailsegment",mtb_k3s3);
+        points = testDef.points;
+        points.put("EingangTrailsegment", new PointDef( PointType.start,new PointModelImpl(49.461859, 8.998727)));
+        points.put("AufDemZweiarmigerBandit", new PointDef( PointType.on_rt,new PointModelImpl(49.462121, 8.998568)));
+        points.put("AufdemPfad1Daneben", new PointDef( PointType.off_rt,new PointModelImpl(49.462172, 8.998216)));
+        points.put("EndeZweiarmigerBandit", new PointDef( PointType.stop,new PointModelImpl(49.462394, 8.998455)));
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef("Darkstone2SchwabenwegBeiHütte",mtb_k3s3);
+        points = testDef.points;
+        points.put("EingangDarkstone", new PointDef( PointType.start,new PointModelImpl(49.402884, 8.731825)));
+        points.put("Darkstone1Seg", new PointDef( PointType.on_rt,new PointModelImpl(49.403512, 8.732308)));
+        points.put("Darkstone2Seg35", new PointDef( PointType.on_rt,new PointModelImpl(49.404621, 8.731857)));
+        points.put("AufTrailVorAuerhahnhütte", new PointDef( PointType.off_rt,new PointModelImpl(49.404063, 8.736623)));
+        points.put("Darkstone3Seg35NachBlockhausweg", new PointDef( PointType.on_rt,new PointModelImpl(49.405845, 8.731758)));
+
+        points.put("TrailausgangSchwabenweg", new PointDef( PointType.stop,new PointModelImpl(49.406258, 8.732099)));
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef("TrailVomHeidelochSeg1",mtb_k3s3);
+        points = testDef.points;
+        points.put("EingangKeltenweg", new PointDef( PointType.start,new PointModelImpl(49.420862, 8.704491)));
+        points.put("ImSteilenTrail25", new PointDef( PointType.on_rt,new PointModelImpl(49.419150, 8.702862)));
+        points.put("KreuzungAussichtsturmfahrwegChaisenweg", new PointDef( PointType.off_rt,new PointModelImpl(49.420655, 8.703688)));
+        points.put("TrailAusgangAufAussichtsturmfahrweg", new PointDef( PointType.stop,new PointModelImpl(49.418552, 8.702183)));
+        tests.put(testDef.getId(),testDef);
+
 
         return tests;
 

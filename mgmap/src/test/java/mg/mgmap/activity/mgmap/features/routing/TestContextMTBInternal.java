@@ -1,10 +1,17 @@
-package mg.mgmap.activity.mgmap.features.routing.profile;
+package mg.mgmap.activity.mgmap.features.routing;
 
 import androidx.annotation.NonNull;
 
 import java.util.Locale;
 
-public class SplineProfileContextMTB implements IfSplineProfileContextMTB {
+import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
+import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfileMTB;
+import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
+import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContextMTB;
+import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
+
+public class TestContextMTBInternal implements IfSplineProfileContextMTB {
+
     public static float sf2d = 1.04f;
     public static float facDnStrech = 8f;
     public static float dlstrechFac = 1.9f;
@@ -33,19 +40,19 @@ public class SplineProfileContextMTB implements IfSplineProfileContextMTB {
     private final float[] slopesAll;
     int indRefDnSlope;
     int heuristicRefSurfaceCat = 7;
-    float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f,1.85f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
+    float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.80f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
     float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
 
-    public SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
+    TestContextMTBInternal(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
         this.power = power;
         this.sUp = sUp;
         this.sDn = sDn;
         this.withRef = withRef;
         this.checkAll = checkAll;
         if (withRef)
-            refProfile = new CostCalcSplineProfileMTB(new SplineProfileContextMTB(100, 200, sDn, false, false));
+            refProfile = new CostCalcSplineProfileMTB(new TestContextMTBInternal(100, 200, sDn, false, false));
         slopesAll = IfSplineProfileContext.slopesAll.clone();
         indRefDnSlope = 3;
 //        slopesAll[indRefDnSlope]=slopesAll[indRefDnSlope] -  0.02f + 0.01f*sDn/100f;
@@ -191,21 +198,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContextMTB {
         return scDnLow;
     }
 
-    public SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll) {
-        this(power, sUp, sDn, checkAll, true);
-    }
-
-    public SplineProfileContextMTB(int power, int sUp, int sDn) {
-        this(power, sUp, sDn, true);
-    }
-
-    public SplineProfileContextMTB(int sUp, int sDn, boolean checkAll) {
-        this((int) (47.5 + 25 * sUp / 100d), sUp, sDn, checkAll, true);
-    }
-
-    public SplineProfileContextMTB(int sUp, int sDn) {
-        this(sUp, sDn, true);
-    }
 
     @NonNull
     public String toString() {
@@ -340,11 +332,11 @@ public class SplineProfileContextMTB implements IfSplineProfileContextMTB {
             float[] distFact = new float[slopesAll.length];
             for (int i=0;i<distFact.length;i++) {
                 if (slopesAll[i]<-0.2f)
-                    distFact[i] = 1f - 0.3f*bell;
+                   distFact[i] = 1f - 0.3f*bell;
                 else if (slopesAll[i] < 0f)
                     distFact[i] = 1f - 0.2f*bell;
                 else
-                    distFact[i] = 1f;
+                   distFact[i] = 1f;
             }
             return distFact;
         } else
