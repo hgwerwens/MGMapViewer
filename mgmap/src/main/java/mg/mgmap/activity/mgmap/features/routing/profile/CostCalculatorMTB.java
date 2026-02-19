@@ -226,14 +226,14 @@ public class CostCalculatorMTB implements CostCalculator {
     public long getDuration(double dist, float vertDist) {
         if (dist >= 0.00001) {
            float slope = (float) (vertDist / dist);
-           double spm = DurationSplineFunctionFactory.getInst().getDurationSplineFunction(mProfileCalculator.mKlevel,mProfileCalculator.mSlevel,surfaceCat,mProfileCalculator.mBicType).calc(slope);
+           double spm = DurationSplineFunctionFactory.getInst().getDurationSplineFunction(mProfileCalculator.mKlevel,mProfileCalculator.mSlevel,surfaceCat,mProfileCalculator.mBicType).valueAt(slope);
            double time = dist*spm;
            double v = 3.6/spm;
            double costs = calcCosts(dist,vertDist,true);
            mgLog.v(()-> String.format(Locale.ENGLISH, "Slope=%.2f v=%.2f time=%.2f dist=%.2f cost=%.2f surfaceCat=%s costf=%.2f",100f*slope, v,time,dist,costs, surfaceCat,costs/dist));
            return (long) ( 1000 * time );
        } else return 0;
-        // return ( dist >= 0.00001) ? (long) ( 1000 * dist * DurationSplineFunctionFactory.getInst().getDurationSplineFunction(mProfileCalculator.mKlevel,mProfileCalculator.mSlevel,surfaceCat,mProfileCalculator.mBicType).calc((float) (vertDist/dist))) : 0;
+        // return ( dist >= 0.00001) ? (long) ( 1000 * dist * DurationSplineFunctionFactory.getInst().getDurationSplineFunction(mProfileCalculator.mKlevel,mProfileCalculator.mSlevel,surfaceCat,mProfileCalculator.mBicType).valueAt((float) (vertDist/dist))) : 0;
     }
 
 

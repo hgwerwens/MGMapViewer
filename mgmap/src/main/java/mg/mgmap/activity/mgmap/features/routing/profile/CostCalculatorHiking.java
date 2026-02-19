@@ -48,6 +48,6 @@ public class CostCalculatorHiking implements CostCalculator {
     @Override
 
     public long getDuration(double dist, float vertDist) {
-        return ( dist >= 0.00001) ? (long) ( 1000 * dist * DurationSplineFunctionFactory.getInst().getDurationSplineFunction((short) 0,(short) 0,surfaceLevel,(short) 0).calc( vertDist/(float) dist)) : 0;
+        return ( dist >= 0.00001) ? (long) ( 1000 * dist * DurationSplineFunctionFactory.getInst().getDurationSplineFunction((short) 0,(short) 0,surfaceLevel,(short) 0).valueAt( vertDist/(float) dist)) : 0;
     }
 }

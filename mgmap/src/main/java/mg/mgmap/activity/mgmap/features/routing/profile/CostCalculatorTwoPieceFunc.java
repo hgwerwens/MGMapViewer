@@ -194,7 +194,7 @@ public class CostCalculatorTwoPieceFunc implements CostCalculator {
 
     @Override
     public long getDuration(double dist, float vertDist) {
-        return ( dist >= 0.00001) ? (long) (1000 * dist * cubicSpline.calc((float) (vertDist/dist))) : 0;
+        return ( dist >= 0.00001) ? (long) (1000 * dist * cubicSpline.valueAt((float) (vertDist/dist))) : 0;
     }
 
  }

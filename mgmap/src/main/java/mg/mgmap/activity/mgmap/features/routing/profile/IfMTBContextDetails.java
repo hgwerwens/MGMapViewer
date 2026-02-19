@@ -1,5 +1,5 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
-public interface IfSplineProfileContextMTB extends IfSplineProfileContext {
+public interface IfMTBContextDetails {
     int getSDn();
 }

@@ -283,11 +283,10 @@ public class RoutingProfileTest {
             TrackResult trackResult = executeSingle(testDef,PointType.on_rt,-1,gGraphTileFactory);
             trackResults.put(trackResult.trackResultKey,trackResult.trackResultValues);
         }
-
+        SplineProfileTestContextMTB.factory = TestContextMTBInternal::new;
         mtb_k1s1 =  new xMTBProf(100,100);//new MTB_K1S1();
         mtb_k2s2 =  new xMTBProf(200,200);//new MTB_K2S2(); //
         mtb_k3s3 =  new xMTBProf(300,300);//new MTB_K3S3();//
-
         tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
 
         tests = new Tests(tests,testFilter);

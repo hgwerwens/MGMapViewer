@@ -14,7 +14,7 @@ public class CostCalcSplineMTB implements CostCalculator {
 
     private final float mfd;
     private final dir direction;
-    private final IfFunction surfaceCatSpline;
+    private final IfSpline surfaceCatSpline;
     private final short surfaceCat;
     private final IfProfileCostCalculator mProfileCalculator;
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
@@ -106,20 +106,20 @@ public class CostCalcSplineMTB implements CostCalculator {
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection){
         if (dist<0.0000001) return 0.00001;
-        float costf = surfaceCatSpline.calc(vertDist / (float) dist);
+        float costf = surfaceCatSpline.valueAt(vertDist / (float) dist);
         double cost;
         if (direction!=null)
             if ( direction == dir.oneway && !primaryDirection)
                 cost = mfd*dist*costf + dist * 5 + 0.00001;
             else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
                 // stairs uphill
-                cost = dist * Math.max( mfd*surfaceCatSpline.calc(0.1f) , costf ) + 0.00001;
+                cost = dist * Math.max( mfd*surfaceCatSpline.valueAt(0.1f) , costf ) + 0.00001;
             else if (direction==dir.none)
                 // stairs without up/down attribute
                 cost = mfd/2d*dist*costf + 0.00001;
             else if (direction!=dir.oneway) {
                 // stairs downhill
-                cost = (1d + mfd / 2d * ProfileUtil.sig(2d*(((IfSplineProfileContextMTB) mProfileCalculator.getContext()).getSDn() / 100d - 1d))) * dist * costf + 0.00001;
+                cost = (1d + mfd / 2d * ProfileUtil.sig(2d*(((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d))) * dist * costf + 0.00001;
             }
             else
                 cost = mfd*dist*costf + 0.00001;
@@ -140,14 +140,14 @@ public class CostCalcSplineMTB implements CostCalculator {
     public long getDuration(double dist, float vertDist) {
         if (dist >= 0.00001) {
             float slope = vertDist / (float) dist;
-            float spm ; //mfd*surfaceCatSpline.calc(slope); //
+            float spm ; //mfd*surfaceCatSpline.valueAt(slope); //
             try {
-                spm = mProfileCalculator.getDurationFunc(surfaceCat).calc(slope);
+                spm = mProfileCalculator.getDurationFunc(surfaceCat).valueAt(slope);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             mgLog.v(()-> {
-                float costf = mfd*surfaceCatSpline.calc(slope)/mProfileCalculator.getRefCosts();
+                float costf = mfd*surfaceCatSpline.valueAt(slope)/mProfileCalculator.getRefCosts();
                 float v = 3.6f/spm;
                 return String.format(Locale.ENGLISH, "%s Slope=%6.2f v=%5.2f time=%6.2f dist=%5.2f cost=%6.2f mfd=%3.2f costf=%5.2f %s",
                      mProfileCalculator.getContext().getSurfaceCatTxt(surfaceCat),100f*slope,v, spm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf,AttributsHashMap.get(this).toDetailedString());

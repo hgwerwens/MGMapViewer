@@ -14,7 +14,7 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private final float mfd;
     private final boolean oneway;
-    private final IfFunction surfaceCatSpline;
+    private final IfSpline surfaceCatSpline;
     private final short surfaceCat;
     private final IfProfileCostCalculator mProfileCalculator;
 
@@ -74,16 +74,16 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
             mgLog.e("Wrong surface Cat:"+ surfaceCat + " ,Tag.highway:" + wayTagEval.highway + " ,Tag.trackType:" + wayTagEval.trackType);
         }
         this.surfaceCat = surfaceCat;
-        this.surfaceCatSpline = mProfileCalculator.getCostFunc(surfaceCat);
+        this.surfaceCatSpline =  mProfileCalculator.getCostFunc(surfaceCat);
         mfd =  distFactor;
     }
 
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection){
         if ( oneway && !primaryDirection)
-            return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist) + dist * 5;
+            return mfd*dist*surfaceCatSpline.valueAt(vertDist / (float) dist) + dist * 5;
         else
-            return mfd*dist*surfaceCatSpline.calc(vertDist / (float) dist);
+            return mfd*dist*surfaceCatSpline.valueAt(vertDist / (float) dist);
     }
 
     public double heuristic(double dist, float vertDist) {
@@ -93,17 +93,17 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
 
     @Override
     public long getDuration(double dist, float vertDist) {
-        IfFunction durationFunc = mProfileCalculator.getDurationFunc(surfaceCat);
+        IfSpline durationFunc = mProfileCalculator.getDurationFunc(surfaceCat);
         if (dist >= 0.00001) {
             mgLog.v(()-> {
                float slope = vertDist / (float) dist;
-               double spm = durationFunc.calc(slope);
+               double spm = durationFunc.valueAt(slope);
                double v = 3.6/spm;
                double cost = calcCosts( dist,  vertDist, true);
                return String.format(Locale.ENGLISH, "DurationCalc: Slope=%6.2f v=%5.2f time=%5.2f dist=%6.2f surfaceCat=%s mfd=%3.2f cost=%6.2f %s",100f*slope,v,spm*dist,dist,surfaceCat,mfd,cost,AttributsHashMap.get(this).toDetailedString());
             });
         }
-        return ( dist >= 0.00001) ? (long) ( 1000 * dist * durationFunc.calc(vertDist/(float) dist)) : 0;
+        return ( dist >= 0.00001) ? (long) ( 1000 * dist * durationFunc.valueAt(vertDist/(float) dist)) : 0;
     }
 
 }

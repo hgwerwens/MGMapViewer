@@ -63,4 +63,29 @@ public class ProfileUtil {
         return na;
     }
 
+    public static float getFrictionBasedVelocity(double slope, double watt, double Cr ){
+        return (float) getFrictionBasedVelocity( slope, watt, Cr,1.2,90d,0.45,0.95);
+
+    }
+
+    public static double getFrictionBasedVelocity(  double slope, double watt, double Cr, double rho, double mass, double ACw, double eta  ) {
+        double mg = mass * 9.81;
+        double ACwr = 0.5 * ACw * rho;
+        double p = mg * (Cr + slope) / ACwr;
+        double q = -watt / ACwr * eta;
+        return solveP3(p, q);
+    }
+
+
+
+    public static float solveP3(double p, double q){
+        double D = Math.pow(q,2)/4. + Math.pow(p,3)/27.;
+
+        return (float) ((D>=0) ? Math.cbrt(- q*0.5 + Math.sqrt(D)) + Math.cbrt(- q*0.5 - Math.sqrt(D)) :
+                Math.sqrt(-4.*p/3.) * Math.cos(1./3.*Math.acos(-q/2*Math.sqrt(-27./Math.pow(p,3.)))));
+
+    }
+
+
+
 }
