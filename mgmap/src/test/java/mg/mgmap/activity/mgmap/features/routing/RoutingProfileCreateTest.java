@@ -9,11 +9,14 @@ import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 
-import mg.mgmap.activity.mgmap.features.routing.profile.CubicSpline;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineDef;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfIsTransformable;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef;
 import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextTrekkingBike;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.SplineUtil;
 import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
 import mg.mgmap.generic.util.basic.MGLog;
 
@@ -45,7 +48,7 @@ public class RoutingProfileCreateTest {
                             for (int mtbDn = 0; mtbDn <= 0; mtbDn += 1) {
                                 int sc = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, mtbDn, mtbDn);
                                 CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
-                                CubicSpline cubicSplineSc = costCalcSplineProfile.getCostSpline(sc);
+                                IfSpline cubicSplineSc = costCalcSplineProfile.getCostSpline(sc);
                                 checkCurvature(cubicSplineSc, new StringBuilder(String.format("%s f2d=%3.2f facDnStrech=%3.2f dlstrechFac=%3.2f", costCalcSplineProfile.getSurfaceCatTxt(sc),
                                         TestContextMTBInternal.sf2d,TestContextMTBInternal.facDnStrech,TestContextMTBInternal.dlstrechFac)));
                             }
@@ -69,8 +72,8 @@ public class RoutingProfileCreateTest {
         SplineProfileTestContextMTB.factory = TestContextMTBInternal::new;
         CostCalcSplineProfile costCalcSplineProfile2 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn2,false));
         try {
-            CubicSpline cubicSplineSc1 = costCalcSplineProfile1.getCostSpline(sc1);
-            CubicSpline cubicSplineSc2 = costCalcSplineProfile2.getCostSpline(sc2);
+            IfSpline cubicSplineSc1 = costCalcSplineProfile1.getCostSpline(sc1);
+            IfSpline cubicSplineSc2 = costCalcSplineProfile2.getCostSpline(sc2);
             System.out.println(costCalcSplineProfile1.getSurfaceCatTxt(sc1));
             checkCubicSpline(cubicSplineSc1,new StringBuilder(),-0.4f,0.4f);
             System.out.println(costCalcSplineProfile2.getSurfaceCatTxt(sc2));
@@ -82,35 +85,6 @@ public class RoutingProfileCreateTest {
         }
         softAssert.assertAll();
     }
-
-
-    @Test
-    public void compare2Short() {
-        MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-        MGLog.setUnittest(true);
-        for (int sDn = 100; sDn <= 100; sDn = sDn + 100) {
-            for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
-                int sc1 = sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 0);//sc2MTBc.maxSL;
-                SplineProfileTestContextMTB.factory = TestContextMTBInternal::new;
-                CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
-                try {
-                    CubicSpline cubicSplineSc1 = costCalcSplineProfile1.getCostSpline(sc1);
-                    CubicSpline cubicSplineSc2 = getShortCubicSpline(cubicSplineSc1,true);
-                    cubicSplineSc1 = getShortCubicSpline(cubicSplineSc1,false);
-                    System.out.println(costCalcSplineProfile1.getSurfaceCatTxt(sc1));
-                    checkCubicSpline(cubicSplineSc1, new StringBuilder(), -0.4f, 0.4f);
-                    System.out.println("short cubic Spline");
-                    checkCubicSpline(cubicSplineSc2, new StringBuilder(), -0.4f, 0.4f);
-                    compareCubicSpline(cubicSplineSc1, cubicSplineSc2, -0.4f, 0.4f,
-                            new StringBuilder(costCalcSplineProfile1.getSurfaceCatTxt(sc1)).append("short Cubic Spline"), true);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        softAssert.assertAll();
-    }
-
 
 
 
@@ -138,7 +112,7 @@ public class RoutingProfileCreateTest {
     @Test
     public void VaryContext_default()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-//        MGLog.setUnittest(true);
+        MGLog.setUnittest(true);
         SplineProfileTestContextMTB.factory = TestContextMTBInternal::new;
         for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
             for (int sDn = 100; sDn <= 300; sDn = sDn + 100) {
@@ -172,7 +146,7 @@ public class RoutingProfileCreateTest {
     }
 
     private void checkSurfaceCats(CostCalcSplineProfile costCalcSplineProfile, StringBuilder rmsg, float slStart, float slStop){
-        CubicSpline cubicSpline = null;
+        IfSpline cubicSpline = null;
         for (int sc = 0; sc < costCalcSplineProfile.getMaxSurfaceCat(); sc++) {
              try {
                 cubicSpline = costCalcSplineProfile.getCostSpline(sc);
@@ -187,7 +161,7 @@ public class RoutingProfileCreateTest {
                 e.printStackTrace();
             }
         }
-        CubicSpline cubicHeuristicSpline = costCalcSplineProfile.getCubicHeuristicSpline();
+        IfSpline cubicHeuristicSpline = costCalcSplineProfile.getCubicHeuristicSpline();
         StringBuilder msg = new StringBuilder(rmsg).append(" heuristic Spline");
         System.out.println("heuristic Spline");
         checkCubicSpline(cubicSpline,msg,slStart,slStop);
@@ -196,11 +170,11 @@ public class RoutingProfileCreateTest {
             try {
                 cubicSpline = costCalcSplineProfile.getCostSpline(sc);
                 if (sc==0 && costCalcSplineProfile.getMinDistFactSC0()!=1f){
-                    cubicSpline = cubicSpline.scaleY(costCalcSplineProfile.getMinDistFactSC0());
+                    cubicSpline = (cubicSpline instanceof IfIsTransformable) ? ((IfIsTransformable) cubicSpline).transformY(costCalcSplineProfile.getMinDistFactSC0(),0f) :null;
                 }
                 if (cubicSpline != null){
                     msg = new StringBuilder(rmsg).append(" compare ").append(costCalcSplineProfile.getSurfaceCatTxt(sc)).append(" with Heuristic:");
-                    ScCompRes compRes = compareCubicSpline(cubicHeuristicSpline,cubicSpline,-0.4f,0.4f,msg,false);
+                    ScCompRes compRes = compareCubicSpline((CubicSpline) cubicHeuristicSpline,cubicSpline,-0.4f,0.4f,msg,false);
                     softAssert.check(compRes.crossings.size()==0,compRes.msg().append(" 0 crossings expected").toString());
                 }
             } catch (Exception e) {
@@ -211,7 +185,7 @@ public class RoutingProfileCreateTest {
         }
     }
 
-    private void checkCubicSpline(CubicSpline cubicSpline,StringBuilder msg, float slStart, float slStop){
+    private void checkCubicSpline(IfSpline cubicSpline,StringBuilder msg, float slStart, float slStop){
         checkCurvature(cubicSpline,msg);
         checkSlope(cubicSpline,msg);
         if (slStop > slStart) {
@@ -233,24 +207,24 @@ public class RoutingProfileCreateTest {
     }
 
 
-    private void checkCurvature(CubicSpline cubicSpline, StringBuilder msg){
+    private void checkCurvature(IfSpline cubicSpline, StringBuilder msg){
         if (cubicSpline != null) {
-            ArrayList<CubicSpline.Value> curveRadiusForNegCurvaturePoint = cubicSpline.getCurveRadiusForNegCurvaturePoints();
+            ArrayList<Float> pointsWithNegativeCurvature = SplineUtil.getPointsWithNegativeCurvature(cubicSpline);
             StringBuilder critmsg = new StringBuilder(msg);
-            if (curveRadiusForNegCurvaturePoint != null){
+            if (pointsWithNegativeCurvature.size()>0){
                 boolean noCritical = true;
-                for (CubicSpline.Value negCurvature : curveRadiusForNegCurvaturePoint) {
-                    float curvature = -negCurvature.y();
+                for (Float negCurvaturePoint : pointsWithNegativeCurvature) {
+                    float curvature = -SplineUtil.curveRadiusAt(negCurvaturePoint,cubicSpline);
                     if (curvature < .5f )  { /*CostCalcSplineProfile.minNegCurvatureRadius*10*/
                         noCritical = false;
-                        String m = String.format(Locale.ENGLISH, " SLOPE=%.2f VERY CRITICAL CURVE RADIUS=%.2f", 100 * negCurvature.x(), curvature);
+                        String m = String.format(Locale.ENGLISH, " SLOPE=%.2f VERY CRITICAL CURVE RADIUS=%.2f", 100 * negCurvaturePoint, curvature);
                         msg.append(m);
                         critmsg.append(m);
                     }
                     else if (curvature < 10f)
-                        msg.append(String.format(Locale.ENGLISH, " Slope=%.2f      Critical Curve Radius=%.2f", 100 * negCurvature.x(), curvature));
+                        msg.append(String.format(Locale.ENGLISH, " Slope=%.2f      Critical Curve Radius=%.2f", 100 * negCurvaturePoint, curvature));
                     else
-                        msg.append(String.format(Locale.ENGLISH, " slope=%.2f curve radius=%.2f", 100 * negCurvature.x(), curvature));
+                        msg.append(String.format(Locale.ENGLISH, " slope=%.2f curve radius=%.2f", 100 * negCurvaturePoint, curvature));
                 }
                 System.out.println(msg);
                 softAssert.check (noCritical,critmsg.toString());
@@ -258,7 +232,7 @@ public class RoutingProfileCreateTest {
         }
     }
 
-    private void checkSlope( CubicSpline cubicSpline, StringBuilder msg){
+    private void checkSlope(IfSpline cubicSpline, StringBuilder msg){
         if (cubicSpline != null) {
             float slope = cubicSpline.derivativeAt(0f);
             if (slope <= 0f) {
@@ -352,7 +326,7 @@ public class RoutingProfileCreateTest {
     record Point(float x, float y0,float y1, float y2){}
     record ScCompRes(ArrayList<Point> crossings, ArrayList<Point> extrema, StringBuilder msg){}
 
-    private ScCompRes compareCubicSpline(CubicSpline cubicSplinelow, CubicSpline cubicSplinehigh, float startSlope, float endSlope, StringBuilder msg, boolean allDetails) throws Exception {
+    private ScCompRes compareCubicSpline(IfSpline cubicSplinelow, IfSpline cubicSplinehigh, float startSlope, float endSlope, StringBuilder msg, boolean allDetails) throws Exception {
         if (cubicSplinehigh == null || cubicSplinelow == null) throw new Exception(msg+" CubicSpline null");
         IfFunction y0 = x -> cubicSplinehigh.valueAt(x) - cubicSplinelow.valueAt(x);
         IfFunction y1 = x -> cubicSplinehigh.derivativeAt(x) - cubicSplinelow.derivativeAt(x);
@@ -441,83 +415,30 @@ public class RoutingProfileCreateTest {
             System.out.println(f);
             System.out.println(f1);
             System.out.println(f2);
-            float[] xl = cubicSplinelow.getX();
-            float[] yl = cubicSplinelow.getY();
+            System.out.println("low Spline");
+            System.out.println(SplineUtil.toDetailedString(cubicSplinelow));
+            System.out.println("high Spline");
+            System.out.println(SplineUtil.toDetailedString(cubicSplinehigh));
+/*            float[] xl = cubicSplinelow.getX();
             float[] xh = cubicSplinehigh.getX();
-            float[] yh = cubicSplinehigh.getY();
             StringBuilder xbl = new StringBuilder("xbv scLow ");
             StringBuilder ybl = new StringBuilder("ybv scLow ");
             StringBuilder xbh = new StringBuilder("xbv scHigh");
             StringBuilder ybh = new StringBuilder("ybv scHigh");
             for (int i = 0; i < xl.length; i++) {
                 xbl.append(String.format(Locale.ENGLISH, " %+8.4f", xl[i] * 100));
-                ybl.append(String.format(Locale.ENGLISH, " %+8.4f", yl[i]));
+                ybl.append(String.format(Locale.ENGLISH, " %+8.4f", cubicSplinelow.valueAt(xl[i])));
             }
             for (int i = 0; i < xh.length; i++) {
                 xbh.append(String.format(Locale.ENGLISH, " %+8.4f", xh[i] * 100));
-                ybh.append(String.format(Locale.ENGLISH, " %+8.4f", yh[i]));
+                ybh.append(String.format(Locale.ENGLISH, " %+8.4f", cubicSplinehigh.valueAt(xh[i])));
             }
             System.out.println(xbl);
             System.out.println(ybl);
             System.out.println(xbh);
-            System.out.println(ybh);
+            System.out.println(ybh); */
         }
         return new ScCompRes(crossings,extrema,imsg);
-    }
-
-    private CubicSpline getShortCubicSpline(CubicSpline cubicSpline,boolean withIf){
-
-        float[] x = cubicSpline.getX();
-        float[] y = cubicSpline.getY();
-        float[] sl = new float[x.length-5];
-        float[] dur = new float[sl.length];
-        int j=0;
-        for ( int i = 0; i<x.length;i++){
-            if (i>2&& i<x.length-2){
-                sl[j]=x[i];
-                dur[j] = y[i];
-                j++;
-            }
-        }
-        try {
-            float m0=cubicSpline.derivativeAt(x[3]) ;
-            float mn=cubicSpline.derivativeAt(x[x.length-3]);
-            IfSplineDef def = new IfSplineDef() {
-                @Override
-                public float[] x() {
-                    return sl;
-                }
-                @Override
-                public float[] y() {
-                    return dur;
-                }
-                @Override
-                public LeftBoundaryCondition leftBoundary() {
-                    return IfSplineDef.clampedLeft(m0);
-                }
-                @Override
-                public RightBoundaryCondition rightBoundary() {
-                    return IfSplineDef.clampedRight(mn);
-                }
-            };
-            return new CubicSpline(def);
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private CubicSpline getOtherCubicSpline(CubicSpline cubicSpline){
-
-        float[] x = cubicSpline.getX();
-        float[] y = cubicSpline.getY();
-        IfSplineDef def = new IfSplineDef.Impl(x,y, IfSplineDef.naturalLeft(), IfSplineDef.naturalRight() );
-        try {
-            return new CubicSpline(def);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
     }
 
 

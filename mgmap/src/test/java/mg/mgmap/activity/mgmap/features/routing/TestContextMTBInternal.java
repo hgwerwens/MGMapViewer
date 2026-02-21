@@ -6,9 +6,10 @@ import androidx.annotation.NonNull;
 
 import java.util.Locale;
 
-import mg.mgmap.activity.mgmap.features.routing.profile.CubicSpline;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfMTBContextDetails;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
 import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
@@ -43,6 +44,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
     private final float[] slopesAll;
     int indRefDnSlope;
     int heuristicRefSurfaceCat = 7;
+    float[] sslopesAll = new float[]{-0.76f, -0.32f, -0.2f, -0.04f, 0.0f, 0.065f,0.17f,0.195f, 0.275f};
     float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.85f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
     float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
@@ -67,8 +69,8 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         this.sDn = sDn;
         this.withRef = withRef;
         this.checkAll = checkAll;
-        slopesAll = IfSplineProfileContext.slopesAll.clone();
-        indRefDnSlope = 3;
+        slopesAll = sslopesAll.clone();
+        indRefDnSlope = 2;
 //        slopesAll[indRefDnSlope]=slopesAll[indRefDnSlope] -  0.02f + 0.01f*sDn/100f;
         float refslope = slopesAll[indRefDnSlope];
         float dlstretch = 0.13f + dlstrechFac * sig((2d - sDn / 100d)*2d);
@@ -244,9 +246,8 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         //      for slopes <=20% pure heuristic formulas apply that derivative of the duration function is equal to factorDn. For smaller slopes additional factors apply (f2d,f3d) to enforce positive
         //      curvature of the duration function
         durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) *f3d; //f3d
-        durations[1] = ( sm20Dn -(slopes[1]-refDnSlope)*factorDn) *f2d;//f2d;
-        durations[2] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
-        durations[3] =   sm20Dn ;
+        durations[1] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
+        durations[2] =   sm20Dn ;
         //      for everything with slope >=0% durations (sec/m) is calculated based on the speed derived from friction and input power (Watt)
         durations[slopes.length-5] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-5], watt0, cr0) ;
         durations[slopes.length-4] = f0up /  getFrictionBasedVelocity(slopes[slopes.length-4], watt, cr1) ;
@@ -288,7 +289,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
             cubicSplineTmp = getSlopeOptSpline(slopes, durations, indRefDnSlope, slopeTarget, indRefDnSlopeOpt);
         }
         else {
-            cubicSplineTmp = new CubicSpline(slopes, durations);
+            cubicSplineTmp = new CubicSpline(slopes, durations,new IfSplineDef.Natural());
         }
         if (getWithRef() ) {
             float slope2slopeTarget = cubicSplineTmp.derivativeAt(slopes[indRefDnSlope]) / slopeTarget;

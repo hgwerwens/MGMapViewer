@@ -3,6 +3,8 @@ package mg.mgmap.activity.mgmap.features.routing.profile;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
+
 public class DurationSplineFunctionFactory {
     static DurationSplineFunctionFactory durationSplineFunctionFactory = new DurationSplineFunctionFactory();
 

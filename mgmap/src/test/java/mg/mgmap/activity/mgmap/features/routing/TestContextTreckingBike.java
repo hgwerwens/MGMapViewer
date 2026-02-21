@@ -1,10 +1,12 @@
-package mg.mgmap.activity.mgmap.features.routing.profile;
+package mg.mgmap.activity.mgmap.features.routing;
 
 import static mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil.getFrictionBasedVelocity;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
+import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
+import mg.mgmap.activity.mgmap.features.routing.profile.TagEval;
 
-public class SplineProfileContextTrekkingBike implements IfSplineProfileContext {
+public class TestContextTreckingBike implements IfSplineProfileContext {
 
     int maxSurfaceCat = 7;
 
@@ -16,15 +18,15 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
     boolean fullCalc;
 
 
-    public SplineProfileContextTrekkingBike(){this(true);}
-    public SplineProfileContextTrekkingBike(boolean fullCalc){
+    public TestContextTreckingBike(){this(true);}
+    public TestContextTreckingBike(boolean fullCalc){
         this.fullCalc = fullCalc;
         for ( int sc=0 ;sc < maxSurfaceCat;sc++){
             factorDown[sc]  = sm20Dn[sc]*10f;
         }
     }
 
-    private CubicSpline calcCubicSpline(int sc, boolean isCostSpline){
+    private CubicSpline calcCubicSpline(int sc){
 
         int indRefDnSlope = 3; //getIndRefDnSlope();
         int indRefDnSlopeOpt = indRefDnSlope+1;
@@ -32,7 +34,7 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
         //   default float getF0u(int sc) {return 1f;};
         //   default float getF1u(int sc){return 1.1f;};
         //   default float getF2u(int sc){return 1.1f*getF1u(sc);};
-       //    default float getF3u(int sc){return 1.8f*getF2u(sc);};
+        //    default float getF3u(int sc){return 1.8f*getF2u(sc);};
 
         float crUp = getCrUp(sc);
         float f0up = 1.0f;
@@ -72,8 +74,6 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
         //      duration at -4% only used for the reference profiles.
         durations[indRefDnSlopeOpt] = durations[slopes.length-5]+getRelSlope(sc)*slopes[indRefDnSlopeOpt];
 
-
-
         CubicSpline cubicSplineTmp;
         cubicSplineTmp = new CubicSpline(slopes, durations);
         return cubicSplineTmp;
@@ -101,11 +101,11 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
 
 
     public CubicSpline calcCostSpline(int sc) {
-        return calcCubicSpline(sc,true);
+        return calcCubicSpline(sc);
     }
 
     public CubicSpline calcDurationSpline(int sc) {
-        return calcCubicSpline(sc,true);
+        return calcCubicSpline(sc);
     }
 
 
@@ -154,4 +154,8 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
         return "Trekking Bike";
     }
 }
+
+
+
+
 

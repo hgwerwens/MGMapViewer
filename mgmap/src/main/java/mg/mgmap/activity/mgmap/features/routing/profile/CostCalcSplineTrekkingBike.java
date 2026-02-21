@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.generic.graph.WayAttributs;
 import mg.mgmap.generic.util.basic.MGLog;
 

@@ -1,9 +1,10 @@
-package mg.mgmap.activity.mgmap.features.routing.profile;
+package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 
 public interface IfSpline {
 
     float valueAt(float x);
     float derivativeAt(float x);
     float secondDerivativeAt(float x);
+    IfSplineDef getSplineDef();
 
 }

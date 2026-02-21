@@ -1,26 +1,22 @@
-package mg.mgmap.activity.mgmap.features.routing.profile;
-
-import java.util.ArrayList;
+package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 
 /**
  * computes natural cubic spline. Algorithm: <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">...</a>
  */
-public class CubicSpline implements IfSpline {
+public class CubicSpline implements IfSpline,IfIsTransformable {
 
     private final float[][] polynominals;
     private final float[] x;
-
-    public record Value(float x, float y) {
-    }
+    private IfSplineDef def;
 
 
     public CubicSpline (float[] x, float[] y)  {
-        this(new IfSplineDef.Impl(x,y, IfSplineDef.naturalLeft(), IfSplineDef.naturalRight()));
+        this(x,y, new IfSplineDef.Natural());
     }
 
-    public CubicSpline(IfSplineDef def){
-        x = def.x();
-        float [] y = def.y();
+
+    public CubicSpline(float[] x, float[] y, IfSplineDef def){
+        this.x = x;
         if (x.length < 3) {
             throw new IllegalArgumentException("input array too short");
         } else if (x.length != y.length) {
@@ -43,14 +39,35 @@ public class CubicSpline implements IfSpline {
             h[i] = x[i+1] - x[i];
             b[i] = (y[i+1] - y[i]) / h[i];
         }
-        def.leftBoundary().apply(h,y,mu,z);
+
+        switch (def.type()) {
+            case NATURAL -> {
+                mu[0] = 0f;
+                z[0] = 0f;}
+            case CLAMPED -> {
+                float l = 2 * h[0];
+                mu[0] = 0.5f;
+                z[0] = 3 * ((y[1] - y[0]) / h[0] - ((IfSplineDef.Clamped) def).slopeLeft()) / l;
+            }
+            default -> throw new IllegalStateException("Unexpected Spline Type in Cubic Spline: " + def.type());
+        }
+        this.def = def;
 
         for (int i = 1; i < n; i++) {
             float l = 2f * (x[i+1] - x[i-1]) - h[i-1] * mu[i-1];
             mu[i] = h[i] / l;
             z[i]  = (3f * (b[i] - b[i-1]) - h[i-1] * z[i-1]) / l;
         }
-        def.rightBoundary().apply(h,y,mu,z);
+        switch (def.type()) {
+            case NATURAL -> {
+                z[n] = 0f;
+            }
+            case CLAMPED -> {
+                float l = h[n-1] * (2f - mu[n-1]);
+                z[n] = (3f * (((IfSplineDef.Clamped) def).slopeRight() - (y[n] - y[n-1]) / h[n-1]) - h[n-1] * z[n-1]) / l;
+            }
+            default -> throw new IllegalStateException("Unexpected Spline Type in Cubic Spline: " + def.type());
+        }
 
         c[n] = z[n];
         for (int j = n - 1; j >= 0; j--) {
@@ -72,17 +89,16 @@ public class CubicSpline implements IfSpline {
 
 
 
-    public float[] getX(){
+
+    float[] getX(){
         return x;
     }
 
-    public float[] getY(){
-        float[] y = new float[x.length];
-        for ( int i = 0; i < x.length; i++){
-            y[i]=polynominals[i+1][0];
-        }
-        return y;
+    @Override
+    public IfSplineDef getSplineDef() {
+        return def;
     }
+
 
     @Override
     public float valueAt(float x) {
@@ -109,7 +125,7 @@ public class CubicSpline implements IfSpline {
             return polynominals[in][1] + 2f*polynominals[in][2]*x1 + 3f*polynominals[in][3]*x2;
         }
     }
-
+    @Override
     public float secondDerivativeAt(float x){
         int in = geti(x);
         if (in==0 || in==this.x.length)
@@ -120,16 +136,8 @@ public class CubicSpline implements IfSpline {
         }
     }
 
-    public ArrayList<Value> getCurveRadiusForNegCurvaturePoints(){
-        ArrayList<Value> result = new ArrayList<>(0);
-        for (int i=1; i<x.length;i++){
-           if (polynominals[i][2]<0)
-               result.add(new Value(x[i - 1], (float) Math.pow((1f+polynominals[i][1]*polynominals[i][1]),1.5d) / (2f*polynominals[i][2])));
-        }
-        return result.isEmpty()? null : result;
-    }
 
-    public float calcMin(float start) throws Exception{
+    float calcMin(float start) throws Exception{
         int in = geti(start);
         return calcMin(in, 0);
     }
@@ -161,41 +169,25 @@ public class CubicSpline implements IfSpline {
     }
 
 
-
-
-    public CubicSpline scaleY(float sy){
+    public CubicSpline transformY(float scale, float translate){
         CubicSpline cubicSpline = new CubicSpline(this);
-        cubicSpline.polynominals[0][0] = cubicSpline.polynominals[0][0] * sy;
-        cubicSpline.polynominals[0][1] = cubicSpline.polynominals[0][1] * sy;
-        cubicSpline.polynominals[cubicSpline.x.length][0] = cubicSpline.polynominals[cubicSpline.x.length][0] * sy ;
-        cubicSpline.polynominals[cubicSpline.x.length][1] = cubicSpline.polynominals[cubicSpline.x.length][1] * sy;
+        cubicSpline.polynominals[0][0] = cubicSpline.polynominals[0][0] * scale + translate;
+        cubicSpline.polynominals[0][1] = cubicSpline.polynominals[0][1] * scale;
+        cubicSpline.polynominals[cubicSpline.x.length][0] = cubicSpline.polynominals[cubicSpline.x.length][0] * scale + translate ;
+        cubicSpline.polynominals[cubicSpline.x.length][1] = cubicSpline.polynominals[cubicSpline.x.length][1] * scale;
         for ( int i = 1; i < cubicSpline.x.length; i++ )   {
-            cubicSpline.polynominals[i][0] = cubicSpline.polynominals[i][0] * sy;
-            cubicSpline.polynominals[i][1] = cubicSpline.polynominals[i][1] * sy;
-            cubicSpline.polynominals[i][2] = cubicSpline.polynominals[i][2] * sy;
-            cubicSpline.polynominals[i][3] = cubicSpline.polynominals[i][3] * sy;
+            cubicSpline.polynominals[i][0] = cubicSpline.polynominals[i][0] * scale + translate;
+            cubicSpline.polynominals[i][1] = cubicSpline.polynominals[i][1] * scale;
+            cubicSpline.polynominals[i][2] = cubicSpline.polynominals[i][2] * scale;
+            cubicSpline.polynominals[i][3] = cubicSpline.polynominals[i][3] * scale;
         }
         return cubicSpline;
     }
 
-
-    public CubicSpline translateY(float transY){
-        CubicSpline cubicSpline = new CubicSpline(this);
-        cubicSpline.polynominals[0][0] = cubicSpline.polynominals[0][0] + transY;
-        cubicSpline.polynominals[0][1] = cubicSpline.polynominals[0][1];
-        cubicSpline.polynominals[cubicSpline.x.length][0] = cubicSpline.polynominals[cubicSpline.x.length][0] + transY ;
-        cubicSpline.polynominals[cubicSpline.x.length][1] = cubicSpline.polynominals[cubicSpline.x.length][1];
-        for ( int i = 1; i < cubicSpline.x.length; i++ )   {
-            cubicSpline.polynominals[i][0] = cubicSpline.polynominals[i][0] + transY;
-            cubicSpline.polynominals[i][1] = cubicSpline.polynominals[i][1];
-            cubicSpline.polynominals[i][2] = cubicSpline.polynominals[i][2];
-            cubicSpline.polynominals[i][3] = cubicSpline.polynominals[i][3];
-        }
-        return cubicSpline;
-    }
 
 
     private CubicSpline( CubicSpline cubicSpline){
+        def = cubicSpline.def;
         polynominals = new float[cubicSpline.x.length+1][4];
         x = cubicSpline.x.clone();
         for ( int i = 0; i <= cubicSpline.x.length; i++ )  {

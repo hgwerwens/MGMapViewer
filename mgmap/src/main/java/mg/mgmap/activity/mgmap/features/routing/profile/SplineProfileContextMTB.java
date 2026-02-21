@@ -6,6 +6,8 @@ import androidx.annotation.NonNull;
 
 import java.util.Locale;
 
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
+
 public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBContextDetails {
     public static float sf2d = 1.04f;
     public static float facDnStrech = 8f;

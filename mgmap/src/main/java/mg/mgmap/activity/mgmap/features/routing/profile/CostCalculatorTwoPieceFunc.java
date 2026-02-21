@@ -7,6 +7,7 @@ import android.util.Log;
 import java.lang.invoke.MethodHandles;
 
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
 import mg.mgmap.generic.util.basic.MGLog;
 
 public class CostCalculatorTwoPieceFunc implements CostCalculator {
