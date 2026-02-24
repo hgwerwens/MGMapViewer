@@ -1,9 +1,10 @@
 package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 
-public class CompositeSpline implements IfSpline {
-    private CubicSpline cubicSpline;
-    private LinearSpline leftLinSpline;
-    private LinearSpline rightLinSpline;
+public class CompositeSpline implements IfSpline,IfReturnsDef {
+
+    private final CubicSpline cubicSpline;
+    private final LinearSpline leftLinSpline;
+    private final LinearSpline rightLinSpline;
     private float leftCubicLimit;
     private float rightCubicLimit;
     private IfSplineDef def;
@@ -16,7 +17,7 @@ public class CompositeSpline implements IfSpline {
         IfSplineDef.Composite compDef = (IfSplineDef.Composite) def;
         int leftLinSegs = compDef.leftLinearSegments();
         int rightLinSegs = compDef.rightLinearSegments();
-        if (x.length-leftLinSegs-rightLinSegs- 4 < 0 ) throw new IllegalArgumentException("Not enough Points for thisComposite Spline Definition");
+        if (x.length-leftLinSegs-rightLinSegs- 3 < 0 ) throw new IllegalArgumentException("Not enough Points for thisComposite Spline Definition");
         float xLeft[] = new float[leftLinSegs+1];
         float yLeft[] = new float[leftLinSegs+1];
         float xMid[] = new float[x.length-leftLinSegs-rightLinSegs];
@@ -47,7 +48,7 @@ public class CompositeSpline implements IfSpline {
         }
         leftLinSpline = new LinearSpline(xLeft,yLeft,linSpline);
         rightLinSpline = new LinearSpline(xRight,yRight,linSpline);
-        float leftSlope = leftLinSpline.derivativeAt(xLeft[xLeft.length]);
+        float leftSlope = leftLinSpline.derivativeAt(xLeft[xLeft.length-1]);
         float rightSlope = rightLinSpline.derivativeAt(xRight[0]);
         cubicSpline      = new CubicSpline(xMid,yMid,new IfSplineDef.Clamped(leftSlope,rightSlope));
 
@@ -55,32 +56,59 @@ public class CompositeSpline implements IfSpline {
 
     @Override
     public float valueAt(float x) {
-        if (x <= leftCubicLimit) return leftLinSpline.valueAt(x);
-        else if ( x<rightCubicLimit ) return cubicSpline.valueAt(x);
-        else return leftLinSpline.valueAt(x);
+        if (x < leftCubicLimit) return leftLinSpline.valueAt(x);
+        else if ( x<=rightCubicLimit ) return cubicSpline.valueAt(x);
+        else return rightLinSpline.valueAt(x);
     }
 
     @Override
     public float derivativeAt(float x) {
-        if (x <= leftCubicLimit) return leftLinSpline.derivativeAt(x);
-        else if ( x<rightCubicLimit ) return cubicSpline.derivativeAt(x);
-        else return leftLinSpline.derivativeAt(x);
+        if (x < leftCubicLimit) return leftLinSpline.derivativeAt(x);
+        else if ( x<=rightCubicLimit ) return cubicSpline.derivativeAt(x);
+        else return rightLinSpline.derivativeAt(x);
     }
 
     @Override
     public float secondDerivativeAt(float x) {
-        if (x <= leftCubicLimit) return leftLinSpline.secondDerivativeAt(x);
-        else if ( x<rightCubicLimit ) return cubicSpline.secondDerivativeAt(x);
-        else return leftLinSpline.secondDerivativeAt(x);
+        if (x < leftCubicLimit) return leftLinSpline.secondDerivativeAt(x);
+        else if ( x <= rightCubicLimit ) return cubicSpline.secondDerivativeAt(x);
+        else return rightLinSpline.secondDerivativeAt(x);
     }
 
 
-    float[] getX() {
+    public float[] getX() {
         return x;
     }
 
-    @Override
+
     public IfSplineDef getSplineDef() {
         return def;
+    }
+
+    @Override
+    public IfSpline transformY(float scale, float translate) {
+        return new CompositeSpline(this,scale,translate);
+    }
+
+    private CompositeSpline(CompositeSpline spline,float scale, float translate){
+        this.x = spline.x.clone();
+        this.def = spline.def;
+        this.leftCubicLimit = spline.leftCubicLimit;
+        this.rightCubicLimit = spline.rightCubicLimit;
+        this.leftLinSpline  = spline.leftLinSpline.transformY(scale,translate);
+        this.cubicSpline    = spline.cubicSpline.transformY(scale,translate);
+        this.rightLinSpline = spline.rightLinSpline.transformY(scale,translate);
+    }
+
+    CubicSpline getCubicSpline() {
+        return cubicSpline;
+    }
+
+    float getLeftCubicLimit() {
+        return leftCubicLimit;
+    }
+
+    float getRightCubicLimit() {
+        return rightCubicLimit;
     }
 }

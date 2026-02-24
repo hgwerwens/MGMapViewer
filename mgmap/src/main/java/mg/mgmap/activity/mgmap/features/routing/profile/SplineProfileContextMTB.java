@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 
 public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBContextDetails {
     public static float sf2d = 1.04f;
@@ -41,8 +42,8 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
     float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
-    private final CubicSpline[] costRefSplines;
-    private final CubicSpline[] durationRefSplines;
+    private final IfSpline[] costRefSplines;
+    private final IfSpline[] durationRefSplines;
     private final IfSplineProfileContext refContext;
 
     public SplineProfileContextMTB(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
@@ -222,7 +223,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         this(sUp, sDn, true);
     }
 
-    private CubicSpline calcCubicSpline(int sc, boolean isCostSpline){
+    private IfSpline calcCubicSpline(int sc, boolean isCostSpline){
         if (!isValidSc(sc)) return null;
 
         int indRefDnSlope = 3;
@@ -280,8 +281,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
 
 
         float slopeTarget = 0f;
-        CubicSpline cubicSplineTmp;
-        CubicSpline test=null;
+        IfSpline cubicSplineTmp;
         if (getWithRef()) {
             /* to achieve an almost constant downhill profile for a given mtbDn scale and downhill level of the profile (sDn) independent of the mtbUp scale and the uphill level of the profile (sUp)
             a reference profile for a given combination of sDn and mtbDn with a constant uphill profile (power = 100 Watt, sUp = 2 ) and mtbUp = mtbDn is calculated. All other uphill combinations are
@@ -312,7 +312,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                     throw new RuntimeException("Out of range " + msg);
             }
         }
-       cubicSplineTmp.equals(test);
+
         return cubicSplineTmp;
     }
 
@@ -333,9 +333,9 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         }
     }
 
-    private CubicSpline getCostRefCubicSpline(int sc){
+    private IfSpline getCostRefCubicSpline(int sc){
         int scDn = sc2MTBc.getCatDn(sc);
-        CubicSpline cubicSpline = costRefSplines[scDn];
+        IfSpline cubicSpline = costRefSplines[scDn];
         if (cubicSpline==null){
             cubicSpline = refContext.calcCostSpline(getRefSc(sc));
             costRefSplines[scDn]= cubicSpline;
@@ -343,9 +343,9 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         return cubicSpline;
     }
 
-    private CubicSpline getDurationRefCubicSpline(int sc){
+    private IfSpline getDurationRefCubicSpline(int sc){
         int scDn = sc2MTBc.getCatDn(sc);
-        CubicSpline cubicSpline = durationRefSplines[scDn];
+        IfSpline cubicSpline = durationRefSplines[scDn];
         if (cubicSpline==null){
             cubicSpline = refContext.calcDurationSpline(getRefSc(sc));
             durationRefSplines[scDn]= cubicSpline;
@@ -359,7 +359,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         return String.format(Locale.ENGLISH, "power=%3d sUp=%3d sDn=%3d hasRef=%s", power, sUp, sDn, withRef ? "x" : " ");
     }
 
-    public boolean checkAll() {
+    public boolean getCheckAll() {
         return checkAll;
     }
 
@@ -391,12 +391,12 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
     }
 
     
-    public CubicSpline calcCostSpline(int sc) {
+    public IfSpline calcCostSpline(int sc) {
         return calcCubicSpline(sc,true);
     }
 
     
-    public CubicSpline calcDurationSpline(int sc) {
+    public IfSpline calcDurationSpline(int sc) {
         return  calcCubicSpline(sc,false);
     }
 

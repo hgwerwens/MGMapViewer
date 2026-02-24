@@ -6,9 +6,11 @@ import androidx.annotation.NonNull;
 
 import java.util.Locale;
 
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CompositeSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfMTBContextDetails;
+import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
 import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
@@ -17,7 +19,7 @@ import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
 
 public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBContextDetails {
 
-    public static float sf2d = 1.04f;
+    public static float sf2d = 0.95f;
     public static float facDnStrech = 8f;
     public static float dlstrechFac = 1.9f;
     public final int power;
@@ -42,23 +44,28 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
     private final float[] watt;
     private final float[] watt0;
     private final float[] slopesAll;
+    private static IfSplineDef.Composite sCompDef = new IfSplineDef.Composite(2,2);
     int indRefDnSlope;
     int heuristicRefSurfaceCat = 7;
-    float[] sslopesAll = new float[]{-0.76f, -0.32f, -0.2f, -0.04f, 0.0f, 0.065f,0.17f,0.195f, 0.275f};
+    float[] sslopesAll = new float[]{-0.76f, -0.36f, -0.2f, -0.04f, 0.0f, 0.065f,0.17f, 0.275f};
     float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.85f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
     float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1f   ,1f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
-    private final CubicSpline[] costRefSplines;
-    private final CubicSpline[] durationRefSplines;
-    private final IfSplineProfileContext refContext;
+    private final IfSpline[] costRefSplines;
+    private final IfSpline[] durationRefSplines;
+    private final TestContextMTBInternal refContext;
+
+    private final SplineProfileContextMTB profileContextMTB;
 
 
     TestContextMTBInternal(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
+        profileContextMTB = new SplineProfileContextMTB(power,sUp,sDn,checkAll);
+
         if (withRef) {
-            costRefSplines = new CubicSpline[sc2MTBc.maxScDn];
-            durationRefSplines = new CubicSpline[sc2MTBc.maxScDn];
-            this.refContext = new SplineProfileContextMTB(100, 200, sDn, false, false);
+            costRefSplines = new CompositeSpline[sc2MTBc.maxScDn];
+            durationRefSplines = new CompositeSpline[sc2MTBc.maxScDn];
+            this.refContext = new TestContextMTBInternal(100, 200, sDn, false, false);
         } else {
             this.refContext = null;
             costRefSplines = null;
@@ -200,6 +207,13 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
             float f = sig((0.05d - crUp) * 100d);
             this.watt0[sc] = watt0_high > watt0_base ? watt0_high + (watt0_base - watt0_high) * f : watt0_high;
             this.watt[sc] = watt > 175 ? watt + (175 - watt) * f : watt;
+ /*           this.watt[sc] = watt0;
+ //           this.watt0[sc] = watt0;
+            this.watt[sc] = watt;
+            float maxCr = (this.crUp[sc2MTBc.maxScUp-1] + this.crDn[sc2MTBc.maxScDn-1])/2;
+            float minCr = this.crUp[0];
+            float fact = (cr0 - minCr)/(maxCr-minCr) ;
+            this.watt0[sc] = watt0 * ( 1 + 0.7f*fact) ;*/
         }
     }
 
@@ -214,11 +228,12 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         return scDnLow;
     }
 
-    private CubicSpline calcCubicSpline(int sc, boolean isCostSpline){
+    private IfSpline calcspline(int sc, boolean isCostSpline){
         if (!isValidSc(sc)) return null;
 
-        int indRefDnSlope = 3;//getIndRefDnSlope();
+        int indRefDnSlope = 2;//getIndRefDnSlope();
         int indRefDnSlopeOpt = indRefDnSlope+1;
+        float[] slopes = isCostSpline ? getCostSlopes(sc): getDurationSlopes(sc);
 
         float crUp = getCrUp(sc);
         float crDn = getCrDn(sc);
@@ -229,11 +244,15 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         float cr0 = (crDn+crUp)/2f;
         float cr1 =  (0.1f*crDn + 0.9f*crUp);
         float sm20Dn = getSm20Dn(sc);
+
+        IfSpline profContextMTBSpline = (isCostSpline) ? profileContextMTB.calcCostSpline(sc) : profileContextMTB.calcDurationSpline(sc);
+        float slopeDn = -profContextMTBSpline.derivativeAt(-0.2f);
+        float slopeUp = profContextMTBSpline.derivativeAt(slopes[slopes.length-3]);
         float factorDn = getFactorDn(sc);
         float f2d      = getF2d(sc);
         float f3d      = getF3d(sc);
         float[] distFactCostFunct = getDistFactforCostFunct(sc);
-        float[] slopes = isCostSpline ? getCostSlopes(sc): getDurationSlopes(sc);
+
         float refDnSlope = slopes[indRefDnSlope];
         float watt0 = getWatt0(sc);
         float watt  = getWatt(sc);
@@ -243,112 +262,102 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
 
         float[] durations = new float[slopes.length];
 
+
+
         //      for slopes <=20% pure heuristic formulas apply that derivative of the duration function is equal to factorDn. For smaller slopes additional factors apply (f2d,f3d) to enforce positive
         //      curvature of the duration function
-        durations[0] = ( sm20Dn -(slopes[0]-refDnSlope)*factorDn) *f3d; //f3d
-        durations[1] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
-        durations[2] =   sm20Dn ;
+        durations[0] = (sm20Dn -(slopes[0]-refDnSlope)*factorDn) *f3d; //f3d
+//        durations[1] = (sm20Dn -(slopes[1]-refDnSlope)*factorDn*f2d);
+        durations[1] = profContextMTBSpline.valueAt(refDnSlope) - (slopes[1] - refDnSlope)*slopeDn;
+        durations[2] =  sm20Dn ;
         //      for everything with slope >=0% durations (sec/m) is calculated based on the speed derived from friction and input power (Watt)
-        durations[slopes.length-5] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-5], watt0, cr0) ;
-        durations[slopes.length-4] = f0up /  getFrictionBasedVelocity(slopes[slopes.length-4], watt, cr1) ;
-        durations[slopes.length-3] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, crUp)  ;
-        durations[slopes.length-2] = f2Up /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp)  ;
+        durations[slopes.length-4] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-4], watt0, cr0) ;
+        durations[slopes.length-3] = f0up /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, cr1) ;
+//        durations[slopes.length-2] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp)  ;
+        durations[slopes.length-2] = profContextMTBSpline.valueAt(slopes[slopes.length-3]) + ( slopes[slopes.length-2] - slopes[slopes.length-3])*slopeUp;
         durations[slopes.length-1] = f3Up /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, crUp)  ;
-        //      duration at -4% only used for the reference profiles.
-        if (!getWithRef()) {
-            durations[indRefDnSlopeOpt] = durations[slopes.length-5]+getRelSlope(sc)*slopes[indRefDnSlopeOpt];
-        }
+
+
+        durations[indRefDnSlopeOpt] = durations[slopes.length-4]+getRelSlope(sc)*slopes[indRefDnSlopeOpt];
+
 
         if (isCostSpline&&distFactCostFunct.length>0){
             for (int i = 0; i < distFactCostFunct.length; i++) {
+                if (!(i==1||i==slopes.length-2))
                 durations[i] = durations[i] * distFactCostFunct[i];
             }
-
         }
 
-        String SplineType = isCostSpline ? "cost":"dura";
-        String contextString = String.format(Locale.ENGLISH,"spline=%s %s ",SplineType,getSurfaceCatTxt(sc));
 
-        float slopeTarget = 0f;
-        CubicSpline cubicSplineTmp;
+        IfSpline spline;
+        IfSpline refSpline;
         if (getWithRef()) {
             /* to achieve an almost constant downhill profile for a given mtbDn scale and downhill level of the profile (sDn) independent of the mtbUp scale and the uphill level of the profile (sUp)
             a reference profile for a given combination of sDn and mtbDn with a constant uphill profile (power = 100 Watt, sUp = 2 ) and mtbUp = mtbDn is calculated. All other uphill combinations are
             calculated in such a way that the slope at -20% is taken from the reference profile und the duration is varied at -4% slope, so that the slope matches the target slope
              */
-//            int mtbDn = getMtbDn(sc);
-
             if (isCostSpline)
-                cubicSplineTmp = getCostRefCubicSpline(sc);//getRefProfile().getCostSpline(getRefSc(sc));
+                refSpline = getCostRefSpline(sc);//getRefProfile().getCostSpline(getRefSc(sc));
             else
-                cubicSplineTmp = getDurationRefCubicSpline(sc); //getRefProfile().getDurationSpline(getRefSc(sc));
+                refSpline = getDurationRefSpline(sc); //getRefProfile().getDurationSpline(getRefSc(sc));
             for ( int i = 0; slopes[i]<0;i++) {
-                durations[i] = cubicSplineTmp.valueAt(slopes[i]) ;//* factor;
+                durations[i] = refSpline.valueAt(slopes[i]) ;//* factor;
             }
-            slopeTarget = cubicSplineTmp.derivativeAt(slopes[indRefDnSlope]); //*factor;
-            cubicSplineTmp = getSlopeOptSpline(slopes, durations, indRefDnSlope, slopeTarget, indRefDnSlopeOpt);
+            float secondDerivativeTarget = refSpline.secondDerivativeAt(slopes[indRefDnSlope]); //*factor;
+            spline = getRefOptSpline(slopes, durations, indRefDnSlope, secondDerivativeTarget, indRefDnSlopeOpt);
         }
         else {
-            cubicSplineTmp = new CubicSpline(slopes, durations,new IfSplineDef.Natural());
-        }
-        if (getWithRef() ) {
-            float slope2slopeTarget = cubicSplineTmp.derivativeAt(slopes[indRefDnSlope]) / slopeTarget;
-            if (Math.abs(slope2slopeTarget - 1f) > 0.01f) {
-                String msg = String.format(Locale.ENGLISH, "for %s Slope to Slopetarget=%.3f at %.2f", contextString, slope2slopeTarget, slopes[indRefDnSlope] * 100f);
-                if (slope2slopeTarget > 0.5f && slope2slopeTarget < 2f)
-                    throw new RuntimeException("Almost Out of range " + msg); //mgLog.w(msg);
-                else
-                    throw new RuntimeException("Out of range " + msg);
-            }
+            spline = new CompositeSpline(slopes, durations,new IfSplineDef.Composite(2,2));
         }
 
-        return cubicSplineTmp;
+        return spline;
     }
 
 
-    protected CubicSpline getSlopeOptSpline(float[] slopes, float[] durations, int targetat, float slopeTarget, int varyat) {
+    protected CompositeSpline getRefOptSpline(float[] slopes, float[] durations, int targetat, float secondDerivativeTarget, int varyat) {
         //     IfFunction of Minimum duration value of a spline based on input duration varied at slope[varyat] (for MTB splines at slope -3.5% )
         IfFunction slope = smvary -> {
             durations[varyat] = smvary;
-            CubicSpline cubicSpline = new CubicSpline(slopes,durations);
-            return cubicSpline.derivativeAt(slopes[targetat]) - slopeTarget;
+            CompositeSpline spline = new CompositeSpline(slopes,durations,sCompDef);
+            return spline.secondDerivativeAt(slopes[targetat]) - secondDerivativeTarget;
         };
 //      Newton iteration with numerical derivation is used to optimize the input duration[varyat] so that the Min duration matches the Target smMinTarget
-        durations[varyat] = ProfileUtil.newtonNumeric(durations[varyat],0.00001f,slope,0.0001f);
+        durations[varyat] = ProfileUtil.newtonNumeric(durations[varyat],0.0001f,slope,0.001f);
         try {
-            return new CubicSpline(slopes, durations);
+            return new CompositeSpline(slopes, durations,sCompDef);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage() + " in getSlopeOptSpline");
         }
     }
 
-    private CubicSpline getCostRefCubicSpline(int sc){
+    private IfSpline getCostRefSpline(int sc){
         int scDn = sc2MTBc.getCatDn(sc);
-        CubicSpline cubicSpline = costRefSplines[scDn];
-        if (cubicSpline==null){
-            cubicSpline = refContext.calcCostSpline(getRefSc(sc));
-            costRefSplines[scDn]= cubicSpline;
+        IfSpline spline = costRefSplines[scDn];
+        if (spline==null){
+            spline = refContext.calcCostSpline(getRefSc(sc));
+            costRefSplines[scDn]= spline;
         }
-        return cubicSpline;
+        return spline;
+
     }
 
-    private CubicSpline getDurationRefCubicSpline(int sc){
+    private IfSpline getDurationRefSpline(int sc){
         int scDn = sc2MTBc.getCatDn(sc);
-        CubicSpline cubicSpline = durationRefSplines[scDn];
-        if (cubicSpline==null){
-            cubicSpline = refContext.calcDurationSpline(getRefSc(sc));
-            durationRefSplines[scDn]= cubicSpline;
+        IfSpline spline = durationRefSplines[scDn];
+        if (spline==null){
+            spline = refContext.calcDurationSpline(getRefSc(sc));
+            durationRefSplines[scDn]= spline;
         }
-        return cubicSpline;
+        return spline;
     }
 
 
     @NonNull
     public String toString() {
-        return String.format(Locale.ENGLISH, "power=%3d sUp=%3d sDn=%3d hasRef=%s", power, sUp, sDn, withRef ? "x" : " ");
+        return String.format(Locale.ENGLISH, "TEST power=%3d sUp=%3d sDn=%3d hasRef=%s", power, sUp, sDn, withRef ? "x" : " ");
     }
 
-    public boolean checkAll() {
+    public boolean getCheckAll() {
         return checkAll;
     }
 
@@ -378,13 +387,13 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
     }
 
 
-    public CubicSpline calcCostSpline(int sc) {
-        return calcCubicSpline(sc,true);
+    public IfSpline calcCostSpline(int sc) {
+        return calcspline(sc,true);
     }
 
 
-    public CubicSpline calcDurationSpline(int sc) {
-        return  calcCubicSpline(sc,false);
+    public IfSpline calcDurationSpline(int sc) {
+        return  calcspline(sc,false);
     }
 
 

@@ -3,7 +3,7 @@ package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 /**
  * computes natural cubic spline. Algorithm: <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">...</a>
  */
-public class CubicSpline implements IfSpline,IfIsTransformable {
+public class CubicSpline implements IfSpline,IfReturnsDef {
 
     private final float[][] polynominals;
     private final float[] x;
@@ -90,7 +90,7 @@ public class CubicSpline implements IfSpline,IfIsTransformable {
 
 
 
-    float[] getX(){
+    public float[] getX(){
         return x;
     }
 
@@ -158,13 +158,9 @@ public class CubicSpline implements IfSpline,IfIsTransformable {
     }
 
     private int geti(float x){
-        int i;
-        if ( x <= this.x[0])
-            i = 0;
-        else {
-            i = 1;
-            while (i < this.x.length && x >= this.x[i] ) i = i + 1;
-        }
+        int i = 0;
+        while (i < this.x.length && x >= this.x[i] ) i++;
+        if (x==this.x[this.x.length-1]) i--; // Spezial treatment at right border relevant for clamped spline, boarders are included and so second derivative has to be calculated from polynom
         return i;
     }
 
@@ -183,6 +179,7 @@ public class CubicSpline implements IfSpline,IfIsTransformable {
         }
         return cubicSpline;
     }
+
 
 
 

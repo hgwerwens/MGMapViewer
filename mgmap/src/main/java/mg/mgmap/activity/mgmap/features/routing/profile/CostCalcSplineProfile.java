@@ -5,8 +5,6 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
-import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfIsTransformable;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.SplineUtil;
 import mg.mgmap.generic.util.basic.MGLog;
@@ -21,10 +19,6 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     protected final IfSpline[] SurfaceCatCostSpline ;
     protected final IfSpline[] SurfaceCatDurationSpline;
     private final IfSplineProfileContext context;
-
-    private float heuristicDnSlopeLimit;
-    private float heuristicUpSlopeLimit;
-
     private static final float lowstart = -0.15f;
     private static final float highstart = 0.15f;
 
@@ -32,12 +26,13 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
 
     public CostCalcSplineProfile(IfSplineProfileContext context) {
         this.context = context;
-        SurfaceCatCostSpline = new CubicSpline[getMaxSurfaceCat()];
-        SurfaceCatDurationSpline = new CubicSpline[context.getMaxSurfaceCat()];
+        SurfaceCatCostSpline = new IfSpline[getMaxSurfaceCat()];
+        SurfaceCatDurationSpline = new IfSpline[context.getMaxSurfaceCat()];
         heuristicSpline = getCubicHeuristicSpline();
         profileSpline = getProfileSpline();
-        if (context.checkAll()) checkAll();
         refCosts = profileSpline.valueAt(0f);
+
+        if (context.getCheckAll()) checkAll();
     }
     public int getMaxSurfaceCat(){
         return context.getMaxSurfaceCat();
@@ -46,7 +41,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
 
 
     public IfSpline getCubicHeuristicSpline(){
-        if (heuristicSpline == null) {
+        if (heuristicSpline == null )  {
             mgLog.i("Spline Profile for " + this.getClass().getName() + " " + context.toString());
             IfSpline cubicHeuristicRefSpline = getHeuristicRefSpline();
             return calcHeuristicSpline(cubicHeuristicRefSpline);
@@ -164,7 +159,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     private IfSpline getHeuristicRefSpline() {
         try {
             IfSpline splineTmp = getCostSpline(context.getScHeuristicRefSpline());
-            IfSpline spline = ( (IfIsTransformable) splineTmp).transformY(1.0f,-0.0001f);
+            IfSpline spline    =  splineTmp.transformY(1.0f,-0.0001f);
             checkNegCurvature(spline,String.format(Locale.ENGLISH,"heuristic spline for %s ", context),1e7f);
             return spline;
         } catch (Exception e) {
@@ -208,7 +203,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     private void checkNegCurvature(IfSpline spline, String context, float threshold) {
 
         ArrayList<Float> pointsWithNegativeCurvature =SplineUtil.getPointsWithNegativeCurvature(spline);
-        if (pointsWithNegativeCurvature.size()>0) {
+        if (!pointsWithNegativeCurvature.isEmpty()) {
             StringBuilder msg = new StringBuilder(String.format(Locale.ENGLISH,"Negative curvature for %s",context));
             boolean criticalthresholdReached = false;
             boolean thresholdReached = false;
@@ -226,7 +221,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                 }
             }
 
-            if(criticalthresholdReached)
+            if(criticalthresholdReached && getContext().getCheckAll())
                 throw new RuntimeException( msg.toString());
             else
                 if (thresholdReached) mgLog.w(msg.toString());

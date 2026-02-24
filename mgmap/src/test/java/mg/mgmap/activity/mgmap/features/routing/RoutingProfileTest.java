@@ -293,7 +293,7 @@ public class RoutingProfileTest {
         TestResults testResults = new TestResults();
         TestResults offRouteTestResults = new TestResults();
 
-
+        long t1 = System.nanoTime();
 //      Execute Tests
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
             TestDef testDef = entry.getValue();
@@ -302,7 +302,9 @@ public class RoutingProfileTest {
             testResults.put(entry.getKey(),testResult.testResult);
             offRouteTestResults.putAll(testResult.offRouteTestResults);
         }
+        long t2 = System.nanoTime();
 
+        System.out.println(String.format(Locale.ENGLISH,"Runtime[ms]=%d",(t2-t1)/1000000));
 
         TrackResultKey previouskey = null;
         TrackResultsAggr trackResultsAggr = new TrackResultsAggr();
