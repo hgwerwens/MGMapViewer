@@ -1,6 +1,6 @@
 package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 
-public class CompositeSpline implements IfSpline,IfReturnsDef {
+public class CompositeSpline implements IfSpline, IfSplineInternal {
 
     private final CubicSpline cubicSpline;
     private final LinearSpline leftLinSpline;
@@ -44,15 +44,20 @@ public class CompositeSpline implements IfSpline,IfReturnsDef {
                 yRight[k] = y[i];
                 k++;
             }
-
         }
         leftLinSpline = new LinearSpline(xLeft,yLeft,linSpline);
         rightLinSpline = new LinearSpline(xRight,yRight,linSpline);
-        float leftSlope = leftLinSpline.derivativeAt(xLeft[xLeft.length-1]);
-        float rightSlope = rightLinSpline.derivativeAt(xRight[0]);
-        cubicSpline      = new CubicSpline(xMid,yMid,new IfSplineDef.Clamped(leftSlope,rightSlope));
-
+        IfSplineDef innerSplineDef;
+        if (compDef.innerSpline() == null) {
+            float leftSlope = leftLinSpline.derivativeAt(xLeft[xLeft.length - 1]);
+            float rightSlope = rightLinSpline.derivativeAt(xRight[0]);
+            innerSplineDef = new IfSplineDef.Clamped(leftSlope,rightSlope);
+        } else {
+            innerSplineDef = compDef.innerSpline();
+        }
+        cubicSpline      = new CubicSpline(xMid,yMid,innerSplineDef);
     }
+
 
     @Override
     public float valueAt(float x) {
@@ -68,6 +73,19 @@ public class CompositeSpline implements IfSpline,IfReturnsDef {
         else return rightLinSpline.derivativeAt(x);
     }
 
+    public float derivativeAt(float x,SplineCalcAt calcAt) {
+        if (calcAt == SplineCalcAt.Left) {
+            if (x <= leftCubicLimit) return leftLinSpline.derivativeAt(x,calcAt);
+            else if (x <= rightCubicLimit) return cubicSpline.derivativeAt(x,calcAt);
+            else return rightLinSpline.derivativeAt(x,calcAt);
+        } else {
+            if (x < leftCubicLimit) return leftLinSpline.derivativeAt(x,calcAt);
+            else if (x < rightCubicLimit) return cubicSpline.derivativeAt(x);
+            else return rightLinSpline.derivativeAt(x,calcAt);
+        }
+    }
+
+
     @Override
     public float secondDerivativeAt(float x) {
         if (x < leftCubicLimit) return leftLinSpline.secondDerivativeAt(x);
@@ -75,6 +93,18 @@ public class CompositeSpline implements IfSpline,IfReturnsDef {
         else return rightLinSpline.secondDerivativeAt(x);
     }
 
+
+    public float secondDerivativeAt(float x, SplineCalcAt calcAt) {
+        if (calcAt == SplineCalcAt.Left) {
+            if (x <= leftCubicLimit) return leftLinSpline.secondDerivativeAt(x,calcAt);
+            else if ( x <= rightCubicLimit ) return cubicSpline.secondDerivativeAt(x,calcAt);
+            else return rightLinSpline.secondDerivativeAt(x,calcAt);
+        } else {
+            if (x < leftCubicLimit) return leftLinSpline.secondDerivativeAt(x,calcAt);
+            else if (x < rightCubicLimit) return cubicSpline.secondDerivativeAt(x,calcAt);
+            else return rightLinSpline.secondDerivativeAt(x,calcAt);
+        }
+    }
 
     public float[] getX() {
         return x;

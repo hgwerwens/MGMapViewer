@@ -1,16 +1,16 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
 public class SurfCat2MTBCat {
-    public int maxSL = 6; // Surface categories without MTB scale
-    public int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
-    public int maxDn = 6; // maximum downhill category
-    public int maxUp = 6; // maximum uphill category
-    public int maxScDn = maxSL+1+maxDn +1; // maximum number of factors depending on the surfaced category for downhill calculation
-    public int maxScUp = maxSL+1+maxUp +1;         // maximum number of factors depending on the surfaced category for uphill calculation
-    public int maxScUpExt = maxScUp + maxDn+1;
+    public final int maxSL = 6; // Surface categories without MTB scale
+    public final int maxUptoDn = 3; // maximum difference mtbUp - mtbDn considered
+    public final int maxDn = 6; // maximum downhill category
+    public final int maxUp = 6; // maximum uphill category
+    public final int maxScDn = maxSL+1+maxDn +1; // maximum number of factors depending on the surfaced category for downhill calculation
+    public final int maxScUp = maxSL+1+maxUp +1;         // maximum number of factors depending on the surfaced category for uphill calculation
+    public final int maxScUpExt = maxScUp + maxDn+1;
 
-    int maxCatUpDn    = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
-    public int maxSurfaceCat = maxCatUpDn + maxDn + 1 ; // includes on top those ones, which have only downhill classification
+    public int maxScUpDn = maxSL + 1 + (maxUptoDn+1)*(maxDn+1); // all surface categories including those ones without any mtb classification and those ones with up and down classification
+    public int maxSurfaceCat = maxScUpDn + maxDn + 1 ; // includes on top those ones, which have only downhill classification
  // slope which all profiles use
 
 
@@ -34,7 +34,7 @@ public class SurfCat2MTBCat {
                     scUp = mtbDn-mtbUp>=0 ? 0 : (Math.min(mtbUp - mtbDn, maxUptoDn));
                     scDn = mtbDn;
                 } else {
-                    return maxCatUpDn+mtbDn;
+                    return maxScUpDn +mtbDn;
 //                    scUp = 1; scDn = mtbDn;
                 }
             else if (mtbUp > -1) {
@@ -56,7 +56,7 @@ public class SurfCat2MTBCat {
 
     public int getMtbUp(int surfaceCat){
         if (surfaceCat <= maxSL  )           return -1;
-        else  if (surfaceCat < maxCatUpDn)   return (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else  if (surfaceCat < maxScUpDn)   return (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else                                 return -1;
     }
 
@@ -65,29 +65,29 @@ public class SurfCat2MTBCat {
     // calculates uphill category based on surface category. Its either between 0 and 6 for anything without MTB classification or 6 + 1 + uphill classification (mtbUp)
     int getCatUp(int surfaceCat){
         if (surfaceCat <= maxSL)           return surfaceCat;
-        else if (surfaceCat < maxCatUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else if (surfaceCat < maxScUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else                               return maxSL;
     }
 
     public int getCatUpExt(int surfaceCat){
         if (surfaceCat <= maxSL)           return surfaceCat;
-        else if (surfaceCat < maxCatUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
-        else                               return surfaceCat - maxCatUpDn + maxScUp;
+        else if (surfaceCat < maxScUpDn)  return maxSL+1 + (surfaceCat-maxSL-1)%(maxUptoDn+1) + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else                               return surfaceCat - maxScUpDn + maxScUp;
     }
 
 
     // calculates uphill category based on surface category. Its either between 0 and 6 for anything without MTB classification or 6 + 1 + downhill classification (mtbDn)
     public int getMtbDn(int surfaceCat){
         if (surfaceCat <= maxSL)          return -1;
-        else if (surfaceCat < maxCatUpDn) return (surfaceCat-maxSL-1)/(maxUptoDn+1);
-        else                              return surfaceCat - maxCatUpDn;
+        else if (surfaceCat < maxScUpDn) return (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else                              return surfaceCat - maxScUpDn;
     }
 
     public int getCatDn(int surfaceCat){
         if (surfaceCat <= maxSL)          return surfaceCat;
-        else if (surfaceCat < maxCatUpDn) return maxSL+1 + (surfaceCat-maxSL-1)/(maxUptoDn+1);
+        else if (surfaceCat < maxScUpDn) return maxSL+1 + (surfaceCat-maxSL-1)/(maxUptoDn+1);
         else
-            return maxSL+1 + surfaceCat - maxCatUpDn;
+            return maxSL+1 + surfaceCat - maxScUpDn;
     }
 
 

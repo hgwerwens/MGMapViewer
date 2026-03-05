@@ -1,6 +1,6 @@
 package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 
-public class LinearSpline implements IfSpline,IfReturnsDef {
+public class LinearSpline implements IfSpline, IfSplineInternal {
     private final float[] x;
     float xr;
     float yr;
@@ -31,28 +31,37 @@ public class LinearSpline implements IfSpline,IfReturnsDef {
         }
     }
 
-    private int geti(float x){
+    private int geti(float x,SplineCalcAt calcAt){
         int i = 0;
         while (i < this.x.length-1 && x >= this.x[i+1] ) i++;
+        if ( calcAt == SplineCalcAt.Left && x== this.x[i] )
+            i--;
         return i;
     }
 
     @Override
-    public float valueAt(float x) {
-        int in = geti(x);
+    public float valueAt(float x){
+        int in = geti(x,SplineCalcAt.Right);
         float x1 = x - this.x[in];
         return y[in] + x1*sl[in];
     }
 
     @Override
-    public float derivativeAt(float x) {
-        int in = geti(x);
+    public float derivativeAt(float x){
+        return derivativeAt(x,SplineCalcAt.Right);
+    }
+
+    public float derivativeAt(float x, SplineCalcAt calcAt) {
+        int in = geti(x,calcAt);
         return sl[in];
     }
 
     @Override
-    public float secondDerivativeAt(float x) {
-        int in = geti(x);
+    public float secondDerivativeAt(float x){
+        return secondDerivativeAt(x,SplineCalcAt.Right);
+    }
+    public float secondDerivativeAt(float x, SplineCalcAt calcAt) {
+        int in = geti(x,calcAt);
         if (in==0) return 0f;
         float x1 = x - this.x[in];
         return x1==0f? Float.NaN:0f;

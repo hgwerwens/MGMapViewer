@@ -32,13 +32,16 @@ public interface IfSplineDef {
         public String toString(){return String.format(Locale.ENGLISH,"%10s slopeLeft=%.2f slopeRight=%.2f", SplineType.CLAMPED, slopeLeft,slopeRight);};
     }
 
-    public record Composite( int leftLinearSegments, int rightLinearSegments) implements IfSplineDef {
+    public record Composite( int leftLinearSegments, int rightLinearSegments, IfSplineDef innerSpline) implements IfSplineDef {
+        public Composite(int leftLinearSegments, int rightLinearSegments){
+            this(leftLinearSegments, rightLinearSegments,null);
+        }
         @Override
         public SplineType type() {
             return SplineType.COMPOSITE;
         }
         @NonNull
-        public String toString(){return String.format(Locale.ENGLISH,"%s segmentsLeft=%d segmentsRight=%d", SplineType.CLAMPED, leftLinearSegments,rightLinearSegments);};
+        public String toString(){return String.format(Locale.ENGLISH,"%s segmentsLeft=%d segmentsRight=%d", SplineType.COMPOSITE, leftLinearSegments,rightLinearSegments);};
     }
     public record Linear(
     ) implements IfSplineDef {

@@ -3,19 +3,19 @@ package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 /**
  * computes natural cubic spline. Algorithm: <a href="https://en.wikipedia.org/wiki/Spline_(mathematics)">...</a>
  */
-public class CubicSpline implements IfSpline,IfReturnsDef {
+public class CubicSpline implements IfSpline, IfSplineInternal {
 
     private final float[][] polynominals;
     private final float[] x;
     private IfSplineDef def;
 
 
-    public CubicSpline (float[] x, float[] y)  {
-        this(x,y, new IfSplineDef.Natural());
+    public CubicSpline(float[] x, float[] y) {
+        this(x, y, new IfSplineDef.Natural());
     }
 
 
-    public CubicSpline(float[] x, float[] y, IfSplineDef def){
+    public CubicSpline(float[] x, float[] y, IfSplineDef def) {
         this.x = x;
         if (x.length < 3) {
             throw new IllegalArgumentException("input array too short");
@@ -30,67 +30,68 @@ public class CubicSpline implements IfSpline,IfReturnsDef {
         int n = x.length - 1;
         float[] h = new float[n];
         float[] b = new float[n];
-        float[] mu = new float[n+1];
-        float[] z  = new float[n+1];
-        float[] c  = new float[n+1];
-        float[] d  = new float[n];
+        float[] mu = new float[n + 1];
+        float[] z = new float[n + 1];
+        float[] c = new float[n + 1];
+        float[] d = new float[n];
 
         for (int i = 0; i < n; i++) {
-            h[i] = x[i+1] - x[i];
-            b[i] = (y[i+1] - y[i]) / h[i];
+            h[i] = x[i + 1] - x[i];
+            b[i] = (y[i + 1] - y[i]) / h[i];
         }
 
         switch (def.type()) {
             case NATURAL -> {
                 mu[0] = 0f;
-                z[0] = 0f;}
+                z[0] = 0f;
+            }
             case CLAMPED -> {
                 float l = 2 * h[0];
                 mu[0] = 0.5f;
                 z[0] = 3 * ((y[1] - y[0]) / h[0] - ((IfSplineDef.Clamped) def).slopeLeft()) / l;
             }
-            default -> throw new IllegalStateException("Unexpected Spline Type in Cubic Spline: " + def.type());
+            default ->
+                    throw new IllegalStateException("Unexpected Spline Type in Cubic Spline: " + def.type());
         }
         this.def = def;
 
         for (int i = 1; i < n; i++) {
-            float l = 2f * (x[i+1] - x[i-1]) - h[i-1] * mu[i-1];
+            float l = 2f * (x[i + 1] - x[i - 1]) - h[i - 1] * mu[i - 1];
             mu[i] = h[i] / l;
-            z[i]  = (3f * (b[i] - b[i-1]) - h[i-1] * z[i-1]) / l;
+            z[i] = (3f * (b[i] - b[i - 1]) - h[i - 1] * z[i - 1]) / l;
         }
         switch (def.type()) {
             case NATURAL -> {
                 z[n] = 0f;
             }
             case CLAMPED -> {
-                float l = h[n-1] * (2f - mu[n-1]);
-                z[n] = (3f * (((IfSplineDef.Clamped) def).slopeRight() - (y[n] - y[n-1]) / h[n-1]) - h[n-1] * z[n-1]) / l;
+                float l = h[n - 1] * (2f - mu[n - 1]);
+                z[n] = (3f * (((IfSplineDef.Clamped) def).slopeRight() - (y[n] - y[n - 1]) / h[n - 1]) - h[n - 1] * z[n - 1]) / l;
             }
-            default -> throw new IllegalStateException("Unexpected Spline Type in Cubic Spline: " + def.type());
+            default ->
+                    throw new IllegalStateException("Unexpected Spline Type in Cubic Spline: " + def.type());
         }
 
         c[n] = z[n];
         for (int j = n - 1; j >= 0; j--) {
-            c[j] = z[j] - mu[j] * c[j+1];
-            d[j] = (c[j+1] - c[j]) / (3f * h[j]);
-            b[j] = b[j] - h[j] * (2f*c[j] + c[j+1]) / 3f;
+            c[j] = z[j] - mu[j] * c[j + 1];
+            d[j] = (c[j + 1] - c[j]) / (3f * h[j]);
+            b[j] = b[j] - h[j] * (2f * c[j] + c[j + 1]) / 3f;
         }
 
-        polynominals = new float[n+2][];
-        polynominals[0] = new float[] {y[0],b[0]}; // initial linear section
-        for ( int i = 0; i< n;i++){
-            polynominals[i+1] = new float[] {y[i],b[i],c[i],d[i]};
+        polynominals = new float[n + 2][];
+        polynominals[0] = new float[]{y[0], b[0]}; // initial linear section
+        for (int i = 0; i < n; i++) {
+            polynominals[i + 1] = new float[]{y[i], b[i], c[i], d[i]};
         }
-        float x1 = this.x[n] - this.x[n-1];
-        float x2 = x1*x1;
-        polynominals[n+1] = new float[] {y[n],polynominals[n][1] + 2* polynominals[n][2]*x1 + 3*polynominals[n][3]*x2};
+        float x1 = this.x[n] - this.x[n - 1];
+        float x2 = x1 * x1;
+        polynominals[n + 1] = new float[]{y[n], polynominals[n][1] + 2 * polynominals[n][2] * x1 + 3 * polynominals[n][3] * x2};
 
     }
 
 
-
-
-    public float[] getX(){
+    public float[] getX() {
         return x;
     }
 
@@ -102,32 +103,40 @@ public class CubicSpline implements IfSpline,IfReturnsDef {
 
     @Override
     public float valueAt(float x) {
-        int in = geti(x);
-        float x1 = x - this.x[(in == 0)?0:in-1];
-        if (in==0 || in==this.x.length)
-            return polynominals[in][0] + polynominals[in][1]*x1;
+        int in = geti(x,SplineCalcAt.Right);
+        float x1 = x - this.x[(in == 0) ? 0 : in - 1];
+        if (in == 0 || in == this.x.length)
+            return polynominals[in][0] + polynominals[in][1] * x1;
         else {
-            float x2 = x1*x1;
-            float x3 = x2*x1;
+            float x2 = x1 * x1;
+            float x3 = x2 * x1;
             return polynominals[in][0] + polynominals[in][1] * x1 + polynominals[in][2] * x2 + polynominals[in][3] * x3;
         }
     }
 
-
     @Override
-    public float derivativeAt(float x){
-        int in = geti(x);
-        if (in==0 || in==this.x.length)
+    public float derivativeAt(float x) {
+        return derivativeAt(x,SplineCalcAt.Right);
+    }
+
+    public float derivativeAt(float x, SplineCalcAt calcAt) {
+        int in = geti(x,calcAt);
+        if (in == 0 || in == this.x.length)
             return polynominals[in][1];
         else {
-            float x1 = x - this.x[in-1];
-            float x2 = x1*x1;
-            return polynominals[in][1] + 2f*polynominals[in][2]*x1 + 3f*polynominals[in][3]*x2;
+            float x1 = x - this.x[in - 1];
+            float x2 = x1 * x1;
+            return polynominals[in][1] + 2f * polynominals[in][2] * x1 + 3f * polynominals[in][3] * x2;
         }
     }
+
     @Override
     public float secondDerivativeAt(float x){
-        int in = geti(x);
+        return secondDerivativeAt(x,SplineCalcAt.Right);
+    }
+
+   public float secondDerivativeAt(float x, SplineCalcAt calcAt){
+        int in = geti(x,calcAt);
         if (in==0 || in==this.x.length)
             return 0f;
         else {
@@ -138,7 +147,7 @@ public class CubicSpline implements IfSpline,IfReturnsDef {
 
 
     float calcMin(float start) throws Exception{
-        int in = geti(start);
+        int in = geti(start, SplineCalcAt.Right);
         return calcMin(in, 0);
     }
 
@@ -157,10 +166,11 @@ public class CubicSpline implements IfSpline,IfReturnsDef {
         return xmin;
     }
 
-    private int geti(float x){
+    private int geti(float x,IfSplineInternal.SplineCalcAt calcAt){
         int i = 0;
         while (i < this.x.length && x >= this.x[i] ) i++;
-        if (x==this.x[this.x.length-1]) i--; // Spezial treatment at right border relevant for clamped spline, boarders are included and so second derivative has to be calculated from polynom
+        if ( x==this.x[this.x.length-1] || calcAt == SplineCalcAt.Left && i>0 && x==this.x[i-1] )
+            i--; // Special treatment at right border relevant for clamped spline, boarders are included and so second derivative has to be calculated from polynom
         return i;
     }
 

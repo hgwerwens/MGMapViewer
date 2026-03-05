@@ -242,7 +242,7 @@ public class RoutingProfileTest {
     @Test
     public void _01_routing()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-        String testFilter = null;// "Darkstone2SchwabenwegBeiHütte_MTB_K3S3";
+        String testFilter = null;//"HirschgasseViaEngelswiesenweg2Philoweg_MTB_K1S1";
         if (testFilter!=null)  MGLog.setUnittest(true);
         mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 

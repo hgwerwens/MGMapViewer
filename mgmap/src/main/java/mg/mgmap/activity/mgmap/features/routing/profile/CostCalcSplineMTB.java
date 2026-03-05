@@ -3,6 +3,8 @@ package mg.mgmap.activity.mgmap.features.routing.profile;
 import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.WeakHashMap;
+
 import mg.mgmap.activity.mgmap.features.routing.CostCalculator;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.generic.graph.WayAttributs;
@@ -11,14 +13,13 @@ import mg.mgmap.generic.util.basic.MGLog;
 public class CostCalcSplineMTB implements CostCalculator {
     enum dir {up,down,none,oneway}
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
-    private static final HashMap<CostCalcSplineMTB,WayAttributs> AttributsHashMap = new HashMap<>();
+    private static final WeakHashMap<CostCalcSplineMTB,WayAttributs> AttributsHashMap = new WeakHashMap<>();
 
     private final float mfd;
     private final dir direction;
     private final IfSpline surfaceCatSpline;
     private final short surfaceCat;
     private final IfProfileCostCalculator mProfileCalculator;
-    static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
 
     public CostCalcSplineMTB(WayAttributs wayTagEval, CostCalcSplineProfile profile) {
         mProfileCalculator = profile;
@@ -92,7 +93,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             }
         }
         try {
-            this.surfaceCat = (short) sc2MTBc.getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
+            this.surfaceCat = (short) ((IfMTBContextDetails) mProfileCalculator.getContext()).getSc2MTBc().getSurfaceCat(surfaceLevel,mtbDn,mtbUp);
             this.surfaceCatSpline = mProfileCalculator.getCostFunc(surfaceCat);
         } catch (Exception e) {
             throw new RuntimeException(e);

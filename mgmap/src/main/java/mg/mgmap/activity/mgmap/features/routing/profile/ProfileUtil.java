@@ -11,7 +11,11 @@ public class ProfileUtil {
         return newton( start, minval,5, f, fs);
     }
 
-    public static float newton(float start, float minval, int maxIter, IfFunction f, IfFunction fs) throws RuntimeException{
+    public static float newton (float start, float threshold, int maxIter, IfFunction f, IfFunction fs) throws RuntimeException{
+        return newton (start, threshold, -Float.MAX_VALUE,Float.MAX_VALUE, maxIter, f, fs);
+    }
+
+    public static float newton(float start, float threshold, float leftLimit, float rightLimit, int maxIter, IfFunction f, IfFunction fs) throws RuntimeException{
         float a;
         float na = start;
         float nb;
@@ -25,6 +29,14 @@ public class ProfileUtil {
         boolean numLimit = false;
         nfa = f.calc(start);
         do {
+            if (na<leftLimit){
+                na = leftLimit;
+                nfa = f.calc(na);
+            }
+            if (na>rightLimit){
+                na = rightLimit;
+                nfa = f.calc(na);
+            }
             i = i+1;
             if ( i >= maxIter)
                 throw new RuntimeException("Too many Newton iterations= " + maxIter);
@@ -39,7 +51,7 @@ public class ProfileUtil {
             nb = a;
             j  = 0;
 
-            while ( Math.abs(nfa) >= 0.5f*Math.abs(fa) && Math.abs(nfa) > minval &&!numLimit ) { // fallback to regula falsi
+            while ( Math.abs(nfa) >= 0.5f*Math.abs(fa) && Math.abs(nfa) > threshold &&!numLimit ) { // fallback to regula falsi
                 j = j+1;
                 if ( j >= maxIter)
                     throw new RuntimeException("Too many Regula Falsi iterations= " + maxIter);
@@ -48,7 +60,7 @@ public class ProfileUtil {
                     System.out.println("Numerical Limit of Newton iteration reached");
                     numLimit = true;
                 }
-                sfa = f.calc(sa) - minval;
+                sfa = f.calc(sa) - threshold;
                 if (Math.signum(sfa) == Math.signum(nfa)) {
                     na = sa;
                     nfa = sfa;
@@ -59,7 +71,7 @@ public class ProfileUtil {
                     nfa = sfa;
                 }
             }
-        } while ( Math.abs(nfa) > minval &&!numLimit);
+        } while ( Math.abs(nfa) > threshold &&!numLimit);
         return na;
     }
 

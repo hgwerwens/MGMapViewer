@@ -3,10 +3,12 @@ package mg.mgmap.activity.mgmap.features.routing.profile.splinefunc;
 
 import static mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef.SplineType.CLAMPED;
 import static mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef.SplineType.COMPOSITE;
+import static mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef.SplineType.LINEAR;
 import static mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef.SplineType.NATURAL;
+import static mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineInternal.SplineCalcAt.Right;
+import static mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineInternal.SplineCalcAt.Left;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
@@ -14,8 +16,44 @@ import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
 
 public class SplineUtil {
 
+
+    public static final class FloatTol {
+
+        private final float absEps;
+        private final float relEps;
+
+        public FloatTol( ){
+           this(1e-6f,1e-6f);
+        }
+        public FloatTol(float absEps, float relEps) {
+            this.absEps = absEps;
+            this.relEps = relEps;
+        }
+        private float tol(float a, float b) {
+            return absEps + relEps * Math.max(Math.abs(a), Math.abs(b));
+        }
+        public boolean eq(float a, float b) {
+            return Math.abs(a - b) <= tol(a, b);
+        }
+        public boolean gt(float a, float b) {
+            return a > b + tol(a, b);
+        }
+        public boolean lt(float a, float b) {
+            return a < b - tol(a, b);
+        }
+
+        public boolean ge(float a, float b) {
+            return gt(a, b) || eq(a, b);
+        }
+
+        public boolean le(float a, float b) {
+            return lt(a, b) || eq(a, b);
+        }
+    }
+
     public static ArrayList<Float> getPointsWithNegativeCurvature(IfSpline spline){
-        IfSplineDef def = ((IfReturnsDef)spline).getSplineDef();
+        IfSplineDef def = ((IfSplineInternal)spline).getSplineDef();
+        IfSplineInternal splineInternal = (IfSplineInternal) spline;
         float[] x;
         int leftSegs = 0;
         int rightSegs = 0;
@@ -25,15 +63,21 @@ public class SplineUtil {
             rightSegs  = compdef.rightLinearSegments();
             CompositeSpline compositeSpline = (CompositeSpline) spline;
             x = compositeSpline.getX();
-        } else if ( def.type()== NATURAL || def.type()==CLAMPED ) {
-            x = ((CubicSpline) spline).getX();
+        } else if ( def.type()== NATURAL || def.type()==CLAMPED || def.type()==LINEAR ) {
+            x = splineInternal.getX();
+            if (def.type()==LINEAR) leftSegs = x.length;
         } else {
-            throw new RuntimeException("Not supported Spline Type for this method");
+            throw new IllegalArgumentException("Not supported Spline Type for this method: " + def);
         }
         ArrayList<Float> list = new ArrayList<>();
+        FloatTol floatTol = new FloatTol();
         for (int i=1; i< x.length-1;i++){
-            if ( i < leftSegs || i >= x.length-rightSegs ){
-                if (spline.derivativeAt(x[i-1])>spline.derivativeAt(x[i])) list.add(x[i]);
+            if ( i <= leftSegs || i >= x.length - 1 -rightSegs ){
+                if (floatTol.gt(splineInternal.derivativeAt(x[i], Left) , splineInternal.derivativeAt(x[i], Right))) {
+                    list.add(x[i]);
+                }
+                if ((i==leftSegs && splineInternal.secondDerivativeAt(x[i],Right) < 0 ) || ( i==x.length-rightSegs - 1  && splineInternal.secondDerivativeAt(x[i],Left)<0))
+                   list.add(x[i]);
             } else {
                 if (spline.secondDerivativeAt(x[i])<0) list.add(x[i]);
             }
@@ -41,8 +85,45 @@ public class SplineUtil {
         return list;
     }
 
+    public static String secantMonotonous(IfSpline spline){
+        float[] x = (spline instanceof IfSplineInternal)? ((IfSplineInternal)spline).getX() : null;
+        if (x==null) throw new IllegalArgumentException("Not supported Spline Type for this method: " + ((IfSplineInternal)spline).getSplineDef());
+        float[] y = new float[x.length];
+        for (int i=0;i<x.length;i++) y[i] = spline.valueAt(x[i]);
+        LinearSpline linearSpline = new LinearSpline(x,y,new IfSplineDef.Linear());
+        IfSplineDef def = ((IfSplineInternal)spline).getSplineDef();
+
+        boolean decreasingFound = false;
+        StringBuilder bl = new StringBuilder("Secant is decreasing at ");
+        if ( def.type()==CLAMPED ) {
+            if (spline.derivativeAt(x[0]) >  linearSpline.derivativeAt(x[1])) {
+                decreasingFound = true;
+                bl.append(String.format(Locale.ENGLISH,"x=%4.2f (%5.2f,%5.2f)",x[0],spline.derivativeAt(x[0]),linearSpline.derivativeAt(x[1])));
+            };
+        }
+        for (int i=1;i<x.length-1;i++) {
+            if ( linearSpline.derivativeAt(x[i-1]) > linearSpline.derivativeAt(x[i])  ) {
+                decreasingFound = true;
+                bl.append(String.format(Locale.ENGLISH,"x=%4.2f (%5.2f,%5.2f)",x[i],linearSpline.derivativeAt(x[i-1]),linearSpline.derivativeAt(x[i])));
+            };
+        }
+        if ( def.type()==CLAMPED ) {
+            if ( linearSpline.derivativeAt(x[x.length-1] ) > spline.derivativeAt(x[x.length-1])) {
+                decreasingFound = true;
+                bl.append(String.format(Locale.ENGLISH,"x=%4.2f (%5.2f,%5.2f)",x[0],spline.derivativeAt(x[x.length-1]),linearSpline.derivativeAt(x[x.length-1])));
+            };
+        }
+
+
+        if (decreasingFound)
+            return bl.toString();
+        else
+            return "";
+    }
+
+
     public static float getMin(IfSpline spline,float start) throws Exception {
-        IfSplineDef def = ((IfReturnsDef)spline).getSplineDef();
+        IfSplineDef def = ((IfSplineInternal)spline).getSplineDef();
         if ( def.type()== NATURAL )
             return ((CubicSpline)spline).calcMin(start);
         else if ( def.type()==COMPOSITE){
@@ -55,6 +136,8 @@ public class SplineUtil {
     }
 
 
+
+
     public static float curveRadiusAt(float x, IfSpline spline){
         float sec = spline.secondDerivativeAt(x);
         float der = spline.derivativeAt(x);
@@ -62,7 +145,7 @@ public class SplineUtil {
     }
 
     public static IfSpline calcCutSpline(IfSpline refCubicSpline, StringBuilder msg){
-        IfSplineDef def = ((IfReturnsDef)refCubicSpline).getSplineDef();
+        IfSplineDef def = ((IfSplineInternal)refCubicSpline).getSplineDef();
         float[] x;
         Touple dnSlopeLimit;
         Touple upSlopeLimit ;
@@ -132,12 +215,13 @@ public class SplineUtil {
 
     private record Touple(float a,float b){}
     private enum Direction{
-        LEFT(+1,0),RIGHT(-1,1);
+        LEFT(+1, Right),RIGHT(-1,Left);
         final int step;
-        final int back;
-        Direction(int step, int back) {
+        final IfSplineInternal.SplineCalcAt calcAt;
+
+        Direction(int step,IfSplineInternal.SplineCalcAt calcAt ) {
             this.step = step;
-            this.back = back;
+            this.calcAt = calcAt;
         }
     }
     private static Touple getCompositeSlopeLimit(CompositeSpline compositeSpline, Direction dir){
@@ -149,28 +233,31 @@ public class SplineUtil {
         };
         float leftCubeLimit = compositeSpline.getLeftCubicLimit();
         float rightCubeLimit = compositeSpline.getRightCubicLimit();
-        while ( compositeSpline.valueAt(x[i]) - compositeSpline.derivativeAt(x[i])*x[i]<0) i+=dir.step;
-        i +=dir.back;
+        while ( compositeSpline.valueAt(x[i]) - compositeSpline.derivativeAt(x[i],dir.calcAt)*x[i]<0) i+=dir.step;
         if ( x[i] <= leftCubeLimit || x[i] >= rightCubeLimit) {
             return new Touple(x[i],compositeSpline.valueAt(x[i])/x[i]);
         } else {
-            return tangentAt(compositeSpline.getCubicSpline(),x[i-dir.step]);
+            return tangentAt(compositeSpline.getCubicSpline(), compositeSpline.getLeftCubicLimit(), compositeSpline.getRightCubicLimit(), (x[i]+x[i-dir.step])/2f);
         }
     }
+
     private static Touple tangentAt(CubicSpline cubicSpline, float start){
+        return tangentAt(cubicSpline, -Float.MAX_VALUE, Float.MAX_VALUE ,start);
+    }
+    private static Touple tangentAt(CubicSpline cubicSpline,float leftLimit, float rightLimit, float start){
         IfFunction tangent = x -> cubicSpline.valueAt(x) - cubicSpline.derivativeAt(x) * x - 0.0001f;
         IfFunction tangDeriv = x -> -cubicSpline.secondDerivativeAt(x) * x;
-        float heuristicLimit = ProfileUtil.newton(start,0.00005f,10,tangent,tangDeriv);
-        float upSlopeLimitValue = cubicSpline.valueAt(heuristicLimit);
-        float upSlopeLimitSlope = cubicSpline.derivativeAt(heuristicLimit);
-        float yintercept_right = upSlopeLimitValue - heuristicLimit*upSlopeLimitSlope;
+        float heuristicLimit = ProfileUtil.newton(start,0.00005f, leftLimit, rightLimit,10,tangent,tangDeriv);
+        float slopeLimitValue = cubicSpline.valueAt(heuristicLimit);
+        float slopeLimitSlope = cubicSpline.derivativeAt(heuristicLimit);
+        float yintercept_right = slopeLimitValue - heuristicLimit*slopeLimitSlope;
         if (yintercept_right <= 0.00003)
             throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_right ));
-        return new Touple(heuristicLimit,upSlopeLimitSlope);
+        return new Touple(heuristicLimit,slopeLimitSlope);
     }
 
     public static String toDetailedString(IfSpline spline) {
-        IfSplineDef def = ((IfReturnsDef)spline).getSplineDef();
+        IfSplineDef def = ((IfSplineInternal)spline).getSplineDef();
         float[] x = switch (def.type()){
             case NATURAL,CLAMPED -> ((CubicSpline)spline).getX();
             case COMPOSITE -> ((CompositeSpline)spline).getX();

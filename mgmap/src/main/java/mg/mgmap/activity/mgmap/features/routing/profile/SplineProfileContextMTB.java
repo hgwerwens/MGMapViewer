@@ -179,20 +179,16 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         deltaSM20Dn[sc2MTBc.maxSL] = deltaSM20Dn[sc2MTBc.maxSL + 1 + 3];
         factorDown[sc2MTBc.maxSL] = deltaSM20Dn[sc2MTBc.maxSL + 1 + 3] * (facDn + 1f + 5f * sig(2. * (sDn / 100. - 1.)));
 
+
         float watt0 = (float) power;
         float watt = 1.7f * power;
         for (sc = 0; sc < sc2MTBc.maxSurfaceCat; sc++) {
-            int scDn = sc2MTBc.getCatDn(sc);
-            int scUp = sc2MTBc.getCatUpExt(sc);
-            float crUp = this.crUp[scUp];
-            float crDn = this.crDn[scDn];
-            float cr0 = (crUp + crDn) / 2f;
-            float f0 = sig((0.05d - cr0) * 100d);
-            float watt0_high = watt0 + (watt - watt0) * f0;
-            float watt0_base = 100f + (175f - 100f) * f0;
-            float f = sig((0.05d - crUp) * 100d);
-            this.watt0[sc] = watt0_high > watt0_base ? watt0_high + (watt0_base - watt0_high) * f : watt0_high;
-            this.watt[sc] = watt > 175 ? watt + (175 - watt) * f : watt;
+            float cr0 = (crUp[sc2MTBc.getCatUpExt(sc)]+crDn[sc2MTBc.getCatDn(sc)])/2f;
+            float fact = sig((0.05-cr0)*100d);
+            this.watt0[sc] = watt0 * ( 1 + (watt/watt0-1f)*fact) ;
+            this.watt[sc] = watt;
+//          Limiting up power in case of high friction does not have advantages, therefore removed
+//          this.watt[sc] = watt > 175 ? watt + (175 - watt) * sig((0.05d - crUp[sc2MTBc.getCatUpExt(sc)]) * 100d) : watt;
         }
     }
 
@@ -531,5 +527,10 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
     
     public int getSDn() {
         return sDn;
+    }
+
+    @Override
+    public SurfCat2MTBCat getSc2MTBc() {
+        return sc2MTBc;
     }
 }

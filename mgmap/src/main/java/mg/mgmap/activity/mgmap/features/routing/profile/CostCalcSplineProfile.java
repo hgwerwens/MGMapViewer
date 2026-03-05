@@ -90,7 +90,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                 msgTxt.append(e.getMessage());
                 negativeCurvature = true;
             }
-            if (spline!= null ) violations[surfaceCat] = checkSplineHeuristic(spline, surfaceCat);
+            if (spline!= null && heuristicSpline != null) violations[surfaceCat] = checkSplineHeuristic(spline, surfaceCat);
         }
         boolean heuristicViolation = false;
         for ( int surfaceCat=0; surfaceCat<violations.length;surfaceCat++) {
@@ -103,9 +103,11 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                 mgLog.e(msgTxt::toString);
             }
         }
-        if (negativeCurvature||heuristicViolation)
-            throw new RuntimeException( msgTxt.toString() );
 
+        if (negativeCurvature||heuristicViolation ||heuristicSpline==null) {
+            if (heuristicSpline==null) msgTxt.append( context + " Heuristic could not be calculated");
+            throw new RuntimeException(msgTxt.toString());
+        }
 
         for (int surfaceCat = 0; surfaceCat < context.getMaxSurfaceCat(); surfaceCat++){
             try {
@@ -160,8 +162,11 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
         try {
             IfSpline splineTmp = getCostSpline(context.getScHeuristicRefSpline());
             IfSpline spline    =  splineTmp.transformY(1.0f,-0.0001f);
-            checkNegCurvature(spline,String.format(Locale.ENGLISH,"heuristic spline for %s ", context),1e7f);
-            return spline;
+            boolean hasNegCurve = checkNegCurvature(spline,String.format(Locale.ENGLISH,"heuristic spline for %s ", context),1e7f);
+            if (hasNegCurve)
+              return null;
+            else
+              return spline;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -200,7 +205,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
         return spline;
     }
 
-    private void checkNegCurvature(IfSpline spline, String context, float threshold) {
+    private boolean checkNegCurvature(IfSpline spline, String context, float threshold) {
 
         ArrayList<Float> pointsWithNegativeCurvature =SplineUtil.getPointsWithNegativeCurvature(spline);
         if (!pointsWithNegativeCurvature.isEmpty()) {
@@ -220,12 +225,12 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                     msg.append(String.format(Locale.ENGLISH, " curve Radius=%.2f", curvature));
                 }
             }
+            if (thresholdReached) mgLog.w(msg.toString());
 
-            if(criticalthresholdReached && getContext().getCheckAll())
-                throw new RuntimeException( msg.toString());
-            else
-                if (thresholdReached) mgLog.w(msg.toString());
+            if(criticalthresholdReached )
+                return true;
         }
+        return false;
     }
 
 
@@ -272,6 +277,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
 
     public IfSpline calcHeuristicSpline(IfSpline refspline ){
         // cut out a new cubic spline out of the existing one using the to touch points of the tangents
+        if (refspline == null) return null;
         StringBuilder msg = new StringBuilder(context.toString());
         IfSpline cutSpline = SplineUtil.calcCutSpline( refspline, msg);
         mgLog.i(()-> msg.toString());
