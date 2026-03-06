@@ -13,14 +13,13 @@ import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef;
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
 import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
-import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
 
 public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBContextDetails {
 
-    public static float sf2d = 1f;
-    public static float facDnStrech = 9f;
-    public static float dlstrechFac = 1.9f;
+    public static float fs1 = 1f;
+    public static float fs2 = 9f;
+    public static float fs3 = 1.9f;
     public final int power;
     public final int sUp;
     public final int sDn;
@@ -76,7 +75,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
 //        slopesAll[indRefDnSlope]=slopesAll[indRefDnSlope] -  0.02f + 0.01f*sDn/100f;
         float refslope = slopesAll[indRefDnSlope];
 
-        float dlstretch = 0.13f + dlstrechFac * sig((2d - sDn / 100d)*2d);
+        float dlstretch = 0.13f + 1.9f * sig((2d - sDn / 100d)*2d);
         for (int i = 0; i < indRefDnSlope; i++)
             slopesAll[i] = refslope + (slopesAll[i] - refslope) * dlstretch;
 
@@ -150,9 +149,9 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
                 ulstrechDuration[sc] = (1f + 0.18f * sUp / 100 - 0.1f * sig);
                 ulstrechCost[sc] = (0.80f + 0.18f * sUp / 100 - 0.4f * sig);
                 f0u[sc] = 1.0f;
-                f1u[sc] = 1.1f;
-                f2u[sc] = 1.1f * f1u[sc];
-                f3u[sc] = f3uf*f2u[sc];
+                f1u[sc] = (1.2f + 0.15f * sig((1.5 - off) * 2.));
+                f2u[sc] = 1.15f * f1u[sc];
+                f3u[sc] = 1.3f*f2u[sc];
                 crUp[sc] = (0.02f + 0.005f * scUp + 0.05f * sig(2d * (2d - off)));
             } else if (sc != sc2MTBc.maxSL) {
                 int scUp = sc - sc2MTBc.maxScUp;
@@ -168,7 +167,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
             }
         }
 
-        f2d = sf2d;
+        f2d = 1f;
         f3d = 3.0f;
 
         ulstrechDuration[sc2MTBc.maxSL] = 1f + 0.18f * sUp / 100;
@@ -265,19 +264,21 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
                 }
             }
             float sig = sig(2d*(sDn/100d-2.5));
-            durations[indRefDnSlopeOpt] = durations[slopes.length-4]+(0.4f + sig*0.4f)*srelSlope[sc2MTBc.getCatDn(sc)]*slopes[indRefDnSlopeOpt];
+            durations[indRefDnSlopeOpt] = durations[slopes.length-4]+(0.4f + sig*0.3f)*srelSlope[sc2MTBc.getCatDn(sc)]*slopes[indRefDnSlopeOpt];
         } else {
             durations[indRefDnSlopeOpt] = durations[slopes.length-4]+srelSlope[sc2MTBc.getCatDn(sc)]*slopes[indRefDnSlopeOpt];
         }
 
         float innerSplineRightSlope = (durations[slopes.length-3]-durations[slopes.length-2])/(slopes[slopes.length-3]-slopes[slopes.length-2]);
-        if (sc <= sc2MTBc.maxSL || sc >= sc2MTBc.maxScUpDn){
             float innerSplineRightSlopeMin = (durations[slopes.length-4]-durations[slopes.length-3])/(slopes[slopes.length-4]-slopes[slopes.length-3]);
             if (sc == sc2MTBc.maxSL)
                 innerSplineRightSlope = ( innerSplineRightSlope + 2f*innerSplineRightSlopeMin )/3f;
-            else
+            else if (sc <= sc2MTBc.maxSL)
+                innerSplineRightSlope = ( innerSplineRightSlope + 0.1f* innerSplineRightSlopeMin )/1.1f;
+            else if ( sc >= sc2MTBc.maxScUpDn)
                 innerSplineRightSlope = ( innerSplineRightSlope + innerSplineRightSlopeMin )/2f;
-        }
+            else
+                innerSplineRightSlope = ( innerSplineRightSlope + 0.3f* innerSplineRightSlopeMin )/1.3f;
 
         float innerSplineLeftSlope = (durations[1]-durations[2])/(slopes[1]-slopes[2]); // idendentical to -factorDn in case distfactor does not change
         IfSplineDef innerSplineDef = new IfSplineDef.Clamped(innerSplineLeftSlope,innerSplineRightSlope);

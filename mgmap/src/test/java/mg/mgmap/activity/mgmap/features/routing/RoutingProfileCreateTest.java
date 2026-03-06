@@ -13,7 +13,6 @@ import java.util.Locale;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfIsFuncWithDeriv;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
@@ -56,9 +55,9 @@ public class RoutingProfileCreateTest {
 
     @Test
     public void ProfileVary() {
-        for (TestContextMTBInternal.dlstrechFac = 2.2f; TestContextMTBInternal.dlstrechFac <= 2.4f; TestContextMTBInternal.dlstrechFac += 0.1f) {
-            for (TestContextMTBInternal.facDnStrech = 8f; TestContextMTBInternal.facDnStrech <= 8.25f; TestContextMTBInternal.facDnStrech += 0.25f) {
-                for (TestContextMTBInternal.sf2d = 1.03f; TestContextMTBInternal.sf2d <= 1.05f; TestContextMTBInternal.sf2d += 0.01f) {
+        for (TestContextMTBInternal.fs3 = 2.2f; TestContextMTBInternal.fs3 <= 2.4f; TestContextMTBInternal.fs3 += 0.1f) {
+            for (TestContextMTBInternal.fs2 = 8f; TestContextMTBInternal.fs2 <= 8.25f; TestContextMTBInternal.fs2 += 0.25f) {
+                for (TestContextMTBInternal.fs1 = 1.03f; TestContextMTBInternal.fs1 <= 1.05f; TestContextMTBInternal.fs1 += 0.01f) {
                     for (int sDn = 00; sDn <= 400; sDn += 100) {
                         for (int sUp = 0; sUp <= 400; sUp += 100) {
                             for (int mtbDn = 0; mtbDn <= 0; mtbDn += 1) {
@@ -66,7 +65,7 @@ public class RoutingProfileCreateTest {
                                 CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
                                 IfSpline cubicSplineSc = costCalcSplineProfile.getCostSpline(sc);
                                 checkCurvature(cubicSplineSc, new StringBuilder(String.format("%s f2d=%3.2f facDnStrech=%3.2f dlstrechFac=%3.2f", costCalcSplineProfile.getSurfaceCatTxt(sc),
-                                        TestContextMTBInternal.sf2d,TestContextMTBInternal.facDnStrech,TestContextMTBInternal.dlstrechFac)),false);
+                                        TestContextMTBInternal.fs1,TestContextMTBInternal.fs2,TestContextMTBInternal.fs3)),false);
                             }
                         }
                     }
@@ -109,9 +108,9 @@ public class RoutingProfileCreateTest {
 //        scs.add(new ProfSc(200, 100,7));//sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 3, 5))
 //        scs.add(new ProfSc(200, 200,7));
 //        scs.add(new ProfSc(200, 300,7));
-        scs.add(new ProfSc(100, 100,1));//sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 3, 5))
-        scs.add(new ProfSc(100, 100,2));
-        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1)));
+        scs.add(new ProfSc(100, 100,3));//sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 3, 5))
+        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2)));
+        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
 //        scs.add(sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2));
         for (ProfSc profSc: scs ) {
             float fromSlope = -0.05f;
@@ -284,8 +283,10 @@ public class RoutingProfileCreateTest {
     private void checkCubicSpline(IfSpline cubicSpline,StringBuilder msg, float slStart, float slStop){
         checkCurvature(cubicSpline,msg,slStart<slStop);
         checkSlope(cubicSpline,msg);
-        if (slStart<slStop)
-           System.out.println(SplineUtil.valuesToString(cubicSpline,slStart,slStop,0.01f));
+        if (slStart<slStop) {
+            System.out.println(SplineUtil.valuesToString(cubicSpline, slStart, slStop, 0.01f));
+            System.out.println(SplineUtil.toDetailedString(cubicSpline));
+        }
     }
 
 
