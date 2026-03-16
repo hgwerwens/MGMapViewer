@@ -1,25 +1,21 @@
-package mg.mgmap.activity.mgmap.features.routing;
+package mg.mgmap.activity.mgmap.features.routing.profile;
 
-import static mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil.getFrictionBasedVelocity;
+
+import static java.lang.Math.exp;
+import static java.lang.Math.pow;
 
 import androidx.annotation.NonNull;
 
 import java.util.Locale;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CompositeSpline;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfMTBContextDetails;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSplineDef;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
-import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
-import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
 
 public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBContextDetails {
 
-    public static float fs1 = 1f;
-    public static float fs2 = 9f;
-    public static float fs3 = 1.9f;
+    public static float[] fs = new float[3];
+
     public final int power;
     public final int sUp;
     public final int sDn;
@@ -29,32 +25,33 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
     float[] ulstrechCost;
     private final float[] f0u;
     private final float[] f1u;
-    private final float[] f2u;
     private final float[] f3u;
+    private final float[] fuSlope;
     private final float f2d;
     private final float f3d;
+    private final float fdSlope;
     private final float[] crUp;
     private final float[] crDn;
     private final float[] srelSlope;
+    private final float[] frelSlopeCost;
     private final float[] sm20Dn;
     private final float[] factorDown;
     private final float[][] distFactforCostFunct;
     private final float[] watt;
     private final float[] watt0;
     private final float[] slopesAll;
-    private static IfSplineDef.Composite sCompDef = new IfSplineDef.Composite(2,2);
     int indRefDnSlope;
     int heuristicRefSurfaceCat = 7;
-    float[] sslopesAll = new float[]{-0.76f, -0.36f, -0.2f, -0.045f, 0.0f, 0.09f,0.19f, 0.24f};
-    float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.85f ,1.5f  ,1.4f }; //factors to increase costs compared to durations to get better routing results
-    float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.2f  ,1.2f  ,1.2f  ,1.2f  ,1.2f ,1.2f   ,1.2f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
+    float[] sslopesAll = new float[]{-0.76f, -0.36f, -0.2f, -0.05f, 0.0f, 0.09f,0.19f, 0.24f};
+    float[] sdistFactforCostFunct = {  3.0f   ,2.4f ,2.0f  ,1.85f ,1.5f  ,1.5f }; //factors to increase costs compared to durations to get better routing results
+    float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 0f    ,1.4f  ,1.3f  ,1.2f  ,1.2f  ,1.2f ,1.2f   ,1.2f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
     private final IfSpline[] costRefSplines;
     private final IfSpline[] durationRefSplines;
     private final TestContextMTBInternal refContext;
 
-    TestContextMTBInternal(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
+    public TestContextMTBInternal(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
 
         if (withRef) {
             costRefSplines = new CompositeSpline[sc2MTBc.maxScDn];
@@ -88,11 +85,12 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         ulstrechCost = new float[sc2MTBc.maxScUpExt];
         f0u = new float[sc2MTBc.maxScUpExt];
         f1u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
-        f2u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
         f3u = new float[sc2MTBc.maxScUpExt];  // factor on top of friction based duration calculation
+        fuSlope = new float[sc2MTBc.maxScUpExt];
         crUp = new float[sc2MTBc.maxScUpExt]; // uphill friction
         crDn = new float[sc2MTBc.maxScDn]; // downhill friction
         srelSlope = new float[sc2MTBc.maxScDn]; // slope of auxiliary function for duration function at 0% slope to get to -4% slope
+        frelSlopeCost = new float[sc2MTBc.maxScDn];
         sm20Dn = new float[sc2MTBc.maxScDn]; // duration (sec/m) at -20% slope
         factorDown = new float[sc2MTBc.maxScDn]; // slope of the duration function lower -20%
         distFactforCostFunct = new float[sdistFactforCostFunct.length][slopesAll.length];// factor on top of duration function for certain slopes to get a better cost function
@@ -100,7 +98,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         watt0 = new float[sc2MTBc.maxSurfaceCat];
 
 //        float facDn = 12f - 6.8f*sig((2d-sDn / 100d)*2d);
-        float facDn = 12f - 9.8f*sig((2d-sDn / 100d)*2d);
+        float facDn = 12f - 10f*sig((2d-sDn / 100d)*2d);
 
         for (sc = 0; sc < sdistFactforCostFunct.length; sc++) {
             for (int i = 0; i < slopesAll.length; i++) {
@@ -114,32 +112,33 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
             }
         }
         // factor how much higher the reference surface level will be if the sDn changes by 100
-        float deltaSlToSl2 = dSM20scDnLow(Math.pow(1.65d, 2d - sDn / 100f) + 1d, sDn); // for sc 7 (mtbDn=0,mtbUp=0) the delta which surface level has same value, with lower sDn sl becomes higher and vice versa, if deltaSlToSl2=0 (for sDn=2) than deltaSM20DnMin=deltaSM20Dn(2)
-        float deltaSM20DnMin = 0.05f + deltaSlToSl2 - dSM20scDnLow(0, sDn) + 0.52f * (float) Math.exp(-sDn / 100d * 0.4d); //deltaSM20DnMin value for sc 7 (mtbDn=0,mtbUp=0)
-
+        float deltaSlToSl2 = dSM20scDnLow(pow(1.25d, 1.8d - sDn / 100f) + 1d, sDn); //for sc 7 (mtbDn=0,mtbUp=0) the delta which surface level has same value, with lower sDn sl becomes higher and vice versa, if deltaSlToSl2=0 (for sDn=2) than deltaSM20DnMin=deltaSM20Dn(2)
+        float deltaSM20DnMin = 0.05f + deltaSlToSl2 - dSM20scDnLow(0, sDn) + 0.68f * (float) exp(-sDn / 100d * 0.5d); //sig((sDn/100d-0.5)*0.675);//0.52f * (float) Math.exp(-sDn / 100d * 0.4d); //deltaSM20DnMin value for sc 7 (mtbDn=0,mtbUp=0)
         for (int scDn = sc2MTBc.maxSL + 1; scDn < sc2MTBc.maxScDn; scDn++) {
             int lscDn = scDn - (sc2MTBc.maxSL + 1);
             off = lscDn - sDn / 100d;
             crDn[scDn] = (0.02f + 0.005f * (scDn - (sc2MTBc.maxSL + 1)) + 0.05f * sig(2d * (2d - off)));
-            srelSlope[scDn] = ssrelSlope[scDn]; //  + 0.5f - sig((sDn / 100d - 2d)) - 0.5f * sig(2d * (1d - off));
-            sm20Dn[scDn] = deltaSM20DnMin + (sig((1.5d - off) * 2d)) + lscDn * 0.025f;
-            factorDown[scDn] = sm20Dn[scDn] * facDn;
+            srelSlope[scDn] = ssrelSlope[scDn];
+            frelSlopeCost[scDn] = (0.3f + sig(2d*(sDn/100d-2))*0.7f);
+            sm20Dn[scDn] = deltaSM20DnMin + ( 0.8f * sig((1.5d - off) * 2d)) + lscDn * 0.025f;
+            factorDown[scDn] = sm20Dn[scDn] * facDn ;
         }
         float deltaSM20DnMinscLow = sm20Dn[sc2MTBc.maxSL + 1] - deltaSlToSl2;
 
-        float f3uf = 1.5f;
+
         for (sc = 0; sc < sc2MTBc.maxScUpExt; sc++) {
             if (sc < sc2MTBc.maxSL) {
                 ulstrechDuration[sc] = 1f + 0.18f * sUp / 100;
-                ulstrechCost[sc] = 1.3f + 0.18f * sUp / 100 - 0.5f * sig((3.5 - sc) * 2.);
-                sig = sig((3.5 - sc) * 2.);
-                f0u[sc] = 1.0f + 0.15f * sig;
-                f1u[sc] = 1.1f + 0.15f * sig;
-                f2u[sc] = 1.1f * f1u[sc];
-                f3u[sc] = f3uf*f2u[sc];
+                sig = sig((3.5 - sc) * 2d);
+                ulstrechCost[sc] = 1.34f*(float) pow(1.18,sUp /100d-1d) -0.8f*sig; //1.1f + 0.24f * sUp / 100 - 0.8f * sig; //1.34f*(float) pow(1.58/1.34,sUp /100d-1d) -0.4f*sig; //
+                f0u[sc] = 1f   + 0.15f * sig;
+                f1u[sc] = 1.1f * f0u[sc];
+                f3u[sc] = 1.1f * 1.2f*f1u[sc]*f0u[sc];
+                fuSlope[sc] = 0.1f;
                 crUp[sc] = (0.0047f + 0.029f * sig((3.5 - sc) * 1.3));
                 crDn[sc] = crUp[sc];
-                srelSlope[sc] = ssrelSlope[sc]; // + (0.5f * (0.5f - sig(sDn / 100d - 2d)));
+                srelSlope[sc] = ssrelSlope[sc];
+                frelSlopeCost[sc] = 0.3f + sig(2d*(sDn/100d-2))*0.1f;
                 sm20Dn[sc] = deltaSM20DnMinscLow + dSM20scDnLow(sc, sDn);
                 factorDown[sc] = sm20Dn[sc] * facDn;
             } else if (sc > sc2MTBc.maxSL && sc < sc2MTBc.maxScUp) {
@@ -147,43 +146,42 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
                 off = scUp - sUp / 100d;
                 sig = sig((0.5 - off) * 2.);
                 ulstrechDuration[sc] = (1f + 0.18f * sUp / 100 - 0.1f * sig);
-                ulstrechCost[sc] = (0.80f + 0.18f * sUp / 100 - 0.4f * sig);
-                f0u[sc] = 1.0f;
-                f1u[sc] = (1.2f + 0.15f * sig((1.5 - off) * 2.));
-                f2u[sc] = 1.15f * f1u[sc];
-                f3u[sc] = 1.3f*f2u[sc];
-                crUp[sc] = (0.02f + 0.005f * scUp + 0.05f * sig(2d * (2d - off)));
-            } else if (sc != sc2MTBc.maxSL) {
-                int scUp = sc - sc2MTBc.maxScUp;
-                off = scUp - sUp / 100d;
-                sig = sig((-0.5 - off) * 2.);
-                ulstrechDuration[sc] = (1f + 0.18f * sUp / 100 - 0.1f * sig);
-                ulstrechCost[sc] = (0.70f + 0.18f * sUp / 100 - 0.4f * sig);
+                ulstrechCost[sc] = 0.94f*(float) pow(1.26,sUp /100d-1d) -0.4f*sig;// 0.94f*(float) pow(1.18/0.94,sUp /100d-1d) -0.4f*sig; //(0.7f + 0.24f * sUp / 100 - 0.4f * sig); //
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.2f;
-                f2u[sc] = 1.1f * f1u[sc]; // ( 1.1 + 0.03*sig )*f1u[sc] ;
-                f3u[sc] = f3uf*f2u[sc];
-                crUp[sc] = (0.025f + 0.005f * scUp + 0.05f * sig(2d * (1d - off)));
+                f3u[sc] = 1.1f*1.3f*f1u[sc];
+                fuSlope[sc] = 0.3f;
+                crUp[sc] = (0.02f + 0.005f * scUp + 0.05f * sig(2d * (2d - off)));
+            } else if (sc != sc2MTBc.maxSL) {
+                int scUp = sc - sc2MTBc.maxScUp; // it's actually the scDn category without scUp used to derive factors for cost function
+                off = scUp - sUp / 100d;
+                sig = sig((-0.5 - off) * 2);
+                ulstrechDuration[sc] = (1f + 0.18f * sUp / 100 - 0.1f * sig);
+                ulstrechCost[sc] = 0.84f*(float) pow(1.24,sUp /100d-1d) -0.4f*sig; //(0.65f + 0.2f * sUp / 100 - 0.4f * sig); //
+                f0u[sc] = 1.0f;
+                f1u[sc] = 1.2f;
+                f3u[sc] = 1.1f*1.4f*f1u[sc];
+                fuSlope[sc] = 1f;
+                crUp[sc] = (0.024f + 0.005f * scUp + 0.05f * sig(2d * (1d - off)));
             }
         }
 
         f2d = 1f;
         f3d = 3.0f;
+        fdSlope = sig(2d*(sDn/100d-2));
 
         ulstrechDuration[sc2MTBc.maxSL] = 1f + 0.18f * sUp / 100;
-        ulstrechCost[sc2MTBc.maxSL] = (0.40f + 0.18f * sUp / 100);
-
+        ulstrechCost[sc2MTBc.maxSL] = 0.65f*(float) pow(1.3,sUp /100d-1d);// (0.45f + 0.2f * sUp / 100);//0.45f*(float) pow(1.3,sUp /100d-1d);//
         f0u[sc2MTBc.maxSL] = 1.0f;
         f1u[sc2MTBc.maxSL] = 1.35f;
-        f2u[sc2MTBc.maxSL] = f1u[sc2MTBc.maxSL] * 1.15f;
-        f3u[sc2MTBc.maxSL] = f3uf*f2u[sc2MTBc.maxSL];
+        f3u[sc2MTBc.maxSL] = 1.5f*(f1u[sc2MTBc.maxSL] * 1.15f);
+        fuSlope[sc2MTBc.maxSL] = 0.2f;
         crUp[sc2MTBc.maxSL] = 0.03f;
         crDn[sc2MTBc.maxSL] = 0.02f;
         srelSlope[sc2MTBc.maxSL] = srelSlope[sc2MTBc.maxSL + 1];
-
+        frelSlopeCost[sc2MTBc.maxSL] = (0.3f + sig(2d*(sDn/100d-2))*0.25f);
         sm20Dn[sc2MTBc.maxSL] = sm20Dn[sc2MTBc.maxSL + 1 + 3];
-        factorDown[sc2MTBc.maxSL] = sm20Dn[sc2MTBc.maxSL + 1 + 3] * (facDn + 1f + 5f * sig(2. * (sDn / 100. - 1.)));
-
+        factorDown[sc2MTBc.maxSL] =  sm20Dn[sc2MTBc.maxSL] * facDn*(1f+0.25f*sig((3d-sDn/100d)*2d));
 
         float watt0 = (float) power;
         float watt = 1.7f * power;
@@ -196,8 +194,13 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
 
     }
 
+    TestContextMTBInternal( int sUp, int sDn) {
+        this((int) (47.5 + 25 * sUp / 100d),sUp,sDn,true,true);
+    }
+
+
     static float sig(double base) {
-        return (float) (1. / (1. + Math.exp(base)));
+        return (float) (1. / (1. + exp(base)));
     }
 
     static float dSM20scDnLow(double scDn, int sDn) {
@@ -221,7 +224,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         float crDn = this.crDn[scDn];
         float f0up = f0u[scUp];
         float f1Up = f1u[scUp];
-//        float f2Up = getF2u(sc);
+
         float f3Up = f3u[scUp];
         float cr0 = (crDn+crUp)/2f;
         float cr1 =  (0.1f*crDn + 0.9f*crUp);
@@ -239,8 +242,6 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         float watt0 = this.watt0[sc];
         float watt  = this.watt[sc];
 
-        long t1 = System.nanoTime();
-
 
         float[] durations = new float[slopes.length];
 
@@ -248,14 +249,10 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
         durations[1] = (sm20Dn -(slopes[1]-refDnSlope)*factorDn*f2d);
         durations[2] =  sm20Dn ;
         //      for everything with slope >=0% durations (sec/m) is calculated based on the speed derived from friction and input power (Watt)
-        durations[slopes.length-4] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-4], watt0, cr0) ;
-        durations[slopes.length-3] = f0up /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, cr1) ;
-        durations[slopes.length-2] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp)  ;
-        durations[slopes.length-1] = f3Up /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, crUp)  ;
-
-
-        durations[indRefDnSlopeOpt] = durations[slopes.length-4]+srelSlope[sc2MTBc.getCatDn(sc)]*slopes[indRefDnSlopeOpt];
-
+        durations[slopes.length-4] = 1.0f /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-4], watt0, cr0) ;
+        durations[slopes.length-3] = f0up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-3], watt, cr1) ;
+        durations[slopes.length-2] = f1Up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp)  ;
+        durations[slopes.length-1] = f3Up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-1], watt, crUp)  ;
 
         if (isCostSpline) {
             if (distFactCostFunct.length>0) {
@@ -263,24 +260,21 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
                     durations[i] = durations[i] * distFactCostFunct[i];
                 }
             }
-            float sig = sig(2d*(sDn/100d-2.5));
-            durations[indRefDnSlopeOpt] = durations[slopes.length-4]+(0.4f + sig*0.3f)*srelSlope[sc2MTBc.getCatDn(sc)]*slopes[indRefDnSlopeOpt];
+            durations[indRefDnSlopeOpt] = durations[slopes.length-4]+frelSlopeCost[scDn]*srelSlope[scDn]*slopes[indRefDnSlopeOpt];
         } else {
-            durations[indRefDnSlopeOpt] = durations[slopes.length-4]+srelSlope[sc2MTBc.getCatDn(sc)]*slopes[indRefDnSlopeOpt];
+            durations[indRefDnSlopeOpt] = durations[slopes.length-4]+srelSlope[scDn]*slopes[indRefDnSlopeOpt];
         }
 
-        float innerSplineRightSlope = (durations[slopes.length-3]-durations[slopes.length-2])/(slopes[slopes.length-3]-slopes[slopes.length-2]);
-            float innerSplineRightSlopeMin = (durations[slopes.length-4]-durations[slopes.length-3])/(slopes[slopes.length-4]-slopes[slopes.length-3]);
-            if (sc == sc2MTBc.maxSL)
-                innerSplineRightSlope = ( innerSplineRightSlope + 2f*innerSplineRightSlopeMin )/3f;
-            else if (sc <= sc2MTBc.maxSL)
-                innerSplineRightSlope = ( innerSplineRightSlope + 0.1f* innerSplineRightSlopeMin )/1.1f;
-            else if ( sc >= sc2MTBc.maxScUpDn)
-                innerSplineRightSlope = ( innerSplineRightSlope + innerSplineRightSlopeMin )/2f;
-            else
-                innerSplineRightSlope = ( innerSplineRightSlope + 0.3f* innerSplineRightSlopeMin )/1.3f;
 
-        float innerSplineLeftSlope = (durations[1]-durations[2])/(slopes[1]-slopes[2]); // idendentical to -factorDn in case distfactor does not change
+        float innerSplineRightSlopeMax = (durations[slopes.length-3]-durations[slopes.length-2])/(slopes[slopes.length-3]-slopes[slopes.length-2]);
+        float innerSplineRightSlopeMin = (durations[slopes.length-4]-durations[slopes.length-3])/(slopes[slopes.length-4]-slopes[slopes.length-3]);
+        float innerSplineRightSlope = ( innerSplineRightSlopeMax + fuSlope[scUp]*innerSplineRightSlopeMin )/(1f+fuSlope[scUp]);
+
+        float innerSplineLeftSlopeMin = (durations[1]-durations[2])/(slopes[1]-slopes[2]); // idendentical to -factorDn in case distfactor does not change
+        float innerSplineLeftSlope2 = durations[2]/slopes[2];
+        float innerSplineLeftSlope = (innerSplineLeftSlope2>innerSplineLeftSlopeMin)?(innerSplineLeftSlopeMin+fdSlope*innerSplineLeftSlope2)/(1+fdSlope):innerSplineLeftSlopeMin;
+
+
         IfSplineDef innerSplineDef = new IfSplineDef.Clamped(innerSplineLeftSlope,innerSplineRightSlope);
         IfSplineDef splineDef = new IfSplineDef.Composite(2,2,innerSplineDef);
 
@@ -421,20 +415,7 @@ public class TestContextMTBInternal implements IfSplineProfileContext, IfMTBCont
     public float[] getDistFactforCostFunct(int sc) {
         if (sc < distFactforCostFunct.length)
             return distFactforCostFunct[sc];
-    /*    else if ( sc2MTBc.getMtbDn(sc) >= 2 && sDn >= 300  ) { // for sDn=300 do explicitly prefer scDn = 3 ( and to a lesser extent 2 and 4 )
-            double off = sDn/100f - sc2MTBc.getMtbDn(sc);
-            float bell = (float) Math.exp(-0.6d*(off*off));
-            float[] distFact = new float[slopesAll.length];
-            for (int i=0;i<distFact.length;i++) {
-                if (slopesAll[i]<-0.2f)
-                   distFact[i] = 1f -0.3f*bell;
-                else if (slopesAll[i] < 0f)
-                    distFact[i] = 1f -0.2f*bell;
-                else
-                   distFact[i] = 1f;
-            }
-            return distFact;
-        } */ else
+        else
             return new float[]{};
     }
 

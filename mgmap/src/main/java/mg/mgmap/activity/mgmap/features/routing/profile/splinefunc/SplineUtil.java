@@ -17,40 +17,6 @@ import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
 public class SplineUtil {
 
 
-    public static final class FloatTol {
-
-        private final float absEps;
-        private final float relEps;
-
-        public FloatTol( ){
-           this(1e-6f,1e-6f);
-        }
-        public FloatTol(float absEps, float relEps) {
-            this.absEps = absEps;
-            this.relEps = relEps;
-        }
-        private float tol(float a, float b) {
-            return absEps + relEps * Math.max(Math.abs(a), Math.abs(b));
-        }
-        public boolean eq(float a, float b) {
-            return Math.abs(a - b) <= tol(a, b);
-        }
-        public boolean gt(float a, float b) {
-            return a > b + tol(a, b);
-        }
-        public boolean lt(float a, float b) {
-            return a < b - tol(a, b);
-        }
-
-        public boolean ge(float a, float b) {
-            return gt(a, b) || eq(a, b);
-        }
-
-        public boolean le(float a, float b) {
-            return lt(a, b) || eq(a, b);
-        }
-    }
-
     public static ArrayList<Float> getPointsWithNegativeCurvature(IfSpline spline){
         IfSplineDef def = ((IfSplineInternal)spline).getSplineDef();
         IfSplineInternal splineInternal = (IfSplineInternal) spline;
@@ -70,7 +36,7 @@ public class SplineUtil {
             throw new IllegalArgumentException("Not supported Spline Type for this method: " + def);
         }
         ArrayList<Float> list = new ArrayList<>();
-        FloatTol floatTol = new FloatTol();
+        ProfileUtil.FloatTol floatTol = new ProfileUtil.FloatTol();
         for (int i=1; i< x.length-1;i++){
             if ( i <= leftSegs || i >= x.length - 1 -rightSegs ){
                 if (floatTol.gt(splineInternal.derivativeAt(x[i], Left) , splineInternal.derivativeAt(x[i], Right))) {
@@ -167,9 +133,9 @@ public class SplineUtil {
             int leftSegs =0;
             int rightSegs = 0;
             for (int i =0; i<xy.x.length;i++){
-                if (xy.x[i]< compositeSpline.getLeftCubicLimit())
+                if (xy.x[i]<= compositeSpline.getLeftCubicLimit())
                     leftSegs++;
-                if (xy.x[i]> compositeSpline.getRightCubicLimit())
+                if (xy.x[i]>= compositeSpline.getRightCubicLimit())
                     rightSegs++;
             }
             if ( leftSegs > 0 || rightSegs > 0) {
@@ -178,10 +144,18 @@ public class SplineUtil {
                 System.arraycopy(xy.x,0,xn,1,xy.x.length);
                 System.arraycopy(xy.y,0,yn,1,xy.y.length);
                 xn[0] = xy.x[0] - 0.2f;
-                yn[0] = xn[0]*dnSlopeLimit.b;
+                yn[0] = (xn[0]-xn[1])*dnSlopeLimit.b + yn[1];
                 xn[xn.length-1] = xy.x[xy.x.length-1] + 0.2f;
-                yn[xn.length-1] = xn[xn.length-1]*upSlopeLimit.b;
-                cutSpline = new CompositeSpline(xn, yn, new IfSplineDef.Composite(leftSegs + 1, rightSegs + 1));
+                yn[xn.length-1] = (xn[xn.length-1]-xn[xn.length-2])*upSlopeLimit.b+yn[yn.length-2];
+                IfSplineDef.Composite compdef = (IfSplineDef.Composite) def;
+                IfSplineDef.Clamped innerSpline = (IfSplineDef.Clamped) compdef.innerSpline();
+                if (innerSpline!=null){
+                    if (leftSegs > 0 && !(rightSegs >0))
+                        innerSpline = new IfSplineDef.Clamped(innerSpline.slopeLeft(), upSlopeLimit.b);
+                    else if (rightSegs > 0 && !(leftSegs>0))
+                        innerSpline = new IfSplineDef.Clamped(dnSlopeLimit.b,innerSpline.slopeRight());
+                }
+                cutSpline = new CompositeSpline(xn, yn, new IfSplineDef.Composite(leftSegs==0?1:leftSegs , rightSegs==0?1:rightSegs,innerSpline));
             }
             else
                 cutSpline = new CubicSpline(xy.x,xy.y,new IfSplineDef.Clamped(dnSlopeLimit.b,upSlopeLimit.b));
@@ -245,13 +219,13 @@ public class SplineUtil {
         return tangentAt(cubicSpline, -Float.MAX_VALUE, Float.MAX_VALUE ,start);
     }
     private static Touple tangentAt(CubicSpline cubicSpline,float leftLimit, float rightLimit, float start){
-        IfFunction tangent = x -> cubicSpline.valueAt(x) - cubicSpline.derivativeAt(x) * x - 0.0001f;
+        IfFunction tangent = x -> cubicSpline.valueAt(x) - cubicSpline.derivativeAt(x) * x - 0.00001f;
         IfFunction tangDeriv = x -> -cubicSpline.secondDerivativeAt(x) * x;
-        float heuristicLimit = ProfileUtil.newton(start,0.00005f, leftLimit, rightLimit,10,tangent,tangDeriv);
+        float heuristicLimit = ProfileUtil.newton(start,0.000005f, leftLimit, rightLimit,10,tangent,tangDeriv);
         float slopeLimitValue = cubicSpline.valueAt(heuristicLimit);
         float slopeLimitSlope = cubicSpline.derivativeAt(heuristicLimit);
         float yintercept_right = slopeLimitValue - heuristicLimit*slopeLimitSlope;
-        if (yintercept_right <= 0.00003)
+        if (yintercept_right <= 0.000003)
             throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_right ));
         return new Touple(heuristicLimit,slopeLimitSlope);
     }

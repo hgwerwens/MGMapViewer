@@ -1,5 +1,7 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
+import androidx.annotation.NonNull;
+
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 
 public interface IfSplineProfileContext {
@@ -13,6 +15,7 @@ public interface IfSplineProfileContext {
     default boolean getCheckAll() {return true;}; //
     float getMinDistFactSC0();
     String getSurfaceCatTxt(int sc);
+    @NonNull
     String toString();
 
 }

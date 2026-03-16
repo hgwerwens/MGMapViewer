@@ -75,12 +75,32 @@ public class ProfileUtil {
         return na;
     }
 
-    public static float getFrictionBasedVelocity(double slope, double watt, double Cr ){
-        return (float) getFrictionBasedVelocity( slope, watt, Cr,1.2,90d,0.45,0.95);
+    private record VelParm(double rho, double mass, double ACw, double eta){};
+    private static VelParm velParm = new VelParm(1.2,90d,0.45,0.95);
 
+
+
+    public static float getFloatFrictionBasedVelocity(double slope, double watt, double Cr ){
+        return  (float) getFrictionBasedVelocity( slope, watt, Cr);
     }
 
-    public static double getFrictionBasedVelocity(  double slope, double watt, double Cr, double rho, double mass, double ACw, double eta  ) {
+    public static double getFrictionBasedVelocity(double slope, double watt, double Cr ){
+        return  getFloatFrictionBasedVelocity( slope, watt, Cr,velParm.rho,velParm.mass,velParm.ACw,velParm.eta);
+    }
+
+    public static double getSlopeDerivative(double slope, double v, double Cr){
+        return getSlopeDerivative( slope, v, Cr,velParm.rho,velParm.mass,velParm.ACw,velParm.eta);
+    }
+
+
+    public static double getSlopeDerivative(double slope, double v, double Cr, double rho, double mass, double ACw, double eta){
+       double mg =  mass * 9.81;
+       double ACwr = 0.5 * ACw * rho;
+       double dvds = - (mg*v)/(3*ACwr*v*v + mg*(slope+Cr));
+       return dvds;
+    }
+
+    public static double getFloatFrictionBasedVelocity(double slope, double watt, double Cr, double rho, double mass, double ACw, double eta  ) {
         double mg = mass * 9.81;
         double ACwr = 0.5 * ACw * rho;
         double p = mg * (Cr + slope) / ACwr;
@@ -88,16 +108,56 @@ public class ProfileUtil {
         return solveP3(p, q);
     }
 
+    private static FloatTol floatTol = new FloatTol(1e-7f,1e-7f);
 
-
-    public static float solveP3(double p, double q){
+    public static double solveP3(double p, double q){
+        // stabiler Spezialfall (typisch für Fahrradphysik)
+        if (p > 0) {
+            double a = Math.sqrt(p / 3.0);
+            double b = (3.0 * q) / (2.0 * p) * Math.sqrt(3.0 / p);
+            return  - 2.0 * a * Math.sinh(asinh(b) / 3.0);
+        }
+        // allgemeine Cardano-Lösung
         double D = Math.pow(q,2)/4. + Math.pow(p,3)/27.;
-
-        return (float) ((D>=0) ? Math.cbrt(- q*0.5 + Math.sqrt(D)) + Math.cbrt(- q*0.5 - Math.sqrt(D)) :
+        return  ((D>=0) ? Math.cbrt(- q*0.5 + Math.sqrt(D)) + Math.cbrt(- q*0.5 - Math.sqrt(D)) :
                 Math.sqrt(-4.*p/3.) * Math.cos(1./3.*Math.acos(-q/2*Math.sqrt(-27./Math.pow(p,3.)))));
-
+    }
+    public static double asinh(double x) {
+        return Math.log(x + Math.sqrt(x*x + 1.0));
     }
 
 
+    public static final class FloatTol {
 
+        private final float absEps;
+        private final float relEps;
+
+        public FloatTol( ){
+           this(1e-6f,1e-6f);
+        }
+        public FloatTol(float absEps, float relEps) {
+            this.absEps = absEps;
+            this.relEps = relEps;
+        }
+        private float tol(float a, float b) {
+            return absEps + relEps * Math.max(Math.abs(a), Math.abs(b));
+        }
+        public boolean eq(float a, float b) {
+            return Math.abs(a - b) <= tol(a, b);
+        }
+        public boolean gt(float a, float b) {
+            return a > b + tol(a, b);
+        }
+        public boolean lt(float a, float b) {
+            return a < b - tol(a, b);
+        }
+
+        public boolean ge(float a, float b) {
+            return gt(a, b) || eq(a, b);
+        }
+
+        public boolean le(float a, float b) {
+            return lt(a, b) || eq(a, b);
+        }
+    }
 }

@@ -1,6 +1,6 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
-import static mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil.getFrictionBasedVelocity;
+import static mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil.getFloatFrictionBasedVelocity;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.CubicSpline;
 
@@ -64,11 +64,11 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
         durations[2] =   sm20Dn -(slopes[2]-refDnSlope)*factorDn;
         durations[3] =   sm20Dn ;
         //      for everything with slope >=0% durations (sec/m) is calculated based on the speed derived from friction and input power (Watt)
-        durations[slopes.length-5] = 1.0f /  getFrictionBasedVelocity(slopes[slopes.length-5], watt0,crUp) ;
-        durations[slopes.length-4] = f0up /  getFrictionBasedVelocity(slopes[slopes.length-4], watt, crUp) ;
-        durations[slopes.length-3] = f1Up /  getFrictionBasedVelocity(slopes[slopes.length-3], watt, crUp)  ;
-        durations[slopes.length-2] = f2Up /  getFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp)  ;
-        durations[slopes.length-1] = f3Up /  getFrictionBasedVelocity(slopes[slopes.length-1], watt, crUp)  ;
+        durations[slopes.length-5] = 1.0f /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-5], watt0,crUp) ;
+        durations[slopes.length-4] = f0up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-4], watt, crUp) ;
+        durations[slopes.length-3] = f1Up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-3], watt, crUp)  ;
+        durations[slopes.length-2] = f2Up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-2], watt, crUp)  ;
+        durations[slopes.length-1] = f3Up /  ProfileUtil.getFloatFrictionBasedVelocity(slopes[slopes.length-1], watt, crUp)  ;
         //      duration at -4% only used for the reference profiles.
         durations[indRefDnSlopeOpt] = durations[slopes.length-5]+getRelSlope(sc)*slopes[indRefDnSlopeOpt];
 

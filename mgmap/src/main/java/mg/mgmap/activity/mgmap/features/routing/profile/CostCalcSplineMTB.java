@@ -65,13 +65,20 @@ public class CostCalcSplineMTB implements CostCalculator {
                     distFactor = 1.15f;
                 }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
-                if (  surfaceLevel >= 4  && ( mtbUp >= 0 || mtbDn >= 0)) {
+/*                if (  surfaceLevel >= 4  && mtbUp >= 0) {
+                    distFactor = (surfaceLevel==4)?1.05f:1.1f;
                     surfaceLevel = 6;
-                    distFactor = 1.05f;
                 } else {
                     surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
                     distFactor = 1.0f;
+                } */
+                surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
+                if (  surfaceLevel >= 3  && mtbDn >= 0) {
+                    distFactor = 0.9f;
+                } else {
+                    distFactor = 1.0f;
                 }
+
             } else if ("steps".equals(wayTagEval.highway)) {
                 surfaceLevel = 6; // treat steps as mtb scale 3.
                 mtbDn = 3;
@@ -121,7 +128,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 cost = mfd/2d*dist*costf + 0.00001;
             else if (direction!=dir.oneway) {
                 // stairs downhill
-                cost = (1d + mfd / 2d * ProfileUtil.sig(2d*(((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d))) * dist * costf + 0.00001;
+                cost = (1d + mfd / 2d * ProfileUtil.sig(1d*(((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d))) * dist * costf + 0.00001;
             }
             else
                 cost = mfd*dist*costf + 0.00001;

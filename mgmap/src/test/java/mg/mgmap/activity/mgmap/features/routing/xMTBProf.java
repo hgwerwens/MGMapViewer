@@ -7,7 +7,7 @@ import mg.mgmap.generic.graph.WayAttributs;
 public class xMTBProf extends RoutingProfile{
     String id;
     public xMTBProf( int sUp, int sDn ) {
-        super(new CostCalcSplineProfile( SplineProfileTestContextMTB.get(sUp,sDn) ));
+        super(new CostCalcSplineProfile( SplineProfileTestContextMTB.get(sUp,sDn,false) ));
         float up = sUp/100f;
         float dn = sDn/100f;
         String uf = (up == Math.floor(up))?"NW_MTB_K%1.0f":"ID_MTB_K%.3f";
@@ -15,9 +15,6 @@ public class xMTBProf extends RoutingProfile{
         id = String.format(uf+df,up,dn);
     }
 
-    public xMTBProf(int power, int sUp, int sDn ) {
-        super(new CostCalcSplineProfile( SplineProfileTestContextMTB.get(power,sUp,sDn) ));
-    }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {
         return new CostCalcSplineMTB(wayAttributs, (CostCalcSplineProfile) profileCalculator);
