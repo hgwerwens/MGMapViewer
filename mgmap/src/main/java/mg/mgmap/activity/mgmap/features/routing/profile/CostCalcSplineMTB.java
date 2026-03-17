@@ -12,9 +12,9 @@ import mg.mgmap.generic.util.basic.MGLog;
 
 public class CostCalcSplineMTB implements CostCalculator {
     enum dir {up,down,none,oneway}
+    private static final float distFactMTBTracks = 0.9f;
     private static final MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
     private static final WeakHashMap<CostCalcSplineMTB,WayAttributs> AttributsHashMap = new WeakHashMap<>();
-
     private final float mfd;
     private final dir direction;
     private final IfSpline surfaceCatSpline;
@@ -65,16 +65,9 @@ public class CostCalcSplineMTB implements CostCalculator {
                     distFactor = 1.15f;
                 }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
-/*                if (  surfaceLevel >= 4  && mtbUp >= 0) {
-                    distFactor = (surfaceLevel==4)?1.05f:1.1f;
-                    surfaceLevel = 6;
-                } else {
-                    surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
-                    distFactor = 1.0f;
-                } */
                 surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
-                if (  surfaceLevel >= 3  && mtbDn >= 0) {
-                    distFactor = 0.9f;
+                if ( surfaceLevel >= 3 && mtbDn >= 0 ) {
+                    distFactor = distFactMTBTracks;
                 } else {
                     distFactor = 1.0f;
                 }
@@ -119,21 +112,21 @@ public class CostCalcSplineMTB implements CostCalculator {
         double cost;
         if (direction!=null)
             if ( direction == dir.oneway && !primaryDirection)
-                cost = mfd*dist*costf + dist * 5 + 0.00001;
+                cost = mfd*dist*costf + dist * 5 ;
             else if ((direction==dir.up&&primaryDirection) || (direction==dir.down&&!primaryDirection))
                 // stairs uphill
-                cost = dist * Math.max( mfd*surfaceCatSpline.valueAt(0.1f) , costf ) + 0.00001;
+                cost = dist * Math.max( mfd*surfaceCatSpline.valueAt(0.1f) , costf ) ;
             else if (direction==dir.none)
                 // stairs without up/down attribute
-                cost = mfd/2d*dist*costf + 0.00001;
+                cost = mfd/2d*dist*costf ;
             else if (direction!=dir.oneway) {
                 // stairs downhill
-                cost = (1d + mfd / 2d * ProfileUtil.sig(1d*(((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d))) * dist * costf + 0.00001;
+                cost = (1d + mfd / 2d * ProfileUtil.sig((((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d))) * dist * costf ;
             }
             else
-                cost = mfd*dist*costf + 0.00001;
+                cost = mfd*dist*costf ;
         else
-            cost = mfd*dist*costf + 0.00001;
+            cost = mfd*dist*costf ;
 
 //        mgLog.d("cost="+cost+" costf="+costf + " dist="+dist+" vertDist="+vertDist+" primaryDir="+primaryDirection+" direction="+direction+" mfd="+mfd);
         return cost;
@@ -163,5 +156,9 @@ public class CostCalcSplineMTB implements CostCalculator {
             });
             return (long) (1000*dist*spm);
         } else return 0;
+    }
+
+    public static float getMinDistFactSC(int surfaceCat) {
+        return (surfaceCat >= 3 && surfaceCat <=5)? distFactMTBTracks:1f;
     }
 }

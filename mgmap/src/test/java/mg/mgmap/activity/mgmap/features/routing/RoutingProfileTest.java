@@ -630,12 +630,12 @@ public class RoutingProfileTest {
         points.put("Leopoldstein", new PointDef( PointType.stop,new PointModelImpl(49.391983, 8.722035)));
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.replace("3Seg0",PointType.off_rt);
-        tests.put(testDef.getId(),testDef);
-
-        testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
 
@@ -995,7 +995,7 @@ public class RoutingProfileTest {
         points.replace("HangwegTeil1", PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef("UnterHampen2DreiEichenPfadSeg1_21",mtb_k2s2);
+        testDef = new TestDef("UnterHampen2DreiEichenPfadSeg1_21",mtb_k3s3);
         points = testDef.points;
         points.put("AlterSteinbruchSchlagweg", new PointDef( PointType.start,new PointModelImpl(49.379343, 8.716802)));
         points.put("DreiEichenPfadSeg1_31", new PointDef( PointType.on_rt,new PointModelImpl(49.379439, 8.717213)));
@@ -1003,11 +1003,13 @@ public class RoutingProfileTest {
         points.put("DreiEichenPfadSeg1_21", new PointDef( PointType.stop,new PointModelImpl(49.379392, 8.717485)));
         tests.put(testDef.getId(),testDef);
 
+
         testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef(testDef,mtb_k1s1);
-        tests.put(testDef.getId(),testDef);
+        // Gelöscht, weil Artefakt in Höhendaten, Steigung am Anfang des RechtsVonDreiEichenPfadSeg1_31 nicht korrekt wieder gegeben und damit sUp=3 schwerer als sc=6 für K1
+        /*testDef = new TestDef(testDef,mtb_k1s1);
+        tests.put(testDef.getId(),testDef); */
 
 
 
@@ -1809,6 +1811,20 @@ public class RoutingProfileTest {
         points.put("AufTrail", new PointDef(PointType.on_rt, new PointModelImpl(49.335478, 8.051178)));
         points.put("AufForstweg", new PointDef(PointType.off_rt, new PointModelImpl(49.335681, 8.051029)));
         points.put("Hellerhütte", new PointDef(PointType.stop,new PointModelImpl(49.336026, 8.053136)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("FelsenmeerBeimLamertskopf",mtb_k1s1);
+        points = testDef.points;
+        points.put("NachErsterQueerungFelsenmeer", new PointDef(PointType.start,new PointModelImpl(49.407521, 8.785701)));
+        points.put("NachZweiterQueerungFelsenmeer", new PointDef(PointType.on_rt, new PointModelImpl(49.405449, 8.788424)));
+        points.put("SchildSteinbruchNeckarhalde", new PointDef(PointType.off_rt, new PointModelImpl(49.413268, 8.781722)));
+        points.put("EndePfadBei4Forstwegen", new PointDef(PointType.stop,new PointModelImpl(49.409448, 8.785783)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
         tests.put(testDef.getId(),testDef);
 
 

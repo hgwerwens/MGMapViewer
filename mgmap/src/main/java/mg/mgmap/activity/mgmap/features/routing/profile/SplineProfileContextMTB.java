@@ -519,12 +519,10 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         return watt[sc];
     }
 
-    
-    public float getMinDistFactSC0() {
-        return 1f;
+    public float getMinDistFactSC(int sc) {
+        return CostCalcSplineMTB.getMinDistFactSC(sc);
     }
 
-    
     public int getSDn() {
         return sDn;
     }

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 
 
+import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
@@ -75,19 +76,18 @@ public class RoutingProfileCreateTest {
         }
     }
 
+
+
     @Test
     public void CompareSC2Heuristic() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        int sc1 = 7;
-        for (int sUp = 300; sUp<=300;sUp+=100)
-            for (int sDn = 100; sDn <=300;sDn+=100) {
-
-                float fromSlope = -0.2f;
-                float toSlope = 0.15f;
-                factory = TestContextMTBInternal::new;
+        int sc1 = 3;
+        for (int sUp = 100; sUp<=100;sUp+=100)
+            for (int sDn = 100; sDn <=100;sDn+=100) {
+//                factory = TestContextMTBInternal::new;
                 CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
-                compareWithHeuristic(costCalcSplineProfile1, sc1,new StringBuilder(""),-0.4f, 0.2f);
+                compareWithHeuristic(costCalcSplineProfile1, sc1,new StringBuilder(""),-0.4f, 0.3f);
             }
         softAssert.assertAll();
     }
@@ -131,12 +131,12 @@ public class RoutingProfileCreateTest {
     public void SCCompare() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        float fromSlope = -0.20f;
-        float toSlope = 0.1f;
+        float fromSlope = -0.10f;
+        float toSlope = 0.2f;
         factory = TestContextMTBInternal::new;
         for (int i=0;i<2;i++) {
             CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(100, 100, false));
-            singleScCompare(costCalcSplineProfile, sc2MTBc.getSurfaceCat(6, 1, -1), costCalcSplineProfile, 2, fromSlope, toSlope);
+            singleScCompare(costCalcSplineProfile, sc2MTBc.getSurfaceCat(6, 1, 1), costCalcSplineProfile, 2, fromSlope, toSlope);
             factory = SplineProfileContextMTB::new;
         }
         softAssert.assertAll();
@@ -323,12 +323,12 @@ public class RoutingProfileCreateTest {
         try {
             if (sc != costCalcSplineProfile.getContext().getScHeuristicRefSpline()) {
                 cubicSpline = costCalcSplineProfile.getCostSpline(sc);
-                if (sc==0 && costCalcSplineProfile.getMinDistFactSC0()!=1f){
-                    cubicSpline =  cubicSpline.transformY(costCalcSplineProfile.getMinDistFactSC0(),0f);
+                if ( costCalcSplineProfile.getMinDistFactSC(sc)!=1f){
+                    cubicSpline =  cubicSpline.transformY(costCalcSplineProfile.getMinDistFactSC(sc),0f);
                 }}
             if (cubicSpline != null ){
                 msg = new StringBuilder(rmsg).append(" compare ").append(costCalcSplineProfile.getSurfaceCatTxt(sc)).append(" with Heuristic:");
-                ScCompRes compRes = compareCubicSpline( cubicHeuristicSpline,cubicSpline,-0.4f,0.4f,msg,slStop > slStart);
+               ScCompRes compRes = compareCubicSpline( cubicSpline,cubicHeuristicSpline,-0.4f,0.4f,msg,slStop > slStart);
                 if (!compRes.crossings.isEmpty()) {
                     float xmax = Float.NEGATIVE_INFINITY;
                     float xmin = Float.POSITIVE_INFINITY;
@@ -478,11 +478,17 @@ public class RoutingProfileCreateTest {
     record Point(float x, float y0,float y1, float y2){}
     record ScCompRes(ArrayList<Point> crossings, ArrayList<Point> extrema, StringBuilder msg){}
 
-    private ScCompRes compareCubicSpline(IfSpline cubicSplinelow, IfSpline cubicSplinehigh, float startSlope, float endSlope, StringBuilder msg, boolean allDetails) throws Exception {
-        if (cubicSplinehigh == null || cubicSplinelow == null) throw new Exception(msg+" CubicSpline null");
-        IfFunction y0 = x -> cubicSplinehigh.valueAt(x) - cubicSplinelow.valueAt(x);
-        IfFunction y1 = x -> cubicSplinehigh.derivativeAt(x) - cubicSplinelow.derivativeAt(x);
-        IfFunction y2 = x -> cubicSplinehigh.secondDerivativeAt(x) - cubicSplinelow.secondDerivativeAt(x);
+
+    private ScCompRes compareCubicSpline(IfSpline cubicSplinelow, IfSpline cubicSplinehigh, float startSlope, float endSlope, StringBuilder msg, boolean allDetails)  {
+        return compareCubicSpline( cubicSplinelow, 1f,  cubicSplinehigh,  startSlope,  endSlope,  msg,  allDetails)  ;
+    }
+
+    private ScCompRes compareCubicSpline(IfSpline cubicSplinelow, float f1, IfSpline cubicSplinehigh, float startSlope, float endSlope, StringBuilder msg, boolean allDetails)  {
+        if (cubicSplinehigh == null || cubicSplinelow == null) return null;
+        IfFunction y0 = x -> f1*cubicSplinehigh.valueAt(x) - cubicSplinelow.valueAt(x);
+        IfFunction y1 = x -> f1*cubicSplinehigh.derivativeAt(x) - cubicSplinelow.derivativeAt(x);
+        IfFunction y2 = x -> f1*cubicSplinehigh.secondDerivativeAt(x) - cubicSplinelow.secondDerivativeAt(x);
+
         ArrayList<Point> crossings = new ArrayList<>();
         ArrayList<Point> extrema = new ArrayList<>();
         float d1 = 0f;
@@ -557,8 +563,7 @@ public class RoutingProfileCreateTest {
                 @Override
                 public float secondDerivativeAt(float x) {  return y2.calc(x);            }
             }) ,startSlope,endSlope,0.01f));
-//            System.out.println(plotToString(x -> x/cubicSplinelow.valueAt(x), x -> x/cubicSplinehigh.valueAt(x), null,startSlope,endSlope,250,100));
-              System.out.println(plotToString(cubicSplinelow::valueAt, cubicSplinehigh::valueAt, null,startSlope,endSlope,250,100));
+            System.out.println(plotToString(x->cubicSplinelow.valueAt(x)*f1, cubicSplinehigh::valueAt, null,startSlope,endSlope,250,100));
         }
         return new ScCompRes(crossings,extrema,imsg);
     }

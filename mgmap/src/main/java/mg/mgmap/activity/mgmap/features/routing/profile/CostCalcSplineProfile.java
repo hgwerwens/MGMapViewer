@@ -137,7 +137,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
 
     protected ArrayList<Value> checkSplineHeuristic(IfSpline spline, int surfaceCat)  {
         float xs = lowstart - 0.3f;
-        float minmfd = (surfaceCat == 0) ? context.getMinDistFactSC0() : 1f;
+        float minmfd = context.getMinDistFactSC(surfaceCat);
         ArrayList<Value> violations = new ArrayList<>();
         do {
             xs = xs + 0.001f;
@@ -175,8 +175,8 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     }
 
 
-    public float getMinDistFactSC0(){
-        return  context.getMinDistFactSC0();
+    public float getMinDistFactSC(int surfaceCat){
+        return  context.getMinDistFactSC(surfaceCat);
     }
 
 

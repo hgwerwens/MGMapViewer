@@ -146,8 +146,8 @@ public class TestContextTreckingBike implements IfSplineProfileContext {
     }
 
 
-    public float getMinDistFactSC0() {
-        return (float) TagEval.minDistfSc0;
+    public float getMinDistFactSC(int sc) {
+        return (sc==0)?(float) TagEval.minDistfSc0:1f;
     }
 
 

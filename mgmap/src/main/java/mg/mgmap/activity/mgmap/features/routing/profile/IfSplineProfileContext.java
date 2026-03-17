@@ -13,7 +13,7 @@ public interface IfSplineProfileContext {
     IfSpline calcCostSpline(int sc);
     IfSpline calcDurationSpline(int sc);
     default boolean getCheckAll() {return true;}; //
-    float getMinDistFactSC0();
+    float getMinDistFactSC(int surfaceCategory);
     String getSurfaceCatTxt(int sc);
     @NonNull
     String toString();
