@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Locale;
 
 
-import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineMTB;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
@@ -82,12 +81,12 @@ public class RoutingProfileCreateTest {
     public void CompareSC2Heuristic() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        int sc1 = 3;
+        int sc1 = 1;
         for (int sUp = 100; sUp<=100;sUp+=100)
             for (int sDn = 100; sDn <=100;sDn+=100) {
-//                factory = TestContextMTBInternal::new;
+                factory = TestContextMTBInternal::new;
                 CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
-                compareWithHeuristic(costCalcSplineProfile1, sc1,new StringBuilder(""),-0.4f, 0.3f);
+                compareWithHeuristic(costCalcSplineProfile1, sc1,new StringBuilder(""),-0.2f, 0.2f);
             }
         softAssert.assertAll();
     }
@@ -127,17 +126,28 @@ public class RoutingProfileCreateTest {
         softAssert.assertAll();
     }
 
+    record CompSc(int sUp, int sDn, int sc1, int sc2){}
     @Test
     public void SCCompare() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        float fromSlope = -0.10f;
-        float toSlope = 0.2f;
+        float fromSlope = -0.0f;
+        float toSlope = 0.3f;
+        ArrayList<CompSc> scs = new ArrayList<>();
+//        scs.add(new  CompSc(100, 100,0,1));
+//        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, -1),2));
+//        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, -1)));
+//        scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),2));
+//        scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1),2));
+        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
+        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
+        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
+        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
+
         factory = TestContextMTBInternal::new;
-        for (int i=0;i<2;i++) {
-            CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(100, 100, false));
-            singleScCompare(costCalcSplineProfile, sc2MTBc.getSurfaceCat(6, 1, 1), costCalcSplineProfile, 2, fromSlope, toSlope);
-            factory = SplineProfileContextMTB::new;
+        for (CompSc comp : scs) {
+            CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(comp.sUp, comp.sDn, false));
+            singleScCompare(costCalcSplineProfile, comp.sc1, costCalcSplineProfile, comp.sc2, fromSlope, toSlope);
         }
         softAssert.assertAll();
     }

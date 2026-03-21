@@ -219,13 +219,13 @@ public class SplineUtil {
         return tangentAt(cubicSpline, -Float.MAX_VALUE, Float.MAX_VALUE ,start);
     }
     private static Touple tangentAt(CubicSpline cubicSpline,float leftLimit, float rightLimit, float start){
-        IfFunction tangent = x -> cubicSpline.valueAt(x) - cubicSpline.derivativeAt(x) * x - 0.00001f;
+        IfFunction tangent = x -> cubicSpline.valueAt(x) - cubicSpline.derivativeAt(x) * x - 0.000005f;
         IfFunction tangDeriv = x -> -cubicSpline.secondDerivativeAt(x) * x;
-        float heuristicLimit = ProfileUtil.newton(start,0.000005f, leftLimit, rightLimit,10,tangent,tangDeriv);
+        float heuristicLimit = ProfileUtil.newton(start,0.000002f, leftLimit, rightLimit,10,tangent,tangDeriv);
         float slopeLimitValue = cubicSpline.valueAt(heuristicLimit);
         float slopeLimitSlope = cubicSpline.derivativeAt(heuristicLimit);
         float yintercept_right = slopeLimitValue - heuristicLimit*slopeLimitSlope;
-        if (yintercept_right <= 0.000003)
+        if (yintercept_right < 0.000003)
             throw new RuntimeException( String.format(Locale.ENGLISH,"Heuristic right tangent too small intercept with %.2f", yintercept_right ));
         return new Touple(heuristicLimit,slopeLimitSlope);
     }
