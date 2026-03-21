@@ -1967,6 +1967,23 @@ public class RoutingProfileTest {
 
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef("Posseltslust2Leopoldstein",mtb_k2s2);
+        points = testDef.points;
+        points.put("AbzweigInPosseltslustpfad", new PointDef(PointType.start,new PointModelImpl(49.385576, 8.731245)));
+        points.put("Posseltslustpfad", new PointDef(PointType.on_rt, new PointModelImpl(49.387974, 8.729255)));
+        points.put("AufJägerpfad", new PointDef(PointType.on_rt, new PointModelImpl(49.391290, 8.726399)));
+        points.put("AufKohlhöferweg", new PointDef(PointType.off_rt, new PointModelImpl(49.390479, 8.725705)));
+        points.put("AufPosseltsweg", new PointDef(PointType.off_rt, new PointModelImpl(49.389804, 8.724568)));
+        points.put("EndeJägerpfad", new PointDef(PointType.stop,new PointModelImpl(49.391954, 8.722524)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
+        tests.put(testDef.getId(),testDef);
+
+
+
         return tests;
 
 
