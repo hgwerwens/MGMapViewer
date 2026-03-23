@@ -1738,18 +1738,24 @@ public class RoutingProfileTest {
         points.put("SteigerwegEckeObGaisbergweg", new PointDef(PointType.start,new PointModelImpl(49.397605, 8.693775)));
         points.put("Rondellhütte", new PointDef(PointType.off_rt, new PointModelImpl(49.405574, 8.700274)));
         points.put("ObererDachswegVorHutzelwaldhütte", new PointDef(PointType.off_rt, new PointModelImpl(49.399737, 8.698473)));
-        points.put("Kühruhpfad", new PointDef(PointType.on_rt, new PointModelImpl(49.395369, 8.705392)));
+        points.put("Dreitrögehütte", new PointDef(PointType.off_rt, new PointModelImpl(49.394941, 8.701868)));
+        points.put("VorletzteKurveHutzelwaldpfad", new PointDef( PointType.on_rt, new PointModelImpl(49.396882, 8.698677)));
+        points.put("KühruhpfadEndeJohannesHoops", new PointDef(PointType.on_rt, new PointModelImpl(49.398304, 8.707980)));//(49.395369, 8.705392
         points.put("Materpfahl", new PointDef(PointType.on_rt,new PointModelImpl(49.401355, 8.710173)));
         points.put("AbzweigTrailBlockhaus", new PointDef(PointType.stop,new PointModelImpl(49.401390, 8.710339)));
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k2s2);
+        points = testDef.points;
+        points.replace("VorletzteKurveHutzelwaldpfad",PointType.off_rt);
+        points.replace("Dreitrögehütte",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k1s1);
         points = testDef.points;
         points.replace("Rondellhütte",PointType.off_rt);
-        points.replace("Kühruhpfad",PointType.off_rt);
+        points.replace("KühruhpfadEndeJohannesHoops",PointType.off_rt);
+        points.replace("Dreitrögehütte",PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("Zollstockbrunnen2Heidenknörzel",mtb_k3s3);

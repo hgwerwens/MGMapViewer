@@ -129,8 +129,8 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         for (sc = 0; sc < sc2MTBc.maxScUpExt; sc++) {
             if (sc < sc2MTBc.maxSL) {
                 sig = sig((3.5 - sc) * 2d);
-                ulstrechDuration[sc] = 1.2f*(float) pow(1.2,sUp /100d-1d) - 0.4f*sig; //1f + 0.18f * sUp / 100;
-                ulstrechCost[sc] = 1.15f*(float) pow(1.3,sUp /100d-1d) - 0.55f*sig; //1.1f + 0.24f * sUp / 100 - 0.8f * sig; //1.34f*(float) pow(1.58/1.34,sUp /100d-1d) -0.4f*sig; //
+                ulstrechDuration[sc] = 1.4f*(float) pow(1.2,sUp /100d-1d) - 0.4f*sig; //1f + 0.18f * sUp / 100;
+                ulstrechCost[sc] = 1.15f*(float) pow(1.25,sUp /100d-1d) - 0.55f*sig; //1.1f + 0.24f * sUp / 100 - 0.8f * sig; //1.34f*(float) pow(1.58/1.34,sUp /100d-1d) -0.4f*sig; //
                 f0u[sc] = 1f   + 0.15f * sig;
                 f1u[sc] = 1.1f * f0u[sc];
                 f3u[sc] = 1.4f*f1u[sc]*f0u[sc];
@@ -145,7 +145,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 int scUp = sc - (sc2MTBc.maxSL + 1);
                 off = scUp - sUp / 100d;
                 sig = sig((0.5 - off) * 2.);
-                ulstrechDuration[sc] = 0.9f*(float) pow(1.2,sUp /100d-1d) - 0.1f*sig;
+                ulstrechDuration[sc] = 1.3f*(float) pow(1.2,sUp /100d-1d) - 0.35f*sig;
                 ulstrechCost[sc] = 0.865f*(float) pow(1.31,sUp /100d-1d) - 0.35f*sig;// 0.94f*(float) pow(1.18/0.94,sUp /100d-1d) -0.4f*sig; //(0.7f + 0.24f * sUp / 100 - 0.4f * sig); //
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
@@ -156,7 +156,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 int scUp = sc - sc2MTBc.maxScUp; // it's actually the scDn category without scUp used to derive factors for cost function
                 off = scUp - sUp / 100d;
                 sig = sig((-0.5 - off) * 2d);
-                ulstrechDuration[sc] = 0.9f*(float) pow(1.2,sUp /100d-1d) - 0.1f*sig;
+                ulstrechDuration[sc] = 1.3f*(float) pow(1.2,sUp /100d-1d) - 0.35f*sig;
                 ulstrechCost[sc] = 0.85f*(float) pow(1.29,sUp /100d-1d) - 0.35f*sig; //(0.65f + 0.2f * sUp / 100 - 0.4f * sig); //
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
@@ -169,7 +169,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         f3d = 2.6f;
         fdSlope = 0.95f*sig(2d*(sDn/100d-2));
 
-        ulstrechDuration[sc2MTBc.maxSL] = 0.8f*(float) pow(1.2,sUp /100d-1d) ;
+        ulstrechDuration[sc2MTBc.maxSL] = 1.3f*(float) pow(1.2,sUp /100d-1d) ;
         ulstrechCost[sc2MTBc.maxSL] = 0.7f*(float) pow(1.25,sUp /100d-1d);// (0.45f + 0.2f * sUp / 100);//0.45f*(float) pow(1.3,sUp /100d-1d);//
         f0u[sc2MTBc.maxSL] = 1.0f;
         f1u[sc2MTBc.maxSL] = 1.35f;
