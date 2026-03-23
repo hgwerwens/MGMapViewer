@@ -23,7 +23,7 @@ import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3_2F;
-import mg.mgmap.activity.mgmap.features.routing.profile.TestContextMTBInternal;
+import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
 import mg.mgmap.application.util.ElevationProvider;
 import mg.mgmap.application.util.ElevationProviderImpl;
 import mg.mgmap.application.util.HgtProvider2;
@@ -243,8 +243,8 @@ public class RoutingProfileTest {
     @Test
     public void _01_routing()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-        String testFilter = null;//"K1S1";//"OdenwälderHütte2Schlossblick_MTB_K1S1";// "HangkantenwegAbErbsweg2EndeGaisbergtrSteigerweg_MTB_K3S3";// "Leopoldstein2Vulpius";
-        SplineProfileTestContextMTB.factory = TestContextMTBInternal::new;
+        String testFilter = null;//"K1S1";//"OdenwälderHütte2Schlossblick_MTB_K1S1";// "HangkantenwegAbErbsweg2EndeGaisbergtrSteigerweg_MTB_K3S3";// "Leopoldstein2Vulpius";//
+        SplineProfileTestContextMTB.factory = SplineProfileContextMTB::new;
         if (testFilter!=null)  MGLog.setUnittest(true);
 //        File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam_20251201.osm.map"); // !!! map is not uploaded to git (due to map size)
         File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam_20260301.osm.map"); // !!! map is not uploaded to git (due to map size)
@@ -1980,9 +1980,49 @@ public class RoutingProfileTest {
         testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
 
+
+        testDef = new TestDef("SKastanine2Bismarkhöhenweg",mtb_k1s1);
+        points = testDef.points;
+        points.put("ElisabethenwegTraileinstieg", new PointDef(PointType.start,new PointModelImpl(49.412763, 8.723805)));
+        points.put("ElisabethenwegNachErsterSerpentine", new PointDef(PointType.off_rt,new PointModelImpl(49.412617, 8.723952)));
+        points.put("Rindenhäuschen", new PointDef(PointType.off_rt, new PointModelImpl(49.410567, 8.723291)));
+        points.put("Molkenkur", new PointDef(PointType.on_rt, new PointModelImpl(49.407038, 8.715009)));
+        points.put("KreuzungTrailMitBismarkhöhenweg", new PointDef(PointType.stop,new PointModelImpl(49.408600, 8.723583)));
+        tests.put(testDef.getId(),testDef);
+
+        TestDef testDeftmp = new TestDef(testDef,mtb_k2s2);
+        points =testDeftmp.points;
+        points.replace("ElisabethenwegNachErsterSerpentine",PointType.on_rt);
+        points.replace("Rindenhäuschen",PointType.on_rt);
+        points.replace("Molkenkur",PointType.off_rt);
+        tests.put(testDeftmp.getId(),testDeftmp);
+
+        testDef = new TestDef(testDef,"SKastanine2BismarkhöhenwegStartImTrail",mtb_k1s1);
+        points =testDef.points;
+        points.remove("ElisabethenwegTraileinstieg");
+        points.replace("ElisabethenwegNachErsterSerpentine",PointType.start);
+        points.replace("Rindenhäuschen",PointType.on_rt);
+        points.replace("Molkenkur",PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
 
+        testDef = new TestDef("SpeierheldhütteRichtungHoheLoog",mtb_k1s1);
+        points = testDef.points;
+        points.put("KreuzungSpeierheldhütte", new PointDef(PointType.start,new PointModelImpl(49.338317, 8.111724)));
+        points.put("Direkter23Trail", new PointDef(PointType.off_rt,new PointModelImpl(49.333550, 8.108029)));
+        points.put("Nördlicher11Trail", new PointDef(PointType.on_rt, new PointModelImpl(49.336620, 8.105987)));
+        points.put("KreuzungDirekterUndNördlicherTrailHoheLoogEbene", new PointDef(PointType.stop,new PointModelImpl(49.332571, 8.101318)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        points =testDef.points;
+        points.replace("Direkter23Trail",PointType.on_rt);
+        points.replace("Nördlicher11Trail",PointType.off_rt);
+        tests.put(testDef.getId(),testDef);
 
         return tests;
 

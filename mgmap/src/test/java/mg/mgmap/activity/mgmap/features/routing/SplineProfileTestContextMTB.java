@@ -1,8 +1,7 @@
 package mg.mgmap.activity.mgmap.features.routing;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfSplineProfileContext;
-import mg.mgmap.activity.mgmap.features.routing.profile.IfMTBContextDetails;
-import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
+import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB_old;
 
 public class SplineProfileTestContextMTB  {
 
@@ -10,7 +9,7 @@ public class SplineProfileTestContextMTB  {
         IfSplineProfileContext create(int power, int sUp, int sDn, boolean checkAll, boolean withRef);
     }
 
-    public static Factory factory = SplineProfileContextMTB::new;
+    public static Factory factory = SplineProfileContextMTB_old::new;
 
     private static IfSplineProfileContext get(int power, int sUp, int sDn, boolean checkAll, boolean withRef){
         return factory.create(power, sUp, sDn, checkAll, withRef);

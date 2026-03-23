@@ -13,14 +13,14 @@ import java.util.Locale;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
-import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
+import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB_old;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfIsFuncWithDeriv;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 import mg.mgmap.activity.mgmap.features.routing.profile.ProfileUtil;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextTrekkingBike;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.SplineUtil;
 import mg.mgmap.activity.mgmap.features.routing.profile.SurfCat2MTBCat;
-import mg.mgmap.activity.mgmap.features.routing.profile.TestContextMTBInternal;
+import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
 import mg.mgmap.generic.util.basic.MGLog;
 
 public class RoutingProfileCreateTest {
@@ -56,9 +56,9 @@ public class RoutingProfileCreateTest {
 
     @Test
     public void ProfileVary() {
-        for (TestContextMTBInternal.fs[2] = 2.2f; TestContextMTBInternal.fs[2] <= 2.4f; TestContextMTBInternal.fs[2] += 0.1f) {
-            for (TestContextMTBInternal.fs[1] = 8f; TestContextMTBInternal.fs[1] <= 8.25f; TestContextMTBInternal.fs[1] += 0.25f) {
-                for (TestContextMTBInternal.fs[0] = 1.03f; TestContextMTBInternal.fs[0] <= 1.05f; TestContextMTBInternal.fs[0] += 0.01f) {
+        for (SplineProfileContextMTB.fs[2] = 2.2f; SplineProfileContextMTB.fs[2] <= 2.4f; SplineProfileContextMTB.fs[2] += 0.1f) {
+            for (SplineProfileContextMTB.fs[1] = 8f; SplineProfileContextMTB.fs[1] <= 8.25f; SplineProfileContextMTB.fs[1] += 0.25f) {
+                for (SplineProfileContextMTB.fs[0] = 1.03f; SplineProfileContextMTB.fs[0] <= 1.05f; SplineProfileContextMTB.fs[0] += 0.01f) {
                     for (int sDn = 00; sDn <= 400; sDn += 100) {
                         for (int sUp = 0; sUp <= 400; sUp += 100) {
                             for (int mtbDn = 0; mtbDn <= 0; mtbDn += 1) {
@@ -66,7 +66,7 @@ public class RoutingProfileCreateTest {
                                 CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
                                 IfSpline cubicSplineSc = costCalcSplineProfile.getCostSpline(sc);
                                 checkCurvature(cubicSplineSc, new StringBuilder(String.format("%s f2d=%3.2f facDnStrech=%3.2f dlstrechFac=%3.2f", costCalcSplineProfile.getSurfaceCatTxt(sc),
-                                        TestContextMTBInternal.fs[0],TestContextMTBInternal.fs[1],TestContextMTBInternal.fs[2])),false);
+                                        SplineProfileContextMTB.fs[0], SplineProfileContextMTB.fs[1], SplineProfileContextMTB.fs[2])),false);
                             }
                         }
                     }
@@ -84,7 +84,7 @@ public class RoutingProfileCreateTest {
         int sc1 = 1;
         for (int sUp = 100; sUp<=100;sUp+=100)
             for (int sDn = 100; sDn <=100;sDn+=100) {
-                factory = TestContextMTBInternal::new;
+                factory = SplineProfileContextMTB::new;
                 CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn, false));
                 compareWithHeuristic(costCalcSplineProfile1, sc1,new StringBuilder(""),-0.2f, 0.2f);
             }
@@ -97,7 +97,7 @@ public class RoutingProfileCreateTest {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
 
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         ArrayList<ProfSc> scs = new ArrayList<>();
 //        scs.add(new ProfSc(200, 100,7));//sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 3, 5))
 //        scs.add(new ProfSc(200, 200,7));
@@ -106,20 +106,21 @@ public class RoutingProfileCreateTest {
 //        scs.add(new ProfSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 2)));
 //        scs.add(new ProfSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1)));
 //        scs.add(new ProfSc(100, 100,2));
-        scs.add(new ProfSc(100, 100,6));
+//        scs.add(new ProfSc(100, 100,6));
 //        scs.add(new ProfSc(200, 200,6));
 //        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1)));
-//        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2)));
+        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 3)));
 //        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
-//        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
+        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1)));
+        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1)));
 //        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2)));
 //        scs.add(sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2));
         for (ProfSc profSc: scs ) {
-            float fromSlope = -0.20f;
-            float toSlope = 0.1f;
-            factory = SplineProfileContextMTB::new;
+            float fromSlope = -0.05f;
+            float toSlope = 0.20f;
+            factory = SplineProfileContextMTB_old::new;
             CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(148,profSc.sUp, profSc.sDn, false));
-            factory = TestContextMTBInternal::new;
+            factory = SplineProfileContextMTB::new;
             CostCalcSplineProfile costCalcSplineProfile2 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(148,profSc.sUp, profSc.sDn, false));
             singleScCompare(costCalcSplineProfile1, profSc.sc, costCalcSplineProfile2, profSc.sc, fromSlope,toSlope);
         }
@@ -131,20 +132,20 @@ public class RoutingProfileCreateTest {
     public void SCCompare() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        float fromSlope = -0.1f;
+        float fromSlope = -0.05f;
         float toSlope = 0.15f;
         ArrayList<CompSc> scs = new ArrayList<>();
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 0),6));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, -1),2));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, -1)));
-          scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1),2));
-          scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 0),2));
+          scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1)));
+          scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1)));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
 //        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
 //        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
 
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         for (CompSc comp : scs) {
             CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(comp.sUp, comp.sDn, false));
             singleScCompare(costCalcSplineProfile, comp.sc1, costCalcSplineProfile, comp.sc2, fromSlope, toSlope);
@@ -174,7 +175,7 @@ public class RoutingProfileCreateTest {
         int sUp = 100;
         int sDn = 100;
         CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn,false));
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         CostCalcSplineProfile costCalcSplineProfile2 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn,false));
         for (int sc =0; sc < sc2MTBc.maxSurfaceCat;sc++)
         try {
@@ -201,7 +202,7 @@ public class RoutingProfileCreateTest {
     public void singleProfileTr() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         CostCalcSplineProfile costCalcSplineProfileTr = new CostCalcSplineProfile(new SplineProfileContextTrekkingBike(true));// new SplineProfileTestContextMTB(100,100));
         checkSurfaceCats(costCalcSplineProfileTr, new StringBuilder(),-0.4f,0.4f);
         softAssert.assertAll();
@@ -230,7 +231,7 @@ public class RoutingProfileCreateTest {
         MGLog.setUnittest(true);
         int sUp = 100;
         int sDn = 300;
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn,  false));
         checkProfile(costCalcSplineProfile, new StringBuilder(String.format("sUp=%3d sDn=%3d", sUp, sDn)),-0.6f,0.6f);
         softAssert.assertAll();
@@ -243,7 +244,7 @@ public class RoutingProfileCreateTest {
         int sUp = 100;
         int sDn = 300;
         int sc = 2;
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn,  false));
         IfSpline spline = costCalcSplineProfile.getCostSpline(sc);
         checkCubicSpline(spline,new StringBuilder(String.format("sUp=%3d sDn=%3d", sUp, sDn)),-0.6f,0.6f);
@@ -255,7 +256,7 @@ public class RoutingProfileCreateTest {
     public void VaryContext_default()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
             for (int sDn = 100; sDn <= 300; sDn = sDn + 100) {
                 CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(sUp, sDn,true));
@@ -269,7 +270,7 @@ public class RoutingProfileCreateTest {
     public void VaryContext_wide() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
 //        MGLog.setUnittest(true);
-        factory = TestContextMTBInternal::new;
+        factory = SplineProfileContextMTB::new;
         for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
             for (int sDn = 100; sDn <= 300; sDn = sDn + 100) {
                 for (int power = 48 ; power <= 150f; power = power + 25) {
@@ -606,7 +607,7 @@ public class RoutingProfileCreateTest {
         step = step*exp;
         width = (int) ((xMax - xMin)/step);
         xMin = (float) (exp*Math.floor(xMin/exp));
-        float[][] ys = new float[3][width];
+        float[][] ys = new float[3][width+1];
         float xx;
         int xAxis = -1;
         float prevxx;
@@ -615,7 +616,7 @@ public class RoutingProfileCreateTest {
             if (fs[i] == null) continue;
             xx = xMin;
             prevxx = Float.NEGATIVE_INFINITY;
-            for (int x = 0; x < width; x++) {
+            for (int x = 0; x <= width; x++) {
                 xx = xx + (float) step;
                 float y = fs[i].calc(xx);
                 ys[i][x] = y;
@@ -638,7 +639,7 @@ public class RoutingProfileCreateTest {
             float yTop = max - (max - min) * row / (height - 1f);
             float yBottom = max - (max - min) * (row + 1f) / (height - 1f);
 
-            for (int col = 0; col < width; col++) {
+            for (int col = 0; col <= width; col++) {
                 char c = ' ';
 
                 // functions
@@ -665,7 +666,7 @@ public class RoutingProfileCreateTest {
         }
         char[] label = null;
         xx = xMin + 3f*(float)step;
-        for (int col = 0; col < width; col++) {
+        for (int col = 0; col <= width; col++) {
             char c = ' ';
             int mod20 = col%20;
             if (col%20==0) {
