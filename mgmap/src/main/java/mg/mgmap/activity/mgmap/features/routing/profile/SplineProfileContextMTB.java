@@ -146,12 +146,12 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 off = scUp - sUp / 100d;
                 sig = sig((0.5 - off) * 2.);
                 ulstrechDuration[sc] = 0.9f*(float) pow(1.2,sUp /100d-1d) - 0.1f*sig;
-                ulstrechCost[sc] = 0.86f*(float) pow(1.31,sUp /100d-1d) - 0.35f*sig;// 0.94f*(float) pow(1.18/0.94,sUp /100d-1d) -0.4f*sig; //(0.7f + 0.24f * sUp / 100 - 0.4f * sig); //
+                ulstrechCost[sc] = 0.865f*(float) pow(1.31,sUp /100d-1d) - 0.35f*sig;// 0.94f*(float) pow(1.18/0.94,sUp /100d-1d) -0.4f*sig; //(0.7f + 0.24f * sUp / 100 - 0.4f * sig); //
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
                 f3u[sc] = 1.65f*f1u[sc];
                 fuSlope[sc] = 0.4f;
-                crUp[sc] = 0.019f + 0.004f * scUp + 0.04f * sig(2d * (2d - off));
+                crUp[sc] = 0.019f + 0.003f * scUp + 0.02f * sig(2d * (1d - off));
             } else if (sc != sc2MTBc.maxSL) {
                 int scUp = sc - sc2MTBc.maxScUp; // it's actually the scDn category without scUp used to derive factors for cost function
                 off = scUp - sUp / 100d;
@@ -162,7 +162,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 f1u[sc] = 1.18f;
                 f3u[sc] = 1.75f*f1u[sc];
                 fuSlope[sc] = 0.5f;
-                crUp[sc] = 0.02f + 0.004f * scUp + 0.04f * sig(2d * (1d - off));
+                crUp[sc] = 0.02f + 0.003f * scUp + 0.02f * sig(2d * ( 1d - off));
             }
         }
 
