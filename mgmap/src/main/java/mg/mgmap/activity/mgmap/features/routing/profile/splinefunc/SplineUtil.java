@@ -80,9 +80,8 @@ public class SplineUtil {
             };
         }
 
-
         if (decreasingFound)
-            return bl.toString();
+            return bl.append("\n").toString();
         else
             return "";
     }

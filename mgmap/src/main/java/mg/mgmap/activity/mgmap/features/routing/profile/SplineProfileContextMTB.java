@@ -130,7 +130,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
             if (sc < sc2MTBc.maxSL) {
                 sig = sig((3.5 - sc) * 2d);
                 ulstrechDuration[sc] = 1.4f*(float) pow(1.2,sUp /100d-1d) - 0.4f*sig; //1f + 0.18f * sUp / 100;
-                ulstrechCost[sc] = 1.15f*(float) pow(1.25,sUp /100d-1d) - 0.55f*sig; //1.1f + 0.24f * sUp / 100 - 0.8f * sig; //1.34f*(float) pow(1.58/1.34,sUp /100d-1d) -0.4f*sig; //
+                ulstrechCost[sc] = (float) pow(1.25,sUp /100d-1d) * (1.15f - 0.55f*sig); //1.1f + 0.24f * sUp / 100 - 0.8f * sig; //1.34f*(float) pow(1.58/1.34,sUp /100d-1d) -0.4f*sig; //
                 f0u[sc] = 1f   + 0.15f * sig;
                 f1u[sc] = 1.1f * f0u[sc];
                 f3u[sc] = 1.4f*f1u[sc]*f0u[sc];
@@ -146,7 +146,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 off = scUp - sUp / 100d;
                 sig = sig((0.5 - off) * 2.);
                 ulstrechDuration[sc] = 1.3f*(float) pow(1.2,sUp /100d-1d) - 0.35f*sig;
-                ulstrechCost[sc] = 0.865f*(float) pow(1.31,sUp /100d-1d) - 0.35f*sig;// 0.94f*(float) pow(1.18/0.94,sUp /100d-1d) -0.4f*sig; //(0.7f + 0.24f * sUp / 100 - 0.4f * sig); //
+                ulstrechCost[sc] = (float) pow(1.34,sUp /100d-1d) * (0.86f - 0.32f*sig);// 0.94f*(float) pow(1.18/0.94,sUp /100d-1d) -0.4f*sig; //(0.7f + 0.24f * sUp / 100 - 0.4f * sig); //
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
                 f3u[sc] = 1.65f*f1u[sc];
@@ -157,7 +157,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 off = scUp - sUp / 100d;
                 sig = sig((-0.5 - off) * 2d);
                 ulstrechDuration[sc] = 1.3f*(float) pow(1.2,sUp /100d-1d) - 0.35f*sig;
-                ulstrechCost[sc] = 0.85f*(float) pow(1.29,sUp /100d-1d) - 0.35f*sig; //(0.65f + 0.2f * sUp / 100 - 0.4f * sig); //
+                ulstrechCost[sc] = (float) pow(1.30,sUp /100d-1d) * (0.81f - 0.32f*sig); //(0.65f + 0.2f * sUp / 100 - 0.4f * sig); //
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
                 f3u[sc] = 1.75f*f1u[sc];

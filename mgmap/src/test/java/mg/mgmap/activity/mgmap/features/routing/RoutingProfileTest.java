@@ -2030,6 +2030,25 @@ public class RoutingProfileTest {
         points.replace("Nördlicher11Trail",PointType.off_rt);
         tests.put(testDef.getId(),testDef);
 
+        testDef = new TestDef("DrachensteinPfalzSüdlicheAuffahrt",mtb_k1s1);
+        points = testDef.points;
+        points.put("KurzVorKreuzung11TrailMitSC4Track", new PointDef(PointType.start,new PointModelImpl(49.417927, 8.054233)));
+        points.put("AufSC4Track", new PointDef(PointType.off_rt,new PointModelImpl(49.418968, 8.053690)));
+        points.put("Auf11Trail", new PointDef(PointType.on_rt, new PointModelImpl(49.420500, 8.053964)));
+        points.put("SpitzkehreAuf23TrailZumPlateau", new PointDef(PointType.stop,new PointModelImpl(49.421339, 8.052987)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+/*        points =testDef.points;
+        points.replace("AufSC4Track",PointType.on_rt);
+        points.replace("Auf11Trail",PointType.off_rt); */
+        tests.put(testDef.getId(),testDef);
+
+
         return tests;
 
 
