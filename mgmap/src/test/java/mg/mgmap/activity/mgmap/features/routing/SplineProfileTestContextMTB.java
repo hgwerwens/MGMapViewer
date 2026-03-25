@@ -19,12 +19,9 @@ public class SplineProfileTestContextMTB  {
         return get(power, sUp, sDn, checkAll, true);
     }
 
-    public static IfSplineProfileContext     get(int power, int sUp, int sDn) {
-        return get(power, sUp, sDn);
-    }
 
     public static IfSplineProfileContext  get(int sUp, int sDn, boolean checkAll) {
-        return get((int) (47.5 + 25 * sUp / 100d), sUp, sDn, checkAll, true);
+        return get(-1, sUp, sDn, checkAll, true);
     }
 
     public static IfSplineProfileContext     get( int sUp, int sDn) {

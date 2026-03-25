@@ -121,7 +121,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 cost = mfd/2d*dist*costf ;
             else if (direction!=dir.oneway) {
                 // stairs downhill
-                cost = (1d + mfd / 2d * (0.1f+0.9f*ProfileUtil.sig((((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d)))) * dist * costf ;
+                cost = (1d + mfd / 2d * (0.2f+0.8f*ProfileUtil.sig((((IfMTBContextDetails) mProfileCalculator.getContext()).getSDn() / 100d - 1d)))) * dist * costf ;
             }
             else
                 cost = mfd*dist*costf ;

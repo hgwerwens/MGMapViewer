@@ -47,6 +47,9 @@ public class SplineProfileContextMTB_old implements IfSplineProfileContext, IfMT
     private final IfSplineProfileContext refContext;
 
     public SplineProfileContextMTB_old(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
+        if (power<0)
+            power=getPower(sUp);
+
         if (withRef) {
             costRefSplines = new CubicSpline[sc2MTBc.maxScDn];
             durationRefSplines = new CubicSpline[sc2MTBc.maxScDn];
@@ -212,7 +215,11 @@ public class SplineProfileContextMTB_old implements IfSplineProfileContext, IfMT
     }
 
     public SplineProfileContextMTB_old(int sUp, int sDn, boolean checkAll) {
-        this((int) (47.5 + 25 * sUp / 100d), sUp, sDn, checkAll, true);
+        this(getPower(sUp),sUp,sDn,checkAll);
+    }
+
+    private static int getPower(int sUp) {
+        return (int) (47.5 + 25 * sUp / 100d);
     }
 
     public SplineProfileContextMTB_old(int sUp, int sDn) {

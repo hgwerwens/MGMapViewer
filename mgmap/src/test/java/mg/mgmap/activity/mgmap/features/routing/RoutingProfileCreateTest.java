@@ -132,8 +132,8 @@ public class RoutingProfileCreateTest {
     public void SCCompare() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        float fromSlope = -0.05f;
-        float toSlope = 0.20f;
+        float fromSlope = -0.25f;
+        float toSlope = 0.050f;
         ArrayList<CompSc> scs = new ArrayList<>();
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 0),6));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, -1),2));
@@ -142,6 +142,8 @@ public class RoutingProfileCreateTest {
           scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1),4));
           scs.add(new  CompSc(300, 300,6,4));
           scs.add(new  CompSc(200, 200,6,4));
+          scs.add(new  CompSc(300, 300,6,5));
+          scs.add(new  CompSc(100, 300,6,2));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
 //        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
@@ -384,7 +386,7 @@ public class RoutingProfileCreateTest {
                 String secant = SplineUtil.secantMonotonous(spline);
                 for (Float negCurvaturePoint : pointsWithNegativeCurvature) {
                     float curvature = -SplineUtil.curveRadiusAt(negCurvaturePoint,spline);
-                    if (curvature < .2f )  { /*CostCalcSplineProfile.minNegCurvatureRadius*10*/
+                    if (curvature < .3f )  { /*CostCalcSplineProfile.minNegCurvatureRadius*10*/
                         noCritical = false;
                         String m = String.format(Locale.ENGLISH, " SLOPE=%.2f VERY CRITICAL CURVE RADIUS=%.2f", 100 * negCurvaturePoint, curvature);
                         msg.append(m).append(secant);
