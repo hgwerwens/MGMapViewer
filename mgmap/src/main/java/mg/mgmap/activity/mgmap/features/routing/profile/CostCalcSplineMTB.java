@@ -60,9 +60,11 @@ public class CostCalcSplineMTB implements CostCalculator {
                 if (surfaceLevel<=0 || surfaceLevel >= 4 || mtbUp >= 0 || mtbDn >= 0) {
                     surfaceLevel = 6;
                     distFactor = 1f;
-                } else { // a path, which is not raw might be anything ...
+                } else if (surfaceLevel <=2){ // a path, which is not raw might be anything ...
                     surfaceLevel = surfaceLevel <= 1 ? 2 : surfaceLevel;
                     distFactor = 1.15f;
+                } else {
+                    distFactor = 1.07f;
                 }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
                 surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
