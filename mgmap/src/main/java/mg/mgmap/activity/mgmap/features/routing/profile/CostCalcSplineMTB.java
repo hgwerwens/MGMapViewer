@@ -1,7 +1,6 @@
 package mg.mgmap.activity.mgmap.features.routing.profile;
 
 import java.lang.invoke.MethodHandles;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.WeakHashMap;
 
@@ -146,7 +145,7 @@ public class CostCalcSplineMTB implements CostCalculator {
             float slope = vertDist / (float) dist;
             float spm ; //mfd*surfaceCatSpline.valueAt(slope); //
             try {
-                spm = mProfileCalculator.getDurationFunc(surfaceCat).valueAt(slope);
+                spm = mProfileCalculator.getDurationSpline(surfaceCat).valueAt(slope);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

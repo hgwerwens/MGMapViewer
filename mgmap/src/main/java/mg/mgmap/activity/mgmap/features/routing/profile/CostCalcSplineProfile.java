@@ -33,7 +33,6 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
         heuristicSpline = getCubicHeuristicSpline();
         profileSpline = getProfileSpline();
         refCosts = profileSpline.valueAt(0f);
-
         if (context.getCheckAll()) checkAll();
     }
     public int getMaxSurfaceCat(){
@@ -146,7 +145,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                 float heuristic = heuristicSpline.valueAt(xs);
                 float splineValue    = spline.valueAt(xs);
                 float delta = minmfd * splineValue - heuristic;
-                if (delta <= 0.00005)
+                if (delta <= 0.0)
                     violations.add(new Value(xs,delta));
             }
         } while (xs < highstart + 0.3f);
@@ -162,7 +161,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
 
     private IfSpline getHeuristicRefSpline() {
         IfSpline splineTmp = getCostSpline(context.getScHeuristicRefSpline());
-        IfSpline spline    =  splineTmp.transformY(1.0f,-0.0001f);
+        IfSpline spline    =  splineTmp.transformY(1.0f,-0.00001f);
         heuristicHasNegativeCurvatureMsg = checkNegCurvature(spline,String.format(Locale.ENGLISH,"heuristic spline for %s ", context),1e7f);
         if (heuristicHasNegativeCurvatureMsg != null)
             return null;
@@ -232,20 +231,12 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     }
 
 
-    public IfSpline getDurationFunc(int surfaceCat) {
-        try {
-            return getDurationSpline(surfaceCat);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     @Override
     public float getRefCosts() {
         return refCosts;
     }
 
-    IfSpline getDurationSpline(int surfaceCat) {
+    public IfSpline getDurationSpline(int surfaceCat) {
         IfSpline spline;
         spline = SurfaceCatDurationSpline[surfaceCat];
         if (spline == null) {

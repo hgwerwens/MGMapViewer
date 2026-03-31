@@ -13,7 +13,7 @@ public interface IfSplineDef {
     }
     SplineType type();
 
-    public record Natural(
+    record Natural(
     ) implements IfSplineDef {
         @Override
         public SplineType type() {
@@ -23,7 +23,7 @@ public interface IfSplineDef {
         public String toString(){return String.format(Locale.ENGLISH,"%10s", SplineType.NATURAL);};
     }
 
-    public record Clamped( float slopeLeft, float slopeRight) implements IfSplineDef {
+    record Clamped( float slopeLeft, float slopeRight) implements IfSplineDef {
         @Override
         public SplineType type() {
             return SplineType.CLAMPED;
@@ -32,7 +32,7 @@ public interface IfSplineDef {
         public String toString(){return String.format(Locale.ENGLISH,"%10s slopeLeft=%.2f slopeRight=%.2f", SplineType.CLAMPED, slopeLeft,slopeRight);};
     }
 
-    public record Composite( int leftLinearSegments, int rightLinearSegments, IfSplineDef innerSpline) implements IfSplineDef {
+    record Composite( int leftLinearSegments, int rightLinearSegments, IfSplineDef innerSpline) implements IfSplineDef {
         public Composite(int leftLinearSegments, int rightLinearSegments){
             this(leftLinearSegments, rightLinearSegments,null);
         }
@@ -43,7 +43,7 @@ public interface IfSplineDef {
         @NonNull
         public String toString(){return String.format(Locale.ENGLISH,"%s segmentsLeft=%d segmentsRight=%d", SplineType.COMPOSITE, leftLinearSegments,rightLinearSegments);};
     }
-    public record Linear(
+    record Linear(
     ) implements IfSplineDef {
         @Override
         public SplineType type() {

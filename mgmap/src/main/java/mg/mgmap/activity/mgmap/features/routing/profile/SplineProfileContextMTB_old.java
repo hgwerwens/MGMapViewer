@@ -46,20 +46,19 @@ public class SplineProfileContextMTB_old implements IfSplineProfileContext, IfMT
     private final IfSpline[] durationRefSplines;
     private final IfSplineProfileContext refContext;
 
-    public SplineProfileContextMTB_old(int power, int sUp, int sDn, boolean checkAll, boolean withRef) {
-        if (power<0)
-            power=getPower(sUp);
+    private SplineProfileContextMTB_old(float powerCost, float powerDur, int sUp, int sDn, boolean checkAll, boolean withRef) {
+        this.power = (int) (powerCost < 0 ? getPower(sDn) : powerCost<0 ? getPower(sUp) : powerCost);
 
         if (withRef) {
             costRefSplines = new CubicSpline[sc2MTBc.maxScDn];
             durationRefSplines = new CubicSpline[sc2MTBc.maxScDn];
-            this.refContext = new SplineProfileContextMTB_old(100, 200, sDn, false, false);
+            this.refContext = new SplineProfileContextMTB_old(100,-1, 200, sDn, false, false);
         } else {
             this.refContext = null;
             costRefSplines = null;
             durationRefSplines = null;
         }
-        this.power = power;
+
         this.sUp = sUp;
         this.sDn = sDn;
         this.withRef = withRef;
@@ -206,25 +205,18 @@ public class SplineProfileContextMTB_old implements IfSplineProfileContext, IfMT
         return scDnLow;
     }
 
-    public SplineProfileContextMTB_old(int power, int sUp, int sDn, boolean checkAll) {
-        this(power, sUp, sDn, checkAll, true);
+    public SplineProfileContextMTB_old(float powerCost, float powerDur, int sUp, int sDn, boolean checkAll) {
+        this(powerCost,powerDur, sUp, sDn, checkAll, true);
     }
-
-    public SplineProfileContextMTB_old(int power, int sUp, int sDn) {
-        this(power, sUp, sDn, true);
-    }
-
-    public SplineProfileContextMTB_old(int sUp, int sDn, boolean checkAll) {
-        this(getPower(sUp),sUp,sDn,checkAll);
+    public SplineProfileContextMTB_old(int sUp, int sDn) {
+        this(getPower(sUp),-1,sUp, sDn, true);
     }
 
     private static int getPower(int sUp) {
         return (int) (47.5 + 25 * sUp / 100d);
     }
 
-    public SplineProfileContextMTB_old(int sUp, int sDn) {
-        this(sUp, sDn, true);
-    }
+
 
     private IfSpline calcCubicSpline(int sc, boolean isCostSpline){
         if (!isValidSc(sc)) return null;

@@ -17,6 +17,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
+import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineMTB;
+import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2;
@@ -24,6 +26,7 @@ import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K2S2_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K3S3_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB;
+import mg.mgmap.activity.mgmap.features.routing.profile.TrekkingBike;
 import mg.mgmap.application.util.ElevationProvider;
 import mg.mgmap.application.util.ElevationProviderImpl;
 import mg.mgmap.application.util.HgtProvider2;
@@ -44,24 +47,27 @@ import mg.mgmap.generic.util.gpx.GpxExporter;
 
 public class RoutingProfileTest {
     private static MGLog mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
-    private enum PointType {start,on_rt,off_rt,stop}
-    private record PointDef( PointType pointType,PointModelImpl pointModelImpl){
-        public PointDef(PointDef ref){
-            this(ref.pointType,ref.pointModelImpl);
+
+    private enum PointType {start, on_rt, off_rt, stop}
+
+    private record PointDef(PointType pointType, PointModelImpl pointModelImpl) {
+        public PointDef(PointDef ref) {
+            this(ref.pointType, ref.pointModelImpl);
         }
     }
 
-    private static class Points extends LinkedHashMap<String,PointDef>{
-        public void replace(String key, PointType pointType){
+    private static class Points extends LinkedHashMap<String, PointDef> {
+        public void replace(String key, PointType pointType) {
             PointDef point = get(key);
             if (point == null) {
                 throw new RuntimeException("Key " + key + " does not exist");
             }
-            replace(key, new PointDef( pointType,point.pointModelImpl));
+            replace(key, new PointDef(pointType, point.pointModelImpl));
         }
-        public void addNewStart(String key, PointDef pointDef){
+
+        public void addNewStart(String key, PointDef pointDef) {
             // Neue Map mit dem Eintrag an erster Stelle
-            LinkedHashMap<String,PointDef> reordered = new LinkedHashMap<>();
+            LinkedHashMap<String, PointDef> reordered = new LinkedHashMap<>();
             reordered.put(key, pointDef);
             reordered.putAll(this);
             // Inhalt ersetzen
@@ -71,64 +77,74 @@ public class RoutingProfileTest {
 
     }
 
-    private record TestDef( String name, RoutingProfile profile, Points points ){
+    private record TestDef(String name, RoutingProfile profile, Points points) {
 
-        public TestDef(TestDef ref, RoutingProfile routingProfile){
-            this(ref.name, routingProfile,new Points());
-            for (var entry : ref.points.entrySet()){
-                this.points.put(entry.getKey(),entry.getValue() == null ? null : new PointDef(entry.getValue()));
+        public TestDef(TestDef ref, RoutingProfile routingProfile) {
+            this(ref.name, routingProfile, new Points());
+            for (var entry : ref.points.entrySet()) {
+                this.points.put(entry.getKey(), entry.getValue() == null ? null : new PointDef(entry.getValue()));
             }
         }
-        public TestDef(TestDef ref,String name, RoutingProfile routingProfile){
-            this(name, routingProfile,new Points());
-            for (var entry : ref.points.entrySet()){
-                this.points.put(entry.getKey(),entry.getValue() == null ? null : new PointDef(entry.getValue()));
+
+        public TestDef(TestDef ref, String name, RoutingProfile routingProfile) {
+            this(name, routingProfile, new Points());
+            for (var entry : ref.points.entrySet()) {
+                this.points.put(entry.getKey(), entry.getValue() == null ? null : new PointDef(entry.getValue()));
             }
         }
-        public TestDef(String name, RoutingProfile routingProfile){
-            this(name, routingProfile,new Points());
+
+        public TestDef(String name, RoutingProfile routingProfile) {
+            this(name, routingProfile, new Points());
         }
-        public String getId(){
-            return name+profile.getId().substring(2);
+
+        public String getId() {
+            return name + profile.getId().substring(2);
         }
+
         int getCntType(PointType pointType) {
             int cnt = 0;
-            for ( PointDef point : points.values()) {
-                if (point!=null && point.pointType == pointType) cnt++;
+            for (PointDef point : points.values()) {
+                if (point != null && point.pointType == pointType) cnt++;
             }
             return cnt;
         }
-        String getPointName(PointType pointType,int pointNumber) {
+
+        String getPointName(PointType pointType, int pointNumber) {
             int cnt = 1;
-            for ( Map.Entry<String, PointDef> pointEntry : points.entrySet()) {
-                if (pointEntry.getValue()!=null && pointEntry.getValue().pointType == pointType && cnt++==pointNumber)
+            for (Map.Entry<String, PointDef> pointEntry : points.entrySet()) {
+                if (pointEntry.getValue() != null && pointEntry.getValue().pointType == pointType && cnt++ == pointNumber)
                     return pointEntry.getKey();
             }
             return "invalid";
         }
     }
-    private record TrackResultValues(double cost, TrackLogStatistic trackLogStatistic, ArrayList<RoutingSummary> routingSummary){
-        public TrackResultValues{
-            if (routingSummary!=null)
-              routingSummary = new ArrayList<>(routingSummary);
+
+    private record TrackResultValues(double cost, TrackLogStatistic trackLogStatistic,
+                                     ArrayList<RoutingSummary> routingSummary) {
+        public TrackResultValues {
+            if (routingSummary != null)
+                routingSummary = new ArrayList<>(routingSummary);
             else
                 routingSummary = new ArrayList<>();
         }
     }
 
-    private record TrackResultKey( int up, int dn, String upDnClass, String trackType,String pointName, String testName, String implementingClass){
+    private record TrackResultKey(int up, int dn, String upDnClass, String trackType,
+                                  String pointName, String testName, String implementingClass, String addParam) {
         @NonNull
         @Override
         public String toString() {
-            return String.format("%s_%s_%s_%s_%s_K%1dS%1d",testName,upDnClass,trackType,pointName,implementingClass,up,dn);
+            return String.format("%s_%s_%s_%s_%s_K%1dS%1d", testName, upDnClass, trackType, pointName, implementingClass, up, dn);
         }
-        public String getGroupName(){
-            return String.format("%s_%s_K%1dS%1d",testName,upDnClass,up,dn);
+
+        public String getGroupName() {
+            return String.format("%s_%s_K%1dS%1d", testName, upDnClass, up, dn);
         }
     }
 
 
-    private record TrackResult(TrackResultKey trackResultKey, TrackResultValues trackResultValues ){}
+    private record TrackResult(TrackResultKey trackResultKey, TrackResultValues trackResultValues) {
+    }
 
     private static class TrackResults extends TreeMap<TrackResultKey, TrackResultValues> {
         private static final Comparator<TrackResultKey> FULL_COMPARATOR =
@@ -139,7 +155,7 @@ public class RoutingProfileTest {
                         .thenComparing(TrackResultKey::pointName)
                         .thenComparing(TrackResultKey::testName)
                         .thenComparing(TrackResultKey::implementingClass)
-;
+                        .thenComparing(TrackResultKey::addParam);
         private static final Comparator<TrackResultKey> TESTGROUP_COMPARATOR =
                 Comparator.comparingInt(TrackResultKey::up)
                         .thenComparingInt(TrackResultKey::dn)
@@ -149,66 +165,79 @@ public class RoutingProfileTest {
                         .thenComparing(TrackResultKey::testName);
 
         TrackResults() {
-            super(FULL_COMPARATOR );
+            super(FULL_COMPARATOR);
         }
+
         static boolean isSameGroup(TrackResultKey a, TrackResultKey b) {
             return a != null && b != null && TESTGROUP_COMPARATOR.compare(a, b) == 0;
         }
 
 
-            }
-    private record TrackResultAggrKey(int up, int dn, String upDnClass, String trackType,String pointName, String implementingClass){
-        TrackResultAggrKey(TrackResultKey trackResultKey){
-            this(trackResultKey.up,trackResultKey.dn,trackResultKey.upDnClass,trackResultKey.trackType,trackResultKey.pointName, trackResultKey.implementingClass);
-        }
-        public String groupKeyString(){
-            return String.format("K%1dS%1d %s",up,dn,upDnClass);
-        }
     }
-    private static class TrackResultAggrVal{
-        private double totalDuration;
-        public void aggr( TrackResultValues trackResultValues){
-            totalDuration = trackResultValues.trackLogStatistic.getDuration() + totalDuration;
+
+    private record TrackResultAggrKey(int up, int dn, String upDnClass, String trackType,
+                                      String pointName, String implementingClass,String addParam) {
+        TrackResultAggrKey(TrackResultKey trackResultKey) {
+            this(trackResultKey.up, trackResultKey.dn, trackResultKey.upDnClass, trackResultKey.trackType, trackResultKey.pointName, trackResultKey.implementingClass,trackResultKey.addParam);
         }
-        @NonNull
-        public String toString(){
-            return String.format("total Duration=%9.3f",totalDuration/1000);
+
+        public String groupKeyString() {
+            return String.format("K%1dS%1d %s", up, dn, upDnClass);
         }
     }
 
-    private static class TrackResultsAggr extends TreeMap<TrackResultAggrKey,TrackResultAggrVal>{
+    private static class TrackResultAggrVal {
+        private double totalDuration;
+
+        public void aggr(TrackResultValues trackResultValues) {
+            totalDuration = trackResultValues.trackLogStatistic.getDuration() + totalDuration;
+        }
+
+        @NonNull
+        public String toString() {
+            return String.format("total Duration=%9.3f", totalDuration / 1000);
+        }
+    }
+
+    private static class TrackResultsAggr extends TreeMap<TrackResultAggrKey, TrackResultAggrVal> {
         private static final Comparator<TrackResultAggrKey> FULL_COMPARATOR =
                 Comparator.comparingInt(TrackResultAggrKey::up)
                         .thenComparingInt(TrackResultAggrKey::dn)
                         .thenComparing(TrackResultAggrKey::upDnClass)
                         .thenComparing(TrackResultAggrKey::trackType)
                         .thenComparing(TrackResultAggrKey::pointName)
-                        .thenComparing(TrackResultAggrKey::implementingClass);
+                        .thenComparing(TrackResultAggrKey::implementingClass)
+                        .thenComparing(TrackResultAggrKey::addParam);
         private static final Comparator<TrackResultAggrKey> GROUP_COMPARATOR =
                 Comparator.comparingInt(TrackResultAggrKey::up)
                         .thenComparingInt(TrackResultAggrKey::dn)
                         .thenComparing(TrackResultAggrKey::upDnClass)
                         .thenComparing(TrackResultAggrKey::trackType)
                         .thenComparing(TrackResultAggrKey::pointName);
+
         TrackResultsAggr() {
-            super(FULL_COMPARATOR );
+            super(FULL_COMPARATOR);
         }
+
         static boolean isSameGroup(TrackResultAggrKey a, TrackResultAggrKey b) {
             return a != null && b != null && GROUP_COMPARATOR.compare(a, b) == 0;
         }
 
-        public void aggr(TrackResultKey resKey, TrackResultValues resVal){
-            computeIfAbsent( new TrackResultAggrKey(resKey),
-                            k -> new TrackResultAggrVal()
-                    ).aggr(resVal);
+        public void aggr(TrackResultKey resKey, TrackResultValues resVal) {
+            computeIfAbsent(new TrackResultAggrKey(resKey),
+                    k -> new TrackResultAggrVal()
+            ).aggr(resVal);
         }
     }
 
 
+    private record TestResult(double costRatio, double lengthRatio) {
+    }
 
-    private record TestResult(double costRatio, double lengthRatio){}
-    private static class TestResults extends LinkedHashMap<String,TestResult>{
-        public TestResults() {}
+    private static class TestResults extends LinkedHashMap<String, TestResult> {
+        public TestResults() {
+        }
+
         public TestResults(TestResults ref, Comparator<TestResult> cmp) {
             super(ref.size());
 
@@ -219,54 +248,62 @@ public class RoutingProfileTest {
 
 
     }
-    private record TestResultDetails(TestResult testResult, TrackResult allPointsOnRouteResult, TestResults offRouteTestResults ){
-        public TestResultDetails(TestResult testResult,TrackResult allPointsOnRouteResult){
-            this(testResult, allPointsOnRouteResult,new TestResults());
+
+    private record TestResultDetails(TestResult testResult, TrackResult allPointsOnRouteResult,
+                                     TestResults offRouteTestResults) {
+        public TestResultDetails(TestResult testResult, TrackResult allPointsOnRouteResult) {
+            this(testResult, allPointsOnRouteResult, new TestResults());
         }
     }
 
 
-    private static class Tests extends LinkedHashMap<String,TestDef>{
-        public Tests(Tests ref, String filter){
-            for (String key : ref.keySet()){
-                if (filter==null || key.contains(filter))
-                    this.put(key,ref.get(key));
+    private static class Tests extends LinkedHashMap<String, TestDef> {
+        public Tests(Tests ref, String filter) {
+            for (String key : ref.keySet()) {
+                if (filter == null || key.contains(filter))
+                    this.put(key, ref.get(key));
             }
         }
+
         public Tests() {
             super();
         }
     }
 
+    private File getFile() {
+        //    File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam_20251201.osm.map"); // !!! map is not uploaded to git (due to map size)
+        File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam_20260301.osm.map"); // !!! map is not uploaded to git (due to map size)
+        System.out.println(mapFile.getAbsolutePath()+" "+mapFile.exists());
+        return mapFile;
+     }
 
+     private GGraphTileFactory getGGraphTileFactory(){
+         File mapFile = getFile();
+         PointModelUtil.init(32);
+         Pref<Boolean> useQubicInterpolation = new Pref<>(true);
+         Pref<Boolean> useQubicSplineInterpolation = new Pref<>(true);
+         ElevationProvider elevationProvider = new ElevationProviderImpl( new HgtProvider2(), useQubicInterpolation, useQubicSplineInterpolation );
+         MapDataStore mds = new MapFile(mapFile, "de");
+         WayProvider wayProvider = new WayProviderHelper(mds);
+         GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
+         return gGraphTileFactory;
+     }
 
     @Test
     public void _01_routing()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-        String testFilter = null;//"SteilerTrailVonSüdwest2Weissenstein"; //"Rodelweg1Trailkreuzung2Schwabenweg";// "HangkantenwegAbErbsweg2EndeGaisbergtrSteigerweg_MTB_K3S3";// "Leopoldstein2Vulpius";//
-        SplineProfileTestContextMTB.factory = SplineProfileContextMTB::new;
-        if (testFilter!=null)  MGLog.setUnittest(true);
-    //    File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam_20251201.osm.map"); // !!! map is not uploaded to git (due to map size)
-        File mapFile = new File("src/test/assets/map_local/Baden-Wuerttemberg_oam_20260301.osm.map"); // !!! map is not uploaded to git (due to map size)
-        System.out.println(mapFile.getAbsolutePath()+" "+mapFile.exists());
         mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
 
-
-        PointModelUtil.init(32);
-        Pref<Boolean> useQubicInterpolation = new Pref<>(true);
-        Pref<Boolean> useQubicSplineInterpolation = new Pref<>(true);
-        ElevationProvider elevationProvider = new ElevationProviderImpl( new HgtProvider2(), useQubicInterpolation, useQubicSplineInterpolation );
-//        ElevationProvider elevationProvider = new ElevationProviderImplHelper2( new HgtProvider2() );
-
-        MapDataStore mds = new MapFile(mapFile, "de");
-        WayProvider wayProvider = new WayProviderHelper(mds);
-        GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
-
+        String testFilter = null; //"Rodelweg1Trailkreuzung2Schwabenweg";// "HangkantenwegAbErbsweg2EndeGaisbergtrSteigerweg_MTB_K3S3";// "Leopoldstein2Vulpius";//
+        SplineProfileTestContextMTB.factory = SplineProfileContextMTB::new;
+        if (testFilter!=null)  MGLog.setUnittest(true);
+        GGraphTileFactory gGraphTileFactory = getGGraphTileFactory();
 
         RoutingProfile mtb_k1s1 =  new MTB_K1S1_2F();
         RoutingProfile mtb_k2s2 =  new MTB_K2S2_2F(); //
         RoutingProfile mtb_k3s3 =  new MTB_K3S3_2F();
-        Tests tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
+        RoutingProfile treckingBike = new TrekkingBike();
+        Tests tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3,treckingBike);
         if (testFilter!=null) tests = new Tests(tests,"nix");
         TrackResults trackResults = new TrackResults();
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
@@ -278,7 +315,7 @@ public class RoutingProfileTest {
         mtb_k1s1 =  new MTB_K1S1();
         mtb_k2s2 =  new MTB_K2S2(); //
         mtb_k3s3 =  new MTB_K3S3();
-        tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
+        tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3,treckingBike);
         if (testFilter!=null) tests = new Tests(tests,"nix");
         for ( Map.Entry<String,TestDef> entry : tests.entrySet() ){
             TestDef testDef = entry.getValue();
@@ -292,7 +329,7 @@ public class RoutingProfileTest {
 /*        mtb_k1s1 =  new MTB_K1S1_2F();
         mtb_k2s2 =  new MTB_K2S2_2F(); //
         mtb_k3s3 =  new MTB_K3S3_2F();// */
-        tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3);
+        tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3,treckingBike);
 
         tests = new Tests(tests,testFilter);
         TestResults testResults = new TestResults();
@@ -396,6 +433,77 @@ public class RoutingProfileTest {
         System.out.printf(Locale.ENGLISH, "Total Off Cost Ratio=%.7f weighted Off Cost Ratio=%.7f %n", totalOffCostRatio,weigthtedCostRatio);
         System.out.printf(Locale.ENGLISH, "onRouteDeviationNumber=%s offRouteMatchNumber=%s%n",cntNotOptRoute,cntOptRoute);
 
+    }
+
+    @Test
+    public void _01_DurationVary() {
+        MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
+        mgLog = new MGLog(MethodHandles.lookup().lookupClass().getName());
+
+        String testFilter = "_MTB_"; //"Rodelweg1Trailkreuzung2Schwabenweg";// "HangkantenwegAbErbsweg2EndeGaisbergtrSteigerweg_MTB_K3S3";// "Leopoldstein2Vulpius";//
+        SplineProfileTestContextMTB.factory = SplineProfileContextMTB::new;
+        if (!testFilter.equals("_MTB_")) MGLog.setUnittest(true);
+        GGraphTileFactory gGraphTileFactory = getGGraphTileFactory();
+
+        RoutingProfile mtb_k1s1 ;
+        RoutingProfile mtb_k2s2 ;
+        RoutingProfile mtb_k3s3 ;
+        TrackResults trackResults = new TrackResults();
+        RoutingProfile treckingBike = new TrekkingBike();
+
+        for (int durationCor = -10;durationCor<=10;durationCor+=1) {
+            mtb_k1s1 = getDurTestProfile(100,100,durationCor);
+            mtb_k2s2 = getDurTestProfile(200,200,durationCor);
+            mtb_k3s3 = getDurTestProfile(300,300,durationCor);
+            Tests tests = defineTests(mtb_k1s1, mtb_k2s2, mtb_k3s3, treckingBike);
+            if (testFilter != null) tests = new Tests(tests, testFilter);
+            for (Map.Entry<String, TestDef> entry : tests.entrySet()) {
+                TestDef testDef = entry.getValue();
+                TrackResult trackResult = executeSingle(testDef, PointType.on_rt, -1, gGraphTileFactory);
+                trackResults.put(trackResult.trackResultKey, trackResult.trackResultValues);
+            }
+        }
+
+        TrackResultKey previouskey = null;
+        TrackResultsAggr trackResultsAggr = new TrackResultsAggr();
+
+        for ( Map.Entry<TrackResultKey,TrackResultValues> entry : trackResults.entrySet() ){
+            TrackResultValues trackResultValues = entry.getValue();
+            TrackResultKey key = entry.getKey();
+            trackResultsAggr.aggr(key,trackResultValues);
+        }
+//        System.out.println(output);
+
+        StringBuilder output = null;
+        TrackResultAggrKey previousaggrkey = null;
+        for ( Map.Entry<TrackResultAggrKey,TrackResultAggrVal> entry : trackResultsAggr.entrySet()){
+            TrackResultAggrKey key = entry.getKey();
+            TrackResultAggrVal val = entry.getValue();
+            if (!TrackResultsAggr.isSameGroup(previousaggrkey,key)) {
+                if (output !=null) System.out.println(output);
+                previousaggrkey = key;
+                output = new StringBuilder(String.format("%-20s %6.0f", key.groupKeyString(),val.totalDuration/1000f));
+            } else {
+                output.append(String.format(" %6.0f",  val.totalDuration/1000f));
+            }
+        }
+        System.out.println(output);
+
+    }
+
+    private RoutingProfile getDurTestProfile(int sUp, int sDn, int durationCorr){
+        CostCalcSplineProfile costCalculator = new CostCalcSplineProfile( new SplineProfileContextMTB(-1,getPowerDur(sUp,durationCorr),sUp,sDn,true));
+        xMTBProf mtb = new xMTBProf(costCalculator);
+        mtb.setID(String.format(Locale.ENGLISH,"%s_DC%3d",mtb.calcID(sUp,sDn),durationCorr));
+        RoutingProfileCreateTest routingProfileCreateTest = new RoutingProfileCreateTest();
+        routingProfileCreateTest.checkProfile( costCalculator, new StringBuilder(String.format("sUp=%3d sDn=%3d", 200,200)),-0.6f,0.6f);
+        return mtb;
+    }
+
+    private float getPowerDur(int sUp, int durationCorr){
+        float powerDur = SplineProfileContextMTB.getDurPower(sUp);
+        powerDur = powerDur * ( 1 + 2*durationCorr/100f);
+        return powerDur;
     }
 
      private RoutingEngine getRoutingEngine(GGraphTileFactory gGraphTileFactory,RoutingProfile profile){
@@ -515,16 +623,18 @@ public class RoutingProfileTest {
         String implemented;
         String    up="0";
         String    dn="0";
+        String addParam = "";
         if (profileID.regionMatches(3,"MTB",0,3)){
             implemented = profileID.substring(0,6);
             up          = profileID.substring(8,9);
             dn          = profileID.substring(10,11);
+            addParam    = profileID.length() > 13 ? profileID.substring(13) : "";
         } else {
             implemented = profileID;
         }
 //        TrackResultValues trackResult = new TrackResultValues(cost, trackStatisic, RoutingSummary.routingSummaries);
         TrackResult trackResult = new TrackResult(
-                new TrackResultKey(Integer.parseInt(up),Integer.parseInt(dn),upDnClass,trackType,pointName, testDef.name, implemented),
+                new TrackResultKey(Integer.parseInt(up),Integer.parseInt(dn),upDnClass,trackType,pointName, testDef.name, implemented,addParam),
                 new TrackResultValues(cost, trackStatisic, RoutingSummary.routingSummaries) );
 
         String testname = trackResult.trackResultKey.toString();
@@ -569,7 +679,7 @@ public class RoutingProfileTest {
     }
 
 
-    private Tests defineTests(RoutingProfile mtb_k1s1,RoutingProfile mtb_k2s2, RoutingProfile mtb_k3s3){
+    private Tests defineTests(RoutingProfile mtb_k1s1,RoutingProfile mtb_k2s2, RoutingProfile mtb_k3s3, RoutingProfile treckingBike){
 //        MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
 //        MGLog.setUnittest(true);
 
@@ -960,6 +1070,9 @@ public class RoutingProfileTest {
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,treckingBike);
         tests.put(testDef.getId(),testDef);
 
         testDef = new TestDef("UnterHampen2DreiEichen",mtb_k1s1);
@@ -1885,7 +1998,7 @@ public class RoutingProfileTest {
         points.replace("KreuzungTrailBlockhauswegBeiBlockhaus",PointType.on_rt);
         tests.put(testDef.getId(),testDef);
 
-        testDef = new TestDef("FlacherS1TrailZwischenNeuerHilsbacherWegUndMichelsbrunnen",mtb_k2s2);
+        testDef = new TestDef("FlacherS1TrailZwischenNeuerHilsbacherWegUndMichelsbr",mtb_k2s2);
         points = testDef.points;
         points.put("EinstiegTrail", new PointDef(PointType.start,new PointModelImpl(49.391504, 8.744444)));
         points.put("AufS1Trail", new PointDef(PointType.on_rt, new PointModelImpl(49.388734, 8.745389)));
@@ -1971,7 +2084,8 @@ public class RoutingProfileTest {
         testDef = new TestDef("TrailGroßsachsen2Kunzmühle",mtb_k2s2);
         points = testDef.points;
         points.put("AbzweigHindenburgweg2Kohlbachweg", new PointDef(PointType.start,new PointModelImpl(49.516342, 8.697618)));
-        points.put("StartTrail", new PointDef(PointType.on_rt, new PointModelImpl(49.514653, 8.694995)));
+        points.put("StartTrail", new PointDef(PointType.off_rt, new PointModelImpl(49.514653, 8.694995)));
+        points.put("BelzholKommtVonRechts", new PointDef(PointType.on_rt, new PointModelImpl(49.514913, 8.692844)));
         points.put("AbzweigVonBelzhohlZurHütte", new PointDef(PointType.on_rt, new PointModelImpl(49.514450, 8.686355)));
         points.put("Teuerbrunnenweg", new PointDef(PointType.off_rt, new PointModelImpl(49.513760, 8.686431)));
         points.put("RunterZurOdenwaldstr", new PointDef(PointType.off_rt, new PointModelImpl(49.511075, 8.687347)));
@@ -2168,6 +2282,50 @@ public class RoutingProfileTest {
 
         testDef = new TestDef(testDef,mtb_k3s3);
         tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef("VulpiusHütte2StartSternwartenTrail",mtb_k1s1);
+        points = testDef.points;
+        points.put("VulpiusHütte", new PointDef(PointType.start,new PointModelImpl(49.400748, 8.727478)));
+        points.put("flacher00Verbindungstrail", new PointDef(PointType.on_rt,new PointModelImpl(49.399693, 8.727260)));
+        points.put("SteilerSC4TrackHoch", new PointDef(PointType.off_rt, new PointModelImpl(49.398791, 8.726228)));
+        points.put("11TrailAmZaunParallelZurStrasse", new PointDef(PointType.off_rt,new PointModelImpl(49.397290, 8.726142)));
+        points.put("AlterHilsbacherWegParallelZaum", new PointDef(PointType.on_rt, new PointModelImpl(49.397156, 8.726572)));
+        points.put("EinstiegTrail", new PointDef(PointType.stop,new PointModelImpl(49.396925, 8.726293)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        points =testDef.points;
+        points.replace("flacher00Verbindungstrail",PointType.off_rt);
+        points.replace("SteilerSC4TrackHoch",PointType.on_rt);
+        points.replace("AlterHilsbacherWegParallelZaum",PointType.off_rt);
+        points.replace("11TrailAmZaunParallelZurStrasse",PointType.on_rt);
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k3s3);
+        tests.put(testDef.getId(),testDef);
+
+
+        testDef = new TestDef("HirschhofPassageKarlsruhe",treckingBike);
+        points = testDef.points;
+        points.put("EingangVonHirschhofstr", new PointDef(PointType.start,new PointModelImpl(49.010468, 8.391818)));//49.010566, 8.391830)));
+        points.put("InPassage", new PointDef(PointType.off_rt,new PointModelImpl(49.010504, 8.393243)));
+        points.put("Akademiestr", new PointDef(PointType.on_rt, new PointModelImpl(49.010883, 8.392840)));
+        points.put("Karlshof", new PointDef(PointType.off_rt,new PointModelImpl(49.010491, 8.394080)));
+        points.put("AkademiestrNebenAusgang", new PointDef(PointType.on_rt, new PointModelImpl(49.010821, 8.394232)));//49.010818, 8.394291)));
+        points.put("AusgangKarlshof", new PointDef(PointType.stop,new PointModelImpl(49.010807, 8.394554)));//49.010814, 8.394384)));
+        tests.put(testDef.getId(),testDef);
+
+        testDef = new TestDef(testDef,mtb_k2s2);
+        tests.put(testDef.getId(),testDef);
+
+
+/*        testDef = new TestDef("ProblemHirschhofPassageKarlsruhe",treckingBike);
+        points = testDef.points;
+        points.put("EingangVonHirschhofstr", new PointDef(PointType.start,new PointModelImpl(49.010566, 8.391830)));
+        points.put("Karlshof", new PointDef(PointType.off_rt,new PointModelImpl(49.010491, 8.394080)));
+        points.put("AkademiestrNebenAusgang", new PointDef(PointType.on_rt, new PointModelImpl(49.010818, 8.394291)));
+        points.put("AusgangKarlshof", new PointDef(PointType.stop,new PointModelImpl(49.010814, 8.394384)));
+        tests.put(testDef.getId(),testDef); */
 
 
         return tests;

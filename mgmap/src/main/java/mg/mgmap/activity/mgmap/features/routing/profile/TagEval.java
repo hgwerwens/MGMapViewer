@@ -94,12 +94,12 @@ public class TagEval {
             surfaceCat = (surfaceCat>0) ? surfaceCat :1;
             if ("bic_destination".equals(wayTagEval.bicycle) || isBikeRoute(wayTagEval) ) {
                 distFactor = 1.0;
- /*           } else if( surfaceCat > 2){
-                distFactor = 1.5; */
-            } else  distFactor = 1.135;
+            } else  distFactor = 1.14;
         } else if ("footway".equals(wayTagEval.highway) || "pedestrian".equals(wayTagEval.highway)) {
-            if (isBikeRoute(wayTagEval) || "bic_yes".equals(wayTagEval.bicycle))
+            if (isBikeRoute(wayTagEval) && "bic_yes".equals(wayTagEval.bicycle))
                 distFactor = 1.0;
+            else if (isBikeRoute(wayTagEval) || "bic_yes".equals(wayTagEval.bicycle))
+                distFactor = 1.05;
             else if  ((wayTagEval.mtbScale != null || wayTagEval.mtbScaleUp != null) && mtb && ( surfaceCat >= 4|| surfaceCat == -1 )) {
                 distFactor = 1.0;
                 surfaceCat = 6;
@@ -114,12 +114,14 @@ public class TagEval {
             surfaceCat = (surfaceCat < 1) ? 2 : surfaceCat;
         } else if ("service".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat < 1) ? 2 : surfaceCat;
-            if ("bic_destination".equals(wayTagEval.bicycle))
+            if ("bic_destination".equals(wayTagEval.bicycle) || isNotLocalBikeRoute(wayTagEval))
                 distFactor = 1.0;
+            else if (wayTagEval.cycleway != null || "lcn".equals(wayTagEval.network))
+                distFactor = 1.15;
             else if ( "no".equals(wayTagEval.access) || "bic_no".equals(wayTagEval.bicycle))
                 distFactor = 15;
             else
-                distFactor = 1.5;
+                distFactor = 1.3;
         } else if ("construction".equals(wayTagEval.highway)){
             distFactor = 10;
             surfaceCat = 4;

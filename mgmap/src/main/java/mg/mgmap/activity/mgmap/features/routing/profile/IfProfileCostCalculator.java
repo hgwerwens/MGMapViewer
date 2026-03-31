@@ -5,7 +5,7 @@ import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
 
 public interface IfProfileCostCalculator extends CostCalculator {
     IfSpline getCostFunc(int surfaceCat);
-    IfSpline getDurationFunc(int surfaceCat);
+    IfSpline getDurationSpline(int surfaceCat);
     float getRefCosts();
     IfSplineProfileContext getContext();
 }

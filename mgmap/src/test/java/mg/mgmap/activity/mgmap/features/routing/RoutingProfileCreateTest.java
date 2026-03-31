@@ -96,7 +96,9 @@ public class RoutingProfileCreateTest {
     public void SCCompareOldNew() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-
+        float fromSlope = -0.05f;
+        float toSlope = 0.30f;
+        boolean isCost = false;
         factory = SplineProfileContextMTB::new;
         ArrayList<ProfSc> scs = new ArrayList<>();
 //        scs.add(new ProfSc(200, 100,7));//sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 3, 5))
@@ -109,20 +111,18 @@ public class RoutingProfileCreateTest {
 //        scs.add(new ProfSc(100, 100,6));
 //        scs.add(new ProfSc(200, 200,6));
 //        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1)));
-        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 3)));
+        scs.add(new ProfSc(200, 200,2));
 //        scs.add(new ProfSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
         scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1)));
         scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1)));
 //        scs.add(new ProfSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2)));
 //        scs.add(sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 2));
         for (ProfSc profSc: scs ) {
-            float fromSlope = -0.05f;
-            float toSlope = 0.20f;
             factory = SplineProfileContextMTB_old::new;
-            CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(148,profSc.sUp, profSc.sDn, false));
+            CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(profSc.sUp, profSc.sDn, false));
             factory = SplineProfileContextMTB::new;
-            CostCalcSplineProfile costCalcSplineProfile2 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(148,profSc.sUp, profSc.sDn, false));
-            singleScCompare(costCalcSplineProfile1, profSc.sc, costCalcSplineProfile2, profSc.sc, fromSlope,toSlope);
+            CostCalcSplineProfile costCalcSplineProfile2 = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(profSc.sUp, profSc.sDn, false));
+            singleScCompare(costCalcSplineProfile1, profSc.sc, costCalcSplineProfile2, profSc.sc, fromSlope,toSlope, isCost);
         }
         softAssert.assertAll();
     }
@@ -132,20 +132,21 @@ public class RoutingProfileCreateTest {
     public void SCCompare() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        float fromSlope = -0.05f;
-        float toSlope = 0.250f;
+        float fromSlope = -0.1f;
+        float toSlope = 0.1f;
+        boolean isCost = false;
         ArrayList<CompSc> scs = new ArrayList<>();
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 0),6));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, -1),2));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, 1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 0, -1)));
 //          scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 1),4));
-          scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 6),6));
-          scs.add(new  CompSc(200, 200,0,1));
+//          scs.add(new  CompSc(200, 200,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 2, 2),6));
+//          scs.add(new  CompSc(200, 200,1,2));
 //          scs.add(new  CompSc(300, 300,6,4));
 //          scs.add(new  CompSc(300, 300,6,4));
 //          scs.add(new  CompSc(200, 200,6,5));
 //          scs.add(new  CompSc(100, 100,6,5));
-//        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
+        scs.add(new  CompSc(100, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 6, 6),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 5, 5)));
 //        scs.add(new  CompSc(100, 100,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
 //        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, -1),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3)));
 //        scs.add(new  CompSc(300, 300,sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 3),sc2MTBc.getSurfaceCat(sc2MTBc.maxSL, 1, 4)));
@@ -153,19 +154,27 @@ public class RoutingProfileCreateTest {
         factory = SplineProfileContextMTB::new;
         for (CompSc comp : scs) {
             CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile(SplineProfileTestContextMTB.get(comp.sUp, comp.sDn, false));
-            singleScCompare(costCalcSplineProfile, comp.sc1, costCalcSplineProfile, comp.sc2, fromSlope, toSlope);
+            singleScCompare(costCalcSplineProfile, comp.sc1, costCalcSplineProfile, comp.sc2, fromSlope, toSlope, isCost);
         }
         softAssert.assertAll();
     }
 
-    void singleScCompare(CostCalcSplineProfile costCalcSplineProfile1, int sc1, CostCalcSplineProfile costCalcSplineProfile2, int sc2, float fromSlope, float toSlope){
+    void singleScCompare(CostCalcSplineProfile costCalcSplineProfile1, int sc1, CostCalcSplineProfile costCalcSplineProfile2, int sc2, float fromSlope, float toSlope,boolean isCost){
         try {
-            float distf = costCalcSplineProfile1.getMinDistFactSC(sc1);
-            IfSpline spline1 = costCalcSplineProfile1.getCostSpline(sc1);
-            if (distf !=1f) spline1 = spline1.transformY(distf,0f);
-            distf = costCalcSplineProfile2.getMinDistFactSC(sc2);
-            IfSpline spline2 = costCalcSplineProfile2.getCostSpline(sc2);
-            if (distf !=1f) spline2 = spline2.transformY(distf,0f);
+            IfSpline spline1;
+            IfSpline spline2;
+            if (isCost) {
+                float distf = costCalcSplineProfile1.getMinDistFactSC(sc1);
+                spline1 = costCalcSplineProfile1.getCostSpline(sc1);
+                if (distf != 1f) spline1 = spline1.transformY(distf, 0f);
+                distf = costCalcSplineProfile2.getMinDistFactSC(sc2);
+                spline2 =  costCalcSplineProfile2.getCostSpline(sc2) ;
+                if (distf !=1f) spline2 = spline2.transformY(distf,0f);
+            } else {
+                spline1 = costCalcSplineProfile1.getDurationSpline(sc1);
+                spline2 = costCalcSplineProfile2.getDurationSpline(sc2);
+            }
+
             System.out.println(costCalcSplineProfile1.getSurfaceCatTxt(sc1));
             checkCubicSpline(spline1, new StringBuilder(costCalcSplineProfile1.getSurfaceCatTxt(sc1)), fromSlope, toSlope);
             System.out.println(costCalcSplineProfile2.getSurfaceCatTxt(sc2));
@@ -264,7 +273,7 @@ public class RoutingProfileCreateTest {
     @Test
     public void VaryContext_default()  {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
-        MGLog.setUnittest(true);
+//        MGLog.setUnittest(true);
         factory = SplineProfileContextMTB::new;
         for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
             for (int sDn = 100; sDn <= 300; sDn = sDn + 100) {
@@ -283,7 +292,7 @@ public class RoutingProfileCreateTest {
         for (int sUp = 100; sUp <= 300; sUp = sUp + 100) {
             for (int sDn = 100; sDn <= 300; sDn = sDn + 100) {
                 for (int power = 48 ; power <= 150f; power = power + 25) {
-                    CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile( SplineProfileTestContextMTB.get(power, sUp, sDn,false));
+                    CostCalcSplineProfile costCalcSplineProfile = new CostCalcSplineProfile( SplineProfileTestContextMTB.get(-1,power, sUp, sDn,false));
                     StringBuilder msg = new StringBuilder();
                     checkProfile(costCalcSplineProfile, msg,0f, 0f);
                 }
@@ -293,7 +302,7 @@ public class RoutingProfileCreateTest {
     }
 
 
-    private void checkProfile(CostCalcSplineProfile costCalcSplineProfile, StringBuilder msg, float slStart, float slStop){
+    void checkProfile(CostCalcSplineProfile costCalcSplineProfile, StringBuilder msg, float slStart, float slStop){
         checkSurfaceCats(costCalcSplineProfile, msg,slStart,slStop);
 //        compareSurfaceCats(costCalcSplineProfile, msg);
     }
@@ -304,11 +313,16 @@ public class RoutingProfileCreateTest {
              try {
                 cubicSpline = costCalcSplineProfile.getCostSpline(sc);
                 if (cubicSpline != null){
-                    System.out.println(costCalcSplineProfile.getSurfaceCatTxt(sc));
-                    StringBuilder msg = new StringBuilder(rmsg).append(costCalcSplineProfile.getSurfaceCatTxt(sc));
+//                    System.out.println(costCalcSplineProfile.getSurfaceCatTxt(sc));
+                    StringBuilder msg = new StringBuilder(rmsg).append("Cost: ").append(costCalcSplineProfile.getSurfaceCatTxt(sc));
                     checkCubicSpline(cubicSpline,msg,slStart,slStop);
                 }
-                costCalcSplineProfile.getDurationFunc(sc);
+                 cubicSpline = costCalcSplineProfile.getDurationSpline(sc);
+                 if (cubicSpline != null){
+//                     System.out.println(costCalcSplineProfile.getSurfaceCatTxt(sc));
+                     StringBuilder msg = new StringBuilder(rmsg).append("Dura: ").append(costCalcSplineProfile.getSurfaceCatTxt(sc));
+                     checkCubicSpline(cubicSpline,msg,slStart,slStop);
+                 }
             } catch (Exception e) {
                 softAssert.check(false, rmsg+"failure:"+e.getMessage()+ Arrays.toString(e.getStackTrace()));
                 System.out.println(e.getMessage());
@@ -341,11 +355,10 @@ public class RoutingProfileCreateTest {
         IfSpline cubicSpline = costCalcSplineProfile.getCostSpline(sc);
         if ( cubicSpline == null ) return;
         try {
-            if (sc != costCalcSplineProfile.getContext().getScHeuristicRefSpline()) {
-                cubicSpline = costCalcSplineProfile.getCostSpline(sc);
-                if ( costCalcSplineProfile.getMinDistFactSC(sc)!=1f){
-                    cubicSpline =  cubicSpline.transformY(costCalcSplineProfile.getMinDistFactSC(sc),0f);
-                }}
+            cubicSpline = costCalcSplineProfile.getCostSpline(sc);
+            if ( costCalcSplineProfile.getMinDistFactSC(sc)!=1f){
+                cubicSpline =  cubicSpline.transformY(costCalcSplineProfile.getMinDistFactSC(sc),0f);
+            }
             if (cubicSpline != null ){
                 msg = new StringBuilder(rmsg).append(" compare ").append(costCalcSplineProfile.getSurfaceCatTxt(sc)).append(" with Heuristic:");
                ScCompRes compRes = compareCubicSpline( cubicSpline,cubicHeuristicSpline,-0.4f,0.4f,msg,slStop > slStart);

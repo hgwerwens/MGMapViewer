@@ -50,12 +50,6 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
                     surfaceCat = (surfaceCat>2) ? (short) (surfaceCat-1):surfaceCat;
                 } else if ( "bic_designated".equals(wayTagEval.bicycle) ) {
                     distFactor = 1.1f;
-/*                } else if (surfaceCat<=1) {
-                    distFactor = 1.2f;
-                }else if (surfaceCat==2) {
-                    distFactor = 1.3f;
-                } else if (surfaceCat==3) {
-                    distFactor = 1.4f; */
                 } else {
                     distFactor = 1.5f;
                 }
@@ -94,7 +88,7 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
 
     @Override
     public long getDuration(double dist, float vertDist) {
-        IfSpline durationFunc = mProfileCalculator.getDurationFunc(surfaceCat);
+        IfSpline durationFunc = mProfileCalculator.getDurationSpline(surfaceCat);
         if (dist >= 0.00001) {
             mgLog.v(()-> {
                float slope = vertDist / (float) dist;

@@ -131,7 +131,7 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
 
 
     public String getSurfaceCatTxt(int sc) {
-        return String.format("TreckingBike sc=%1d", sc);
+        return String.format("TrekkingBike sc=%1d", sc);
     }
 
 
