@@ -21,7 +21,6 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     private final IfSplineProfileContext context;
     private static final float lowstart = -0.15f;
     private static final float highstart = 0.15f;
-
     private String heuristicHasNegativeCurvatureMsg;
 
     public final float refCosts;
@@ -53,7 +52,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection) {
         if (dist <= 0.0000001) {
-            return 0.0001;
+            return 0.000001;
         }
         return dist * profileSpline.valueAt(vertDist / (float) dist) ;
     }
@@ -91,7 +90,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                 msgTxt.append(e.getMessage());
                 negativeCurvature = true;
             }
-            if (spline!= null && heuristicSpline != null) violations[surfaceCat] = checkSplineHeuristic(spline, surfaceCat);
+            if (spline!= null && heuristicSpline != null) violations[surfaceCat] = checkHeuristicSpline(spline, surfaceCat);
         }
         boolean heuristicViolation = false;
         for ( int surfaceCat=0; surfaceCat<violations.length;surfaceCat++) {
@@ -106,7 +105,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
         }
 
         if (negativeCurvature||heuristicViolation ||heuristicSpline==null) {
-            if (heuristicSpline==null) msgTxt.append( context + " Heuristic could not be calculated: " + heuristicHasNegativeCurvatureMsg);
+            if (heuristicSpline==null) msgTxt.append(context).append(" Heuristic could not be calculated: ").append(heuristicHasNegativeCurvatureMsg);
             throw new RuntimeException(msgTxt.toString());
         }
 
@@ -134,7 +133,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
     }
 
 
-    protected ArrayList<Value> checkSplineHeuristic(IfSpline spline, int surfaceCat)  {
+    protected ArrayList<Value> checkHeuristicSpline(IfSpline spline, int surfaceCat)  {
         float xs = lowstart - 0.3f;
         float minmfd = context.getMinDistFactSC(surfaceCat);
         ArrayList<Value> violations = new ArrayList<>();
@@ -145,7 +144,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
                 float heuristic = heuristicSpline.valueAt(xs);
                 float splineValue    = spline.valueAt(xs);
                 float delta = minmfd * splineValue - heuristic;
-                if (delta <= 0.0)
+                if (delta <= 0.000005)
                     violations.add(new Value(xs,delta));
             }
         } while (xs < highstart + 0.3f);
@@ -269,7 +268,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
         if (refspline == null) return null;
         StringBuilder msg = new StringBuilder(context.toString());
         IfSpline cutSpline = SplineUtil.calcCutSpline( refspline, msg);
-        mgLog.i(()-> msg.toString());
+        mgLog.i(msg::toString);
         return cutSpline;
     }
 
@@ -277,8 +276,7 @@ public class CostCalcSplineProfile implements IfProfileCostCalculator {
         return heuristicHasNegativeCurvatureMsg;
     }
 
-
-    private record Value(float x, float y) {
+    protected record Value(float x, float y) {
     }
 }
 

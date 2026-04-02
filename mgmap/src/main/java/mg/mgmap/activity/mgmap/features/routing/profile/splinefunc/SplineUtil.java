@@ -87,15 +87,19 @@ public class SplineUtil {
     }
 
 
-    public static float getMin(IfSpline spline,float start) throws Exception {
+    public static float getMin(IfSpline spline,float start)  {
         IfSplineDef def = ((IfSplineInternal)spline).getSplineDef();
-        if ( def.type()== NATURAL )
+        try {
+        if ( def.type()== NATURAL || def.type()==CLAMPED )
             return ((CubicSpline)spline).calcMin(start);
         else if ( def.type()==COMPOSITE){
             CompositeSpline compSpline = (CompositeSpline) spline;
             if (start > compSpline.getLeftCubicLimit())
                 return compSpline.getCubicSpline().calcMin(compSpline.getLeftCubicLimit()+0.01f);
 
+        }
+        } catch (Exception e) {
+            //ignore
         }
         return Float.NaN;
     }

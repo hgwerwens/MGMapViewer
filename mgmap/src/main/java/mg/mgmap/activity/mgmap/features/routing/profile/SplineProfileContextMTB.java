@@ -45,9 +45,9 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
     private final float[] slopesAll;
     int indRefDnSlope;
     int heuristicRefSurfaceCat = 7;
-    float[] sslopesAll = new float[]{-0.76f, -0.36f, -0.2f, -0.05f, 0.0f, 0.09f,0.19f, 0.24f};
-    float[] sdistFactforCostFunct = {  3.0f ,2.4f ,2.0f,1.75f,1.35f,1.2f }; //factors to increase costs compared to durations to get better routing results
-    float[] ssrelSlope            = {  1.4f   ,1.2f ,1f    ,1f    ,1f    ,1f  , 1.0f   ,1.4f  ,1.3f  ,1.2f  ,1.2f  ,1.2f ,1.2f   ,1.2f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
+    float[] sslopesAll = new float[]{-0.76f, -0.36f, -0.2f, -0.045f, 0.0f, 0.09f,0.19f, 0.24f};
+    float[] sdistFactforCostFunct = {  3.0f ,2.4f ,2.0f,1.77f,1.35f,1.2f }; //factors to increase costs compared to durations to get better routing results
+    float[] ssrelSlope            = {  0.85f   ,0.75f , 0.65f   ,0.65f   ,0.65f    ,0.65f  , 0.65f   ,1.15f  ,0.9f  ,0.9f  ,0.9f  ,0.9f ,0.9f   ,0.9f }; //slope of auxiliary function for duration function at 0% slope to get to -4% slope
 
     static SurfCat2MTBCat sc2MTBc = new SurfCat2MTBCat();
     private final IfSpline[] costRefSplines;
@@ -110,7 +110,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 if (slopesAll[i] < 0)
                     distFactforCostFunct[sc][i] = sdistFactforCostFunct[sc];
                 else if (slopesAll[i] == 0.0f)
-                    distFactforCostFunct[sc][i] = (1f + (sdistFactforCostFunct[sc] - 1f) * 0.74f);
+                    distFactforCostFunct[sc][i] = (1f + (sdistFactforCostFunct[sc] - 1f) * 0.735f);
                 else {
                     distFactforCostFunct[sc][i] = (1f + (sdistFactforCostFunct[sc] - 1f) * 0.30f);
                 }
@@ -119,12 +119,11 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
 
         IfFunction fSM20sc = getSM20sc(sDn); //gets calculator to calculate sm20Dn differences for sc's (sc0 is reference)
         IfFunction fSM20scDn = getSM20scDn(sDn); //gets calculator to calculate sm20Dn differences for scDn's (sc7 is reference)
+        // factor how much higher the reference surface level will be if the sDn changes by 100
 
-
-        float sm20Dnsc0 = 0.07f + 0.4f * (float) pow(1.75,1-sDn/100);
-        float deltaSlToSl2 =  fSM20sc.calc((float) (pow(1.35d, 1 - sDn / 100f)*1.3f + 1d));
+        float sm20Dnsc0 = 0.05f + 0.42f * (float) pow(1.66,1-sDn/100d);
+        float deltaSlToSl2 =  fSM20sc.calc((float) (pow(1.4d, 1 - sDn / 100f)*1.4f + 1d));
         float sm20Dnsc7 = sm20Dnsc0 + deltaSlToSl2;
-
 
 
         for (int scDn = sc2MTBc.maxSL + 1; scDn < sc2MTBc.maxScDn; scDn++) {
@@ -132,7 +131,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
             off = lscDn - sDn / 100d;
             crDn[scDn] = 0.019f + 0.004f * lscDn + 0.035f * sig(2d * (2d - off));
             srelSlope[scDn] = ssrelSlope[scDn];
-            frelSlopeCost[scDn] = 0.3f + sig(2d*(sDn/100d-2))*0.7f*sig(2d * (off));
+            frelSlopeCost[scDn] = 0.35f + sig(2d*(sDn/100d-2))*1.0f*sig(2d * (off));
             sm20Dn[scDn] = sm20Dnsc7 +  fSM20scDn.calc(lscDn);
             factorDown[scDn] = sm20Dn[scDn] * facDn ;
         }
@@ -150,15 +149,15 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 crUp[sc] = 0.0048f + 0.03f * sig((3.5 - sc) * 1.3);
                 crDn[sc] = crUp[sc];
                 srelSlope[sc] = ssrelSlope[sc];
-                frelSlopeCost[sc] = 0.3f;// + sig(2d*(sDn/100d-2))*0.0f;
+                frelSlopeCost[sc] = 0.35f;// + sig(2d*(sDn/100d-2))*0.0f;
                 sm20Dn[sc] = sm20Dnsc0 + fSM20sc.calc(sc);
-                factorDown[sc] = sm20Dn[sc] * facDn;
+                factorDown[sc] = sm20Dn[sc] * facDn*1.1f;
             } else if (sc > sc2MTBc.maxSL && sc < sc2MTBc.maxScUp) {
                 int scUp = sc - (sc2MTBc.maxSL + 1);
                 off = scUp - sUp / 100d;
                 sig = sig((0.5 - off) * 2.);
                 ulstrechDuration[sc] = (float) pow(1.2,sUp /100d-1d)*(1.3f - 0.5f*sig);
-                ulstrechCost[sc] = (float) pow(1.34,sUp /100d-1d) * (0.85f - 0.3f*sig);
+                ulstrechCost[sc] = (float) pow(1.34,sUp /100d-1d) * (0.86f - 0.32f*sig);
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
                 f3u[sc] = 1.65f*f1u[sc];
@@ -169,7 +168,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
                 off = scUp - sUp / 100d;
                 sig = sig((-0.5 - off) * 2d);
                 ulstrechDuration[sc] = (float) pow(1.2,sUp /100d-1d)*(1.3f - 0.5f*sig);
-                ulstrechCost[sc] = (float) pow(1.32,sUp /100d-1d) * (0.80f - 0.3f*sig); //(0.65f + 0.2f * sUp / 100 - 0.4f * sig); //
+                ulstrechCost[sc] = (float) pow(1.32,sUp /100d-1d) * (0.81f - 0.32f*sig);
                 f0u[sc] = 1.0f;
                 f1u[sc] = 1.18f;
                 f3u[sc] = 1.75f*f1u[sc];
@@ -188,12 +187,12 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
         f3u[sc2MTBc.maxSL] = 1.9f*f1u[sc2MTBc.maxSL] ;
         fuSlope[sc2MTBc.maxSL] = 0.3f;
         crUp[sc2MTBc.maxSL] = 0.03f;
-        crDn[sc2MTBc.maxSL] = 0.02f;
+        crDn[sc2MTBc.maxSL] = 0.0225f;
         srelSlope[sc2MTBc.maxSL] = ssrelSlope[sc2MTBc.maxSL];
         frelSlopeCost[sc2MTBc.maxSL] = 0.3f + sig(2d*(sDn/100d-2))*0.4f;
         float mtbDnRefSc6 = 3f;
-        sm20Dn[sc2MTBc.maxSL] = sm20Dnsc7 +  fSM20scDn.calc(mtbDnRefSc6);//deltaSM20DnMin +  dSM20scDn(mtbDnRefSc6, sDn,0); //sm20Dn[sc2MTBc.maxSL + 1 + 3];
-        factorDown[sc2MTBc.maxSL] =  sm20Dn[sc2MTBc.maxSL] * facDn;//*(1f+0.15f*sig((3d-sDn/100d)*2d));
+        sm20Dn[sc2MTBc.maxSL] = sm20Dnsc7 +  fSM20scDn.calc(mtbDnRefSc6);
+        factorDown[sc2MTBc.maxSL] =  sm20Dn[sc2MTBc.maxSL] * facDn;
 
 
         float powerHighCost = power2powerHighCost * this.powerCost;
@@ -223,9 +222,6 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
     }
     public static float getDurPower(int sUp) {  return   (aDuration * sUp / 100f + bDuration );
     }
-    private static float getDurPowerFromPower(int powerCost) {
-        return  ((aDuration*powerCost-bCost*aDuration+aCost*bDuration)/ aCost);
-    }
 
     static float sig(double base) {
         return (float) (1. / (1. + exp(base)));
@@ -233,8 +229,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
 
     private static IfFunction getSM20sc(int sDn){
         float dSM20sc0 = dSM20sc(0, sDn, 0);
-        IfFunction f = scDn -> dSM20sc(scDn, sDn, dSM20sc0);
-        return f;
+        return scDn -> dSM20sc(scDn, sDn, dSM20sc0);
     }
 
     static float dSM20sc(double scDn, int sDn, float dSM20sc0 ) {
@@ -247,8 +242,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
 
     private static IfFunction getSM20scDn(int sDn){
         float dSM20sc7 = dSM20scDn(0, sDn, 0);
-        IfFunction f = scDn -> dSM20scDn(scDn, sDn, dSM20sc7);
-        return f;
+        return scDn -> dSM20scDn(scDn, sDn, dSM20sc7);
     }
     static float dSM20scDn(float scDn, int sDn, float dSM20sc7 ) {
         double off = scDn - sDn / 100d;
@@ -385,7 +379,7 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
 
     @NonNull
     public String toString() {
-        return String.format(Locale.ENGLISH, "TEST power=%3.0f sUp=%3d sDn=%3d hasRef=%s", powerCost, sUp, sDn, withRef ? "x" : " ");
+        return String.format(Locale.ENGLISH, "TEST pwCost=%3.0f pwDur=%3.0f sUp=%3d sDn=%3d hasRef=%s", powerCost,powerDur, sUp, sDn, withRef ? "x" : " ");
     }
 
     public boolean getCheckAll() {

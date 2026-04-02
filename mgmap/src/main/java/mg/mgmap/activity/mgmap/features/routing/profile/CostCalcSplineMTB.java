@@ -18,7 +18,7 @@ public class CostCalcSplineMTB implements CostCalculator {
     private final dir direction;
     private final IfSpline surfaceCatSpline;
     private final short surfaceCat;
-    private final IfProfileCostCalculator mProfileCalculator;
+    private final CostCalcSplineProfile mProfileCalculator;
 
     public CostCalcSplineMTB(WayAttributs wayTagEval, CostCalcSplineProfile profile) {
         mProfileCalculator = profile;
@@ -56,14 +56,16 @@ public class CostCalcSplineMTB implements CostCalculator {
                 };
             }
             if ("path".equals(wayTagEval.highway)) {
-                if (surfaceLevel<=0 || surfaceLevel >= 4 || mtbUp >= 0 || mtbDn >= 0) {
+                if (surfaceLevel<=0 || surfaceLevel >= 3 || mtbUp >= 0 || mtbDn >= 0) {
                     surfaceLevel = 6;
                     distFactor = 1f;
-                } else if (surfaceLevel <=2){ // a path, which is not raw might be anything ...
-                    surfaceLevel = surfaceLevel <= 1 ? 2 : surfaceLevel;
-                    distFactor = 1.15f;
+                } else if ("bic_yes".equals(wayTagEval.bicycle) || "bic_designated".equals(wayTagEval.bicycle) || "bic_permissive".equals(wayTagEval.bicycle) || TagEval.isBikeRoute(wayTagEval) || wayTagEval.mtbScaleUp != null || wayTagEval.mtbScale != null){
+                    distFactor = 1.0f;
+                } else if ("bic_no".equals(wayTagEval.bicycle) || "bic_destination".equals(wayTagEval.bicycle)){
+                    distFactor = 2.0f;
                 } else {
-                    distFactor = 1.07f;
+                    surfaceLevel = surfaceLevel <= 1 ? 2 : surfaceLevel;
+                    distFactor = 1.35f;
                 }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
                 surfaceLevel = (surfaceLevel > 0) ? surfaceLevel : 4;
@@ -108,7 +110,7 @@ public class CostCalcSplineMTB implements CostCalculator {
 
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection){
-        if (dist<0.0000001) return 0.00001;
+        if (dist<0.0000001) return 0.000001;
         float costf = surfaceCatSpline.valueAt(vertDist / (float) dist);
         double cost;
         if (direction!=null)
@@ -128,8 +130,6 @@ public class CostCalcSplineMTB implements CostCalculator {
                 cost = mfd*dist*costf ;
         else
             cost = mfd*dist*costf ;
-
-//        mgLog.d("cost="+cost+" costf="+costf + " dist="+dist+" vertDist="+vertDist+" primaryDir="+primaryDirection+" direction="+direction+" mfd="+mfd);
         return cost;
     }
 
@@ -152,8 +152,10 @@ public class CostCalcSplineMTB implements CostCalculator {
             mgLog.v(()-> {
                 float costf = mfd*surfaceCatSpline.valueAt(slope)/mProfileCalculator.getRefCosts();
                 float v = 3.6f/spm;
+                WayAttributs wayAttributs = AttributsHashMap.get(this);
+                String wayAttrString = (wayAttributs!=null) ? wayAttributs.toString() : "";
                 return String.format(Locale.ENGLISH, "%s Slope=%6.2f v=%5.2f time=%6.2f dist=%5.2f cost=%6.2f mfd=%3.2f costf=%5.2f %s",
-                     mProfileCalculator.getContext().getSurfaceCatTxt(surfaceCat),100f*slope,v, spm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf,AttributsHashMap.get(this).toDetailedString());
+                     mProfileCalculator.getContext().getSurfaceCatTxt(surfaceCat),100f*slope,v, spm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf, wayAttrString);
             });
             return (long) (1000*dist*spm);
         } else return 0;

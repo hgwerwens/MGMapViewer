@@ -92,9 +92,9 @@ public class TagEval {
                 distFactor = 1.5;
         } else if ("residential".equals(wayTagEval.highway)||"living_street".equals(wayTagEval.highway)) {
             surfaceCat = (surfaceCat>0) ? surfaceCat :1;
-            if ("bic_destination".equals(wayTagEval.bicycle) || isBikeRoute(wayTagEval) ) {
+            if ("bic_designated".equals(wayTagEval.bicycle) || isBikeRoute(wayTagEval) ) {
                 distFactor = 1.0;
-            } else  distFactor = 1.14;
+            } else  distFactor = 1.15;
         } else if ("footway".equals(wayTagEval.highway) || "pedestrian".equals(wayTagEval.highway)) {
             if (isBikeRoute(wayTagEval) && "bic_yes".equals(wayTagEval.bicycle))
                 distFactor = 1.0;
@@ -121,7 +121,7 @@ public class TagEval {
             else if ( "no".equals(wayTagEval.access) || "bic_no".equals(wayTagEval.bicycle))
                 distFactor = 15;
             else
-                distFactor = 1.3;
+                distFactor = 1.25;
         } else if ("construction".equals(wayTagEval.highway)){
             distFactor = 10;
             surfaceCat = 4;

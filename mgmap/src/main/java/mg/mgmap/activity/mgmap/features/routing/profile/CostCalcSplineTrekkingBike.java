@@ -33,14 +33,15 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
             surfaceCat = (surfaceCat>0) ? surfaceCat :2;
         } else {
             if ("path".equals(wayTagEval.highway)) {
-                surfaceCat = (surfaceCat<=0) ? 4: (surfaceCat == 1) ? 2 : surfaceCat;
-                if ("lcn".equals(wayTagEval.network) || "rcn".equals(wayTagEval.network) || "icn".equals(wayTagEval.network)) {
+                surfaceCat = (surfaceCat<=0) ? 4: surfaceCat;
+                if (TagEval.isBikeRoute(wayTagEval) && "bic_designated".equals(wayTagEval.bicycle)) {
+                    distFactor = 1.0f;
+                } else if ("bic_designated".equals(wayTagEval.bicycle) ||TagEval.isBikeRoute(wayTagEval) ) {
                     distFactor = 1.1f;
-                } else if ("bic_designated".equals(wayTagEval.bicycle)) {
-                    distFactor = 1.5f;
                 } else if ("bic_yes".equals(wayTagEval.bicycle) ) {
-                    distFactor = 1.5f;
+                    distFactor = 1.3f;
                 } else {
+                    surfaceCat = (surfaceCat <= 1) ? 2 : surfaceCat;
                     distFactor = 2;
                 }
             } else if ("track".equals(wayTagEval.highway) || "unclassified".equals(wayTagEval.highway)) {
@@ -75,6 +76,7 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
 
 
     public double calcCosts(double dist, float vertDist, boolean primaryDirection){
+        if (dist<0.0000001) return 0.000001;
         if ( oneway && !primaryDirection)
             return mfd*dist*surfaceCatSpline.valueAt(vertDist / (float) dist) + dist * 5;
         else
@@ -89,16 +91,18 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
     @Override
     public long getDuration(double dist, float vertDist) {
         IfSpline durationFunc = mProfileCalculator.getDurationSpline(surfaceCat);
-        if (dist >= 0.00001) {
+        if (dist >= 0.0000001) {
             mgLog.v(()-> {
                float slope = vertDist / (float) dist;
                double spm = durationFunc.valueAt(slope);
                double v = 3.6/spm;
                double cost = calcCosts( dist,  vertDist, true);
-               return String.format(Locale.ENGLISH, "DurationCalc: Slope=%6.2f v=%5.2f time=%5.2f dist=%6.2f surfaceCat=%s mfd=%3.2f cost=%6.2f %s",100f*slope,v,spm*dist,dist,surfaceCat,mfd,cost,AttributsHashMap.get(this).toDetailedString());
+                WayAttributs wayAttributs = AttributsHashMap.get(this);
+                String wayAttrString = (wayAttributs!=null) ? wayAttributs.toString() : "";
+               return String.format(Locale.ENGLISH, "DurationCalc: Slope=%6.2f v=%5.2f time=%5.2f dist=%6.2f surfaceCat=%s mfd=%3.2f cost=%6.2f %s",100f*slope,v,spm*dist,dist,surfaceCat,mfd,cost,wayAttrString);
             });
         }
-        return ( dist >= 0.00001) ? (long) ( 1000 * dist * durationFunc.valueAt(vertDist/(float) dist)) : 0;
+        return ( dist >= 0.0000001) ? (long) ( 1000 * dist * durationFunc.valueAt(vertDist/(float) dist)) : 0;
     }
 
 }
