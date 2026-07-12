@@ -76,4 +76,7 @@ public class ShareLocConfig extends ObservableImpl {
         return false;
     }
 
+    boolean hasCertificates(long now){
+        return persons.stream().allMatch(person -> person.hasCertificate(now));
+    }
 }

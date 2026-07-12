@@ -194,6 +194,14 @@
             app:title="@string/preferences_minimalTurningInstruction_title"
             app:iconSpaceReserved="false"
             />
+
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="@string/FSRouting_pref_RouteArrivalTime"
+            app:summary="@string/FSRouting_pref_RouteArrivalTime_desc"
+            app:title="@string/FSRouting_pref_RouteArrivalTime_title"
+            app:iconSpaceReserved="false"
+            />
     </PreferenceCategory>
 
     <PreferenceCategory
@@ -291,6 +299,20 @@
             app:key="@string/preferences_fileMgr_preferIntEditor_key"
             app:summary="@string/preferences_fileMgr_preferIntEditor_desc"
             app:title="@string/preferences_fileMgr_preferIntEditor_title"
+            app:iconSpaceReserved="false"
+            />
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="@string/preferences_speechControl_key"
+            app:summary="@string/preferences_speechControl_desc"
+            app:title="@string/preferences_speechControl_title"
+            app:iconSpaceReserved="false"
+            />
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="@string/preferences_tom_archive_key"
+            app:summary="@string/preferences_tom_archive_desc"
+            app:title="@string/preferences_tom_archive_title"
             app:iconSpaceReserved="false"
             />
         <SwitchPreference

@@ -71,7 +71,6 @@ import mg.mgmap.generic.model.TrackLogSegment;
 import mg.mgmap.generic.util.CC;
 import mg.mgmap.generic.util.Observer;
 import mg.mgmap.generic.util.PrefCache;
-import mg.mgmap.generic.util.basic.Formatter;
 import mg.mgmap.generic.util.basic.MGLog;
 import mg.mgmap.generic.util.Pref;
 import mg.mgmap.generic.util.gpx.GpxExporter;
@@ -122,7 +121,7 @@ public class FSRouting extends FeatureService {
     private final String defaultRoutingProfileId = RoutingProfile.constructId(ShortestDistance.class);
     private final Pref<String> prefRoutingProfileId = getPref(R.string.FSRouting_pref_currentRoutingProfile, defaultRoutingProfileId);
     private final Pref<Boolean> prefCalcRouteInProgress = getPref(R.string.FSRouting_pref_calcRouteInProgress, false);
-    private final Pref<Boolean> prefRouteDuration = getPref(R.string.FSRouting_pref_RouteDuration, true);
+    private final Pref<Boolean> prefRouteArrivalTime = getPref(R.string.FSRouting_pref_RouteArrivalTime, false);
     private final ArrayList<ExtendedTextView> profileETVs = new ArrayList<>();
     private final Pref<Boolean> prefRouteSavable = new Pref<>(false); // when MTL is changed
     private MultiPointView routingIntermediateMPV = null;
@@ -260,7 +259,7 @@ public class FSRouting extends FeatureService {
                 routingIntermediateMPV = null;
             }
         });
-        prefRouteDuration.addObserver(refreshObserver);
+        prefRouteArrivalTime.addObserver(refreshObserver);
 
         routingThread = createRoutingThread();
     }
@@ -445,7 +444,6 @@ public class FSRouting extends FeatureService {
         unregisterAll();
         WriteableTrackLog mtl = application.markerTrackLogObservable.getTrackLog();
         WriteableTrackLog rotl = application.routeTrackLogObservable.getTrackLog();
-
         if (dndVisualisationLayer != null){
             if (checkMtlpMovement( dndVisualisationLayer.getModel().get(0), false )){
                 register(dndVisualisationLayer);
@@ -458,14 +456,24 @@ public class FSRouting extends FeatureService {
         if (getPref(R.string.preferences_display_show_km_key, true).getValue()){
             showTrack(rotl,CC.getAlphaCloneFill(PAINT_ROUTE_STROKE2, prefAlphaRotl.getValue()),false, 3, true, true);
         }
-        TrackLogStatistic trackLogStatistic = calcRemainingStatistic(rotl);
-        boolean arrivalTimeMode = (trackLogStatistic != null) && (trackLogStatistic.getDuration() > 8640000000L); // > 100 days ==> assume arrival time
-        ((ExtendedTextView)dashboardRoute.getChildAt(4)).setFormat(arrivalTimeMode? Formatter.FormatType.FORMAT_ARRIVAL_TIME: Formatter.FormatType.FORMAT_DURATION);
-        getControlView().setDashboardValue(prefMtlVisibility.getValue(), dashboardRoute, trackLogStatistic);
-
         checkRelaxedViews(mtl);
-        getTimer().postDelayed(ttRefresh, 5000);
+        taskStatisticUpdate.run();
     }
+
+    Runnable taskStatisticUpdate = new Runnable() {
+        @Override
+        public void run() {
+            WriteableTrackLog rotl = application.routeTrackLogObservable.getTrackLog();
+            TrackLogStatistic trackLogStatistic = calcRemainingStatistic(rotl);
+            getControlView().setDashboardValue(prefMtlVisibility.getValue(), dashboardRoute, trackLogStatistic);
+            getTimer().removeCallbacks(ttStatisticUpdate);
+            if ((trackLogStatistic != null) && (trackLogStatistic.getSegmentIdx()==-7)) { // refresh timer only in arrival time mode
+                getTimer().postDelayed(ttStatisticUpdate, 5000);
+            }
+        }
+    };
+
+    Runnable ttStatisticUpdate = () -> getActivity().runOnUiThread(taskStatisticUpdate);
 
     private void updateRouting(){
         WriteableTrackLog mtl = application.markerTrackLogObservable.getTrackLog();
@@ -476,6 +484,7 @@ public class FSRouting extends FeatureService {
             long tStart = System.currentTimeMillis();
             rotl = routingEngine.updateRouting2(mtl, application.routeTrackLogObservable.getTrackLog());
             application.getMetaDataUtil().createMetaData(rotl);
+            rotl.setChanged();
             mgLog.d("End duration="+(System.currentTimeMillis()-tStart)+"ms");
         }
         application.routeTrackLogObservable.setTrackLog(rotl);
@@ -495,11 +504,12 @@ public class FSRouting extends FeatureService {
                         routeTrackLog.remainStatistic(dashboardStatistic, bestMatch.getApproachPoint(), bestMatch.getSegmentIdx(), bestMatch.getEndPointIndex());
                         dashboardStatistic.setSegmentIdx(-2); // indicates Remainings statistic
 
-                        if (!prefRouteDuration.getValue()){ // calc arrival time instead duration
+                        if (prefRouteArrivalTime.getValue()){ // calc arrival time instead duration
                             long now = System.currentTimeMillis();
                             long duration = dashboardStatistic.getDuration();
                             mgLog.d("now="+now+" duration="+duration);
                             dashboardStatistic.setDuration( now + duration );
+                            dashboardStatistic.setSegmentIdx(-7); // indicates arrival time statistic
                         }
                     }
                 }

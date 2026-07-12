@@ -18,6 +18,12 @@
         android:strokeWidth="2"
         android:pathData="M30,7 l0,-5 l5,0  m0,20 l-5,0 l0,-5  m20,0 l0,5 l-5,0 m0,-20 l5,0 l0,5 " />
 
+
+    <path
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M32,12 a3,7,0 1 1 0,0.0001 M41,4 l0,16 M47,4 l0,16 M41.1,4.38 l5.86,15.2"
+        />
     <path
         android:strokeColor="#FFFFFFFF"
         android:strokeWidth="2"
