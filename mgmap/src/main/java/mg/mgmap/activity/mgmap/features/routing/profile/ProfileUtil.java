@@ -78,6 +78,9 @@ public class ProfileUtil {
     private record VelParm(double rho, double mass, double ACw, double eta){};
     private static VelParm velParm = new VelParm(1.2,90d,0.45,0.95);
 
+    private record HikeParm(double rho, double mass, double ACw, double eta,double a, double b){};
+    private static HikeParm hikeParm = new HikeParm(1.2,75d,0.6,1d,30d, 5);
+
 
 
     public static float getFloatFrictionBasedVelocity(double slope, double watt, double Cr ){
@@ -107,6 +110,33 @@ public class ProfileUtil {
         double q = -watt / ACwr * eta;
         return solveP3(p, q);
     }
+
+    public static double getWalkingVelocity(double slope, double watt,double cterr){
+        return getWalkingVelocity( slope, watt,cterr, hikeParm.mass, hikeParm.a, hikeParm.b, hikeParm.rho, hikeParm.ACw, hikeParm.eta);
+    }
+    private static double getWalkingVelocity(
+            double slope,
+            double watt,
+            double cTerr,
+            double mass,
+            double a,
+            double b,
+            double rho,
+            double ACw,
+            double eta
+  // neuer Untergrund-Parameter
+    ) {
+        double g  = 9.81;
+        double mg = mass * g;
+        double K0 = a + mg * (slope + cTerr);
+        double K2 = b + 0.5 * rho * ACw;
+        double p = K0 / K2;
+        double q = - (watt * eta) / K2;
+        return solveP3(p, q);
+    }
+
+
+
 
     private static FloatTol floatTol = new FloatTol(1e-7f,1e-7f);
 

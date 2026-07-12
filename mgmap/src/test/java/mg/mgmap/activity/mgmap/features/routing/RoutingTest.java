@@ -188,7 +188,7 @@ public class RoutingTest {
         for (int x=0; x<100; x++){
             System.out.printf(Locale.ENGLISH, "%s x=%03d started%n",sdf.format(new Date()),x );
 
-            RoutingProfile rp = new TrekkingBike();
+            RoutingProfile rp = new TrekkingBike(-1);
             ArrayList<GGraphTile> gGraphTiles;
             GGraphMulti multi;
             GNode gStart;
@@ -242,7 +242,7 @@ public class RoutingTest {
         for (int x=0; x<100; x++){
             System.out.printf(Locale.ENGLISH, "%s x=%03d started%n",sdf.format(new Date()),x );
 
-            RoutingProfile rp = new TrekkingBike();
+            RoutingProfile rp = new TrekkingBike(-1);
             ArrayList<GGraphTile> gGraphTiles;
             GGraphMulti multi;
             GNode gStart;
@@ -310,7 +310,7 @@ public class RoutingTest {
         GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>(""), new Pref<>(false), new Pref<>("16"));
 
         RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-        routingEngine.setRoutingProfile(new TrekkingBike());
+        routingEngine.setRoutingProfile(new TrekkingBike(-1));
         routingEngine.refreshRequired.set(0);
 
         {
@@ -380,7 +380,7 @@ public class RoutingTest {
         GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(false), new Pref<>("16"));
 
         RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-        routingEngine.setRoutingProfile(new TrekkingBike());
+        routingEngine.setRoutingProfile(new TrekkingBike(-1));
         routingEngine.refreshRequired.set(0);
 
         {
@@ -454,7 +454,7 @@ public class RoutingTest {
             useQubicSplineInterpolation.setValue(false);
             GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>(""), new Pref<>(false), prefSmoothingDistance);
             RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-            routingEngine.setRoutingProfile(new TrekkingBike());
+            routingEngine.setRoutingProfile(new TrekkingBike(-1));
             routingEngine.refreshRequired.set(0);
 
             long now1 = System.currentTimeMillis();
@@ -470,7 +470,7 @@ public class RoutingTest {
             useQubicSplineInterpolation.setValue(false);
             GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>(""), new Pref<>(false), prefSmoothingDistance);
             RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-            routingEngine.setRoutingProfile(new TrekkingBike());
+            routingEngine.setRoutingProfile(new TrekkingBike(-1));
             routingEngine.refreshRequired.set(0);
 
             long now1 = System.currentTimeMillis();
@@ -487,7 +487,7 @@ public class RoutingTest {
             useQubicSplineInterpolation.setValue(false);
             GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>(""), new Pref<>(false), prefSmoothingDistance);
             RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-            routingEngine.setRoutingProfile(new TrekkingBike());
+            routingEngine.setRoutingProfile(new TrekkingBike(-1));
             routingEngine.refreshRequired.set(0);
 
             long now1 = System.currentTimeMillis();
@@ -505,7 +505,7 @@ public class RoutingTest {
             useQubicSplineInterpolation.setValue(true);
             GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>(""), new Pref<>(false), prefSmoothingDistance);
             RoutingEngine routingEngine = new RoutingEngine(gGraphTileFactory, interactiveRoutingContext, new ObservableImpl());
-            routingEngine.setRoutingProfile(new TrekkingBike());
+            routingEngine.setRoutingProfile(new TrekkingBike(-1));
             routingEngine.refreshRequired.set(0);
 
             long now1 = System.currentTimeMillis();

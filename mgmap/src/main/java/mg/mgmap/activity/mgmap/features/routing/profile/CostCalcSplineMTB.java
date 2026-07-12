@@ -153,7 +153,7 @@ public class CostCalcSplineMTB implements CostCalculator {
                 float costf = mfd*surfaceCatSpline.valueAt(slope)/mProfileCalculator.getRefCosts();
                 float v = 3.6f/spm;
                 WayAttributs wayAttributs = AttributsHashMap.get(this);
-                String wayAttrString = (wayAttributs!=null) ? wayAttributs.toString() : "";
+                String wayAttrString = (wayAttributs!=null) ? wayAttributs.toDetailedString() : "";
                 return String.format(Locale.ENGLISH, "%s Slope=%6.2f v=%5.2f time=%6.2f dist=%5.2f cost=%6.2f mfd=%3.2f costf=%5.2f %s",
                      mProfileCalculator.getContext().getSurfaceCatTxt(surfaceCat),100f*slope,v, spm *dist,dist, calcCosts(dist,vertDist,true),mfd,costf, wayAttrString);
             });

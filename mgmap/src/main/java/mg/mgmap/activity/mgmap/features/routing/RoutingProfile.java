@@ -6,12 +6,11 @@ import mg.mgmap.generic.model.PointModelUtil;
 
 public abstract class RoutingProfile {
 
-    protected final String id;
+    protected final String id = constructId(this.getClass());
     protected final CostCalculator costCalculator;
 
     public RoutingProfile(CostCalculator costCalculator){
         this.costCalculator = costCalculator;
-        id = constructId(this.getClass());
     }
 
     public static String constructId(Class<?> clazz){
@@ -21,6 +20,7 @@ public abstract class RoutingProfile {
     public String getId(){
         return id;
     }
+
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs){
         return profileCalculator; // default is no way specific calculator

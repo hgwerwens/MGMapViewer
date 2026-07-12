@@ -98,7 +98,7 @@ public class CostCalcSplineTrekkingBike implements CostCalculator {
                double v = 3.6/spm;
                double cost = calcCosts( dist,  vertDist, true);
                 WayAttributs wayAttributs = AttributsHashMap.get(this);
-                String wayAttrString = (wayAttributs!=null) ? wayAttributs.toString() : "";
+                String wayAttrString = (wayAttributs!=null) ? wayAttributs.toDetailedString(): "";
                return String.format(Locale.ENGLISH, "DurationCalc: Slope=%6.2f v=%5.2f time=%5.2f dist=%6.2f surfaceCat=%s mfd=%3.2f cost=%6.2f %s",100f*slope,v,spm*dist,dist,surfaceCat,mfd,cost,wayAttrString);
             });
         }

@@ -13,6 +13,7 @@ import java.util.Locale;
 import mg.mgmap.activity.mgmap.features.routing.profile.CostCalcSplineProfile;
 
 import mg.mgmap.activity.mgmap.features.routing.profile.IfFunction;
+import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextHiking;
 import mg.mgmap.activity.mgmap.features.routing.profile.SplineProfileContextMTB_old;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfIsFuncWithDeriv;
 import mg.mgmap.activity.mgmap.features.routing.profile.splinefunc.IfSpline;
@@ -101,7 +102,7 @@ public class RoutingProfileCreateTest {
     public void CompareSC2HeuristicTrBk() {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
-        CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(new SplineProfileContextTrekkingBike(false));
+        CostCalcSplineProfile costCalcSplineProfile1 = new CostCalcSplineProfile(new SplineProfileContextTrekkingBike(false,-1));
 
         for (int sc1 = 0; sc1<costCalcSplineProfile1.getMaxSurfaceCat();sc1+=1) {
             compareWithHeuristic(costCalcSplineProfile1, sc1, new StringBuilder(), -0.2f, 0.2f);
@@ -226,8 +227,18 @@ public class RoutingProfileCreateTest {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
         factory = SplineProfileContextMTB::new;
-        CostCalcSplineProfile costCalcSplineProfileTr = new CostCalcSplineProfile(new SplineProfileContextTrekkingBike(true));// new SplineProfileTestContextMTB(100,100));
+        CostCalcSplineProfile costCalcSplineProfileTr = new CostCalcSplineProfile(new SplineProfileContextTrekkingBike(true,-1));// new SplineProfileTestContextMTB(100,100));
         checkSurfaceCats(costCalcSplineProfileTr, new StringBuilder(),-0.4f,0.4f);
+        softAssert.assertAll();
+    }
+
+    @Test
+    public void singleProfileHike() {
+        MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
+        MGLog.setUnittest(true);
+        factory = SplineProfileContextMTB::new;
+        CostCalcSplineProfile costCalcSplineProfileHike = new CostCalcSplineProfile(new SplineProfileContextHiking(true,-1));// new SplineProfileTestContextMTB(100,100));
+        checkSurfaceCats(costCalcSplineProfileHike, new StringBuilder(),-0.4f,0.4f);
         softAssert.assertAll();
     }
 

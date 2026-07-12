@@ -9,16 +9,20 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
     int maxSurfaceCat = 7;
 
     private float watt0 = 90.0f ;
+    private final int powerDurPercent ;
     float [] cr =      new float[]{0.0035f,0.005f,0.0076f,0.02f,0.04f,0.075f,0.13f};
     float[] relSlope = new float[]{1.7f,1.7f,0.7f,0.7f,0.9f,1.2f,1.4f};
     float[] sm20Dn = new float[]{0.425f,0.4845f,0.595f,0.765f,0.85f,1.02f,1.955f};
     float[] factorDown = new float[maxSurfaceCat];
     boolean fullCalc;
 
-
-    public SplineProfileContextTrekkingBike(){this(true);}
-    public SplineProfileContextTrekkingBike(boolean fullCalc){
+    public SplineProfileContextTrekkingBike(int powerDurPercent){this(true,powerDurPercent);}
+    public SplineProfileContextTrekkingBike(boolean fullCalc,int powerDurPercent){
         this.fullCalc = fullCalc;
+        if (powerDurPercent>0)
+            this.powerDurPercent = Math.max(50, Math.min(powerDurPercent, 200));
+        else
+            this.powerDurPercent = 100;
         for ( int sc=0 ;sc < maxSurfaceCat;sc++){
             factorDown[sc]  = sm20Dn[sc]*10f;
         }
@@ -49,11 +53,8 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
 //        float[] distFactCostFunct = getDistFactforCostFunct(sc);
         float[] slopes = IfSplineProfileContext.slopesAll.clone();
         float refDnSlope = slopes[indRefDnSlope];
-        float watt0 = getWatt0(sc);
-        float watt  = getWatt(sc);
-
-        long t1 = System.nanoTime();
-
+        float watt0 = isCostSpline? this.watt0:this.watt0*this.powerDurPercent/100f;
+        float watt  = watt0 + 40f*sig(sc-5);
 
         float[] durations = new float[slopes.length];
 
@@ -105,7 +106,7 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
     }
 
     public CubicSpline calcDurationSpline(int sc) {
-        return calcCubicSpline(sc,true);
+        return calcCubicSpline(sc,false);
     }
 
 
@@ -132,16 +133,6 @@ public class SplineProfileContextTrekkingBike implements IfSplineProfileContext 
 
     public String getSurfaceCatTxt(int sc) {
         return String.format("TrekkingBike sc=%1d", sc);
-    }
-
-
-    private float getWatt0(int sc) {
-        return watt0;
-    }
-
-
-    private float getWatt(int sc) {
-        return watt0 + 40f*sig(sc-5);
     }
 
 

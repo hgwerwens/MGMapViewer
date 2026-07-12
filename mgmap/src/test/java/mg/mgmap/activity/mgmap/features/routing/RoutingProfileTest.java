@@ -299,7 +299,7 @@ public class RoutingProfileTest {
         RoutingProfile mtb_k1s1 =  new MTB_K1S1_2F();
         RoutingProfile mtb_k2s2 =  new MTB_K2S2_2F(); //
         RoutingProfile mtb_k3s3 =  new MTB_K3S3_2F();
-        RoutingProfile treckingBike = new TrekkingBike();
+        RoutingProfile treckingBike = new TrekkingBike(-1);
         Tests tests = defineTests(mtb_k1s1,mtb_k2s2,mtb_k3s3,treckingBike);
         if (testFilter!=null) tests = new Tests(tests,"nix");
         TrackResults trackResults = new TrackResults();
@@ -446,7 +446,7 @@ public class RoutingProfileTest {
         RoutingProfile mtb_k2s2 ;
         RoutingProfile mtb_k3s3 ;
         TrackResults trackResults = new TrackResults();
-        RoutingProfile treckingBike = new TrekkingBike();
+        RoutingProfile treckingBike = new TrekkingBike(-1);
 
         for (int durationCor = -5;durationCor<=20;durationCor+=1) {
             mtb_k1s1 = getDurTestProfile(100,100,durationCor);

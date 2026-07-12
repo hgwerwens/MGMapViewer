@@ -113,14 +113,14 @@ public class SplineUtil {
         return (float) Math.pow((1d+der*der),1.5d)/sec;
     }
 
-    public static IfSpline calcCutSpline(IfSpline refCubicSpline, StringBuilder msg){
-        IfSplineDef def = ((IfSplineInternal)refCubicSpline).getSplineDef();
+    public static IfSpline calcCutSpline(IfSpline refSpline, StringBuilder msg){
+        IfSplineDef def = ((IfSplineInternal)refSpline).getSplineDef();
         float[] x;
-        Touple dnSlopeLimit;
-        Touple upSlopeLimit ;
+        Touple dnSlopeLimit = null;
+        Touple upSlopeLimit = null ;
         IfSpline cutSpline;
         if ( def.type()== NATURAL  ) {
-            CubicSpline cubicSpline = (CubicSpline) refCubicSpline;
+            CubicSpline cubicSpline = (CubicSpline) refSpline;
             x = cubicSpline.getX();
             dnSlopeLimit = tangentAt(cubicSpline,-0.15f);
             upSlopeLimit = tangentAt(cubicSpline, 0.15f);
@@ -128,7 +128,7 @@ public class SplineUtil {
             cutSpline = new CubicSpline(xy.x,xy.y,new IfSplineDef.Clamped(dnSlopeLimit.b, upSlopeLimit.b));
         }
         else if ( def.type()==COMPOSITE){
-            CompositeSpline compositeSpline = (CompositeSpline) refCubicSpline;
+            CompositeSpline compositeSpline = (CompositeSpline) refSpline;
             x= compositeSpline.getX();
             dnSlopeLimit = getCompositeSlopeLimit(compositeSpline,Direction.LEFT);
             upSlopeLimit = getCompositeSlopeLimit(compositeSpline,Direction.RIGHT);
@@ -162,11 +162,14 @@ public class SplineUtil {
             }
             else
                 cutSpline = new CubicSpline(xy.x,xy.y,new IfSplineDef.Clamped(dnSlopeLimit.b,upSlopeLimit.b));
+        } else if ( def.type()==LINEAR){
+            cutSpline = refSpline;
         } else
             throw new RuntimeException("not yet implemented");
 
-        msg.append( String.format(Locale.ENGLISH, " Heuristic DnSlopeLim=%.2f UpSlopeLim=%.2f",dnSlopeLimit.a*100,upSlopeLimit.a*100));
-        return cutSpline; //refCubicSpline.getCutCubicSpline(heuristicDnSlopeLimit,heuristicUpSlopeLimit);
+        if (dnSlopeLimit != null && upSlopeLimit != null)
+            msg.append( String.format(Locale.ENGLISH, " Heuristic DnSlopeLim=%.2f UpSlopeLim=%.2f",dnSlopeLimit.a*100,upSlopeLimit.a*100));
+        return cutSpline; //refSpline.getCutCubicSpline(heuristicDnSlopeLimit,heuristicUpSlopeLimit);
     }
 
     private record XYArrays(float[]x,float[]y){}

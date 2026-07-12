@@ -6,8 +6,8 @@ import mg.mgmap.activity.mgmap.features.routing.RoutingProfile;
 import mg.mgmap.generic.graph.WayAttributs;
 
 public class TrekkingBike extends RoutingProfile {
-    public TrekkingBike( ) {
-        super(new CostCalcSplineProfile( new SplineProfileContextTrekkingBike() ));
+    public TrekkingBike( int powerPercent ) {
+        super(new CostCalcSplineProfile( new SplineProfileContextTrekkingBike(powerPercent) ));
     }
 
     protected CostCalculator getCostCalculator(CostCalculator profileCalculator, WayAttributs wayAttributs) {

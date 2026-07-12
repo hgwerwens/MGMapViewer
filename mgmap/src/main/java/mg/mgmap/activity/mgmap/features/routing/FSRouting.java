@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import mg.mgmap.activity.mgmap.MGMapActivity;
 import mg.mgmap.activity.mgmap.features.routing.profile.Hiking;
+import mg.mgmap.activity.mgmap.features.routing.profile.Hiking_Sp;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1_2F;
 import mg.mgmap.activity.mgmap.features.routing.profile.MTB_K1S1_NI;
@@ -205,9 +206,10 @@ public class FSRouting extends FeatureService {
             getActivity().findViewById(R.id.routingProfiles).setVisibility(shouBeVisible?View.VISIBLE:View.INVISIBLE);
         });
         definedRoutingProfiles = new ArrayList<>();
-        addDefinedRoutingProfile(prefCache, new ShortestDistance(), true);
+        addDefinedRoutingProfile(prefCache, new ShortestDistance(), false);
         addDefinedRoutingProfile(prefCache, new Hiking(), true);
-        addDefinedRoutingProfile(prefCache, new MTB_K1S1_NI(), true);
+        addDefinedRoutingProfile(prefCache, new Hiking_Sp(), true);
+        addDefinedRoutingProfile(prefCache, new MTB_K1S1_NI(getRoutingProfilePowerPercent("MTB_K1S1")), true);
         addDefinedRoutingProfile(prefCache, new MTB_K2S2_NI(), true);
         addDefinedRoutingProfile(prefCache, new MTB_K3S3_NI(), true);
         addDefinedRoutingProfile(prefCache, new MTB_K1S1(), true);
@@ -219,7 +221,7 @@ public class FSRouting extends FeatureService {
         addDefinedRoutingProfile(prefCache, new MTB_K3S1(), false);
         addDefinedRoutingProfile(prefCache, new MTB_K3S2(), false);
         addDefinedRoutingProfile(prefCache, new MTB_K3S3(), true);
-        addDefinedRoutingProfile(prefCache, new TrekkingBike(), true);
+        addDefinedRoutingProfile(prefCache, new TrekkingBike(getRoutingProfilePowerPercent("TrekkingBike")), true);
         addDefinedRoutingProfile(prefCache, new MTB_K1S1_2F(), true);
         addDefinedRoutingProfile(prefCache, new MTB_K2S2_2F(), true);
         addDefinedRoutingProfile(prefCache, new MTB_K3S3_2F(), true);
@@ -533,6 +535,17 @@ public class FSRouting extends FeatureService {
         }
     }
 
+    private int getRoutingProfilePowerPercent(String ProfileName){
+        int powerPercent = 100;
+        String PrefValue = getPref("FSRouting.PowerPercentage"+ProfileName, "100").getValue();
+        try {
+            powerPercent = (int) Double.parseDouble(PrefValue);
+        } catch (NumberFormatException e) {
+            mgLog.e(e);
+        }
+        return powerPercent;
+    }
+    
     public class AdvancedMtlSupportProvider implements FSMarker.MtlSupportProvider{
         @Override
         public TrackLogRefApproach getBestDistance(WriteableTrackLog mtl, PointModel pm, double threshold) {

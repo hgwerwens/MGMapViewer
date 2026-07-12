@@ -210,6 +210,11 @@ public class SplineProfileContextMTB implements IfSplineProfileContext, IfMTBCon
     SplineProfileContextMTB(int sUp, int sDn) {
         this(getCostPower(sUp),getDurPower(sUp),sUp,sDn,true,true);
     }
+
+    SplineProfileContextMTB(int sUp, int sDn,int powerDurPercent) {
+        this(getCostPower(sUp),getDurPower(sUp)*Math.max(50, Math.min(powerDurPercent, 200))/100f,sUp,sDn,true,true);
+    }
+
     public SplineProfileContextMTB(float powerCost, float powerDur,int sUp, int sDn, boolean checkAll) {
         this(powerCost,powerDur,sUp,sDn,checkAll,true);
     }
