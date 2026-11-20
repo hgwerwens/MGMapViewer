@@ -26,7 +26,10 @@ public class CostCalcSplineHiking implements CostCalculator {
         if ("path".equals(wayTagEval.highway) && ( surfaceLevel <=0 || surfaceLevel >= 4 )) {
             surfaceLevel = 6;
         }
-        if (wayTagEval.highway == null || "acc_no".equals(wayTagEval.access) || "private".equals(wayTagEval.access) || "motorway".equals(wayTagEval.highway)){
+        if ("path".equals(wayTagEval.highway) || "footway".equals(wayTagEval.highway) || "pedestrian".equals(wayTagEval.highway) || wayTagEval.hknetwork != null ){
+            distFactor = 1.0;
+            surfaceLevel = surfaceLevel <= 0 ? 3 : surfaceLevel;
+        } else if (wayTagEval.highway == null || "acc_no".equals(wayTagEval.access) || "private".equals(wayTagEval.access) || "motorway".equals(wayTagEval.highway)){
             distFactor = 10;
         } else if ("primary".equals(wayTagEval.highway)){
             distFactor = 3;
@@ -34,10 +37,17 @@ public class CostCalcSplineHiking implements CostCalculator {
             distFactor = 2;
         } else if ("tertiary".equals(wayTagEval.highway)){
             distFactor = 1.5;
-        } else
-            distFactor = 1.0;
+        } else if ("track".equals(wayTagEval.highway)){
+            distFactor = 1.05;
+        } else if (  "residential".equals(wayTagEval.highway)){
+            distFactor = 1.1;
+        }  else if ( "unclassified".equals(wayTagEval.highway) ){
+            distFactor = 1.25;
+        }else
+            distFactor = 1.5;
+        surfaceLevel = surfaceLevel <= 0 ? 1 : surfaceLevel;
         this.distFactor = distFactor;
-        this.surfaceCat = surfaceLevel;
+        this.surfaceCat = surfaceLevel - 1;
         try {
             this.surfaceCatSpline = mProfileCalculator.getCostFunc(surfaceCat);
         } catch (Exception e) {

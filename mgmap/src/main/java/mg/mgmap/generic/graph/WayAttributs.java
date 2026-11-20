@@ -18,6 +18,7 @@ public class WayAttributs {
 
     public String trackType = null;
     public String network = null;
+    public String hknetwork = null;
     public String incline_dir = null;
     public final boolean oneway;
 
@@ -47,10 +48,11 @@ public class WayAttributs {
                 case "tracktype":
                     trackType = tag.value;
                     break;
+                case "hknetwork":
+                    hknetwork = tag.value;
+                    break;
                 case "network":
                     network = tag.value;
-//                    if ( "ocn".equals(network) ||  "ncn".equals(network))
-//                        network = "rcn";
                     break;
                 case "bicycle":
                     bicycle = tag.value;

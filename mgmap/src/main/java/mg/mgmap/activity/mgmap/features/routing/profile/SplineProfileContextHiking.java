@@ -25,29 +25,30 @@ public class SplineProfileContextHiking implements IfSplineProfileContext {
 
     @Override
     public int getMaxSurfaceCat() {
-        return 7;
-    }
-
-    @Override
-    public int getScHeuristicRefSpline() {
-        return 2;
-    }
-
-    @Override
-    public int getScProfileSpline() {
         return 6;
     }
 
     @Override
+    public int getScHeuristicRefSpline() {
+        return 0;
+    }
+
+    @Override
+    public int getScProfileSpline() {
+        return 3;
+    }
+
+    @Override
     public IfSpline calcCostSpline(int sc) {
-        float[] slopes = {-0.4f,-.3f,0f,0.3f,0.4f};
-        float[] durations = {3f,1f,1f,4f,6f};
-        return new LinearSpline(slopes, durations, new IfSplineDef.Linear());
+//        float[] slopes = {-0.4f,-.3f,0f,0.3f,0.4f};
+//        float[] durations = {3f,1f,1f,4f,6f};
+//        float[] durations = {3f,1f,1f,2f,4f};
+//        return new LinearSpline(slopes, durations, new IfSplineDef.Linear());
+        return calcDurationSpline(sc);
     }
 
     @Override
     public IfSpline calcDurationSpline(int sc) {
-        float fu = 9.0f;
         float fd = 10.5f;
         float off = 0.1f;
         float vbase = 5.25f - 0.1f*sc;
@@ -58,8 +59,6 @@ public class SplineProfileContextHiking implements IfSplineProfileContext {
         float[] slopes = new float[]{-0.5f, -0.3f, -0.075f, 0.0f, 0.2f, 0.5f};
         float[] durations = new float[slopes.length];
 
-
-
         durations[0] = (-slopes[0]-off)*fd;
         durations[1] = (-slopes[1]-off)*fd;
         durations[2] = t_m10Pcnt;
@@ -68,7 +67,7 @@ public class SplineProfileContextHiking implements IfSplineProfileContext {
         durations[5] = slopes[5]*fu; */
         durations[3] = (float) (1f/ProfileUtil.getWalkingVelocity(0,watt0,cTerr[sc]));
         durations[4] = (float) (1f/ProfileUtil.getWalkingVelocity(slopes[4],watt,cTerr[sc]));
-        durations[5] = (float) (1f/ProfileUtil.getWalkingVelocity(slopes[5],watt,cTerr[sc]));
+        durations[5] = (float) (1.1f/ProfileUtil.getWalkingVelocity(slopes[5],watt,cTerr[sc]));
 
         return new CubicSpline(slopes, durations, new IfSplineDef.Natural());
     }
@@ -80,6 +79,6 @@ public class SplineProfileContextHiking implements IfSplineProfileContext {
 
     @Override
     public String getSurfaceCatTxt(int sc) {
-        return String.format("Hiking sc=%1d", sc);
+        return String.format("Hiking sl=%1d", sc+1);
     }
 }

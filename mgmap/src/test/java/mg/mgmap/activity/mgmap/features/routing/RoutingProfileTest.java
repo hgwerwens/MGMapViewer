@@ -282,7 +282,7 @@ public class RoutingProfileTest {
          ElevationProvider elevationProvider = new ElevationProviderImpl( new HgtProvider2(), useQubicInterpolation, useQubicSplineInterpolation );
          MapDataStore mds = new MapFile(mapFile, "de");
          WayProvider wayProvider = new WayProviderHelper(mds);
-         GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, false, new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
+         GGraphTileFactory gGraphTileFactory = new GGraphTileFactory().onCreate(wayProvider, elevationProvider, new Pref<>(false), new Pref<>("BidirectionalAstarExt"), new Pref<>(true), new Pref<>("12"));
          return gGraphTileFactory;
      }
 

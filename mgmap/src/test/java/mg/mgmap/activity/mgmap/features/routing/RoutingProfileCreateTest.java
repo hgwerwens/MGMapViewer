@@ -228,7 +228,7 @@ public class RoutingProfileCreateTest {
         MGLog.setUnittest(true);
         factory = SplineProfileContextMTB::new;
         CostCalcSplineProfile costCalcSplineProfileTr = new CostCalcSplineProfile(new SplineProfileContextTrekkingBike(true,-1));// new SplineProfileTestContextMTB(100,100));
-        checkSurfaceCats(costCalcSplineProfileTr, new StringBuilder(),-0.4f,0.4f);
+        checkSurfaceCats(costCalcSplineProfileTr, new StringBuilder(),-0.4f,0.4f, true);
         softAssert.assertAll();
     }
 
@@ -237,8 +237,8 @@ public class RoutingProfileCreateTest {
         MGLog.logConfig.put("mg.mgmap", MGLog.Level.VERBOSE);
         MGLog.setUnittest(true);
         factory = SplineProfileContextMTB::new;
-        CostCalcSplineProfile costCalcSplineProfileHike = new CostCalcSplineProfile(new SplineProfileContextHiking(true,-1));// new SplineProfileTestContextMTB(100,100));
-        checkSurfaceCats(costCalcSplineProfileHike, new StringBuilder(),-0.4f,0.4f);
+        CostCalcSplineProfile costCalcSplineProfileHike = new CostCalcSplineProfile(new SplineProfileContextHiking(false,-1));// new SplineProfileTestContextMTB(100,100));
+        checkSurfaceCats(costCalcSplineProfileHike, new StringBuilder(),-0.4f,0.4f, true);
         softAssert.assertAll();
     }
 
@@ -319,11 +319,11 @@ public class RoutingProfileCreateTest {
 
 
     void checkProfile(CostCalcSplineProfile costCalcSplineProfile, StringBuilder msg, float slStart, float slStop){
-        checkSurfaceCats(costCalcSplineProfile, msg,slStart,slStop);
+        checkSurfaceCats(costCalcSplineProfile, msg,slStart,slStop,false);
 //        compareSurfaceCats(costCalcSplineProfile, msg);
     }
 
-    private void checkSurfaceCats(CostCalcSplineProfile costCalcSplineProfile, StringBuilder rmsg, float slStart, float slStop){
+    private void checkSurfaceCats(CostCalcSplineProfile costCalcSplineProfile, StringBuilder rmsg, float slStart, float slStop, boolean plotall){
         IfSpline cubicSpline;
         for (int sc = 0; sc < costCalcSplineProfile.getMaxSurfaceCat(); sc++) {
              try {
@@ -332,12 +332,13 @@ public class RoutingProfileCreateTest {
 //                    System.out.println(costCalcSplineProfile.getSurfaceCatTxt(sc));
                     StringBuilder msg = new StringBuilder(rmsg).append("Cost: ").append(costCalcSplineProfile.getSurfaceCatTxt(sc));
                     checkCubicSpline(cubicSpline,msg,slStart,slStop);
-                }
+                    if (plotall) System.out.println( plotToString(cubicSpline::valueAt, null, null, slStart, slStop, 200, 100));                }
                  cubicSpline = costCalcSplineProfile.getDurationSpline(sc);
                  if (cubicSpline != null){
 //                     System.out.println(costCalcSplineProfile.getSurfaceCatTxt(sc));
                      StringBuilder msg = new StringBuilder(rmsg).append("Dura: ").append(costCalcSplineProfile.getSurfaceCatTxt(sc));
                      checkCubicSpline(cubicSpline,msg,slStart,slStop);
+                     if (plotall) System.out.println( plotToString(cubicSpline::valueAt, null, null, slStart, slStop, 200, 100));
                  }
             } catch (Exception e) {
                 softAssert.check(false, rmsg+"failure:"+e.getMessage()+ Arrays.toString(e.getStackTrace()));
